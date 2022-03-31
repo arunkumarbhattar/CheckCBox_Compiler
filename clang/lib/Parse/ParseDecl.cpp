@@ -4143,6 +4143,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // continue to keep the current token from being consumed.
       continue; 
     }
+
+    case tok::kw__t:
+    case tok::kw__t_array_ptr:
+    case tok::kw__t_nt_array_ptr:
+    case tok::kw__t_ptr:
+    {
+      // Continue to keep the current token from being consumed.
+      continue;
+    }
     case tok::kw__Exists: {
       ParseExistentialTypeSpecifier(DS);
       // Continue to keep the current token from being consumed.
@@ -5315,6 +5324,11 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw__Exists:
   case tok::kw__Unpack:
 
+  case tok::kw__t:
+  case tok::kw__t_array_ptr:
+  case tok::kw__t_nt_array_ptr:
+  case tok::kw__t_ptr:
+
     return true;
   }
 }
@@ -5443,6 +5457,11 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw__Ptr:
   case tok::kw__Array_ptr:
   case tok::kw__Nt_array_ptr:
+
+  case tok::kw__t:
+  case tok::kw__t_array_ptr:
+  case tok::kw__t_nt_array_ptr:
+  case tok::kw__t_ptr:
 
     return true;
 
@@ -5617,6 +5636,12 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   // Checked C existential types
   case tok::kw__Exists:
   case tok::kw__Unpack:
+
+  case tok::kw__t:
+  case tok::kw__t_array_ptr:
+  case tok::kw__t_nt_array_ptr:
+  case tok::kw__t_ptr:
+
     return true;
 
     // GNU ObjC bizarre protocol extension: <proto1,proto2> with implicit 'id'.

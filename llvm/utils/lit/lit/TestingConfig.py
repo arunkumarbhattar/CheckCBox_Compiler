@@ -86,7 +86,7 @@ class TestingConfig(object):
         cfg_globals['lit_config'] = litConfig
         cfg_globals['__file__'] = path
         try:
-            exec(compile(data, path, 'exec'), cfg_globals, None)
+#            exec(compile(data, path, 'exec'), cfg_globals, None)
             if litConfig.debug:
                 litConfig.note('... loaded config %r' % path)
         except SystemExit:

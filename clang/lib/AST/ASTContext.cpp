@@ -6176,7 +6176,12 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
       break;
     case CheckedArrayKind::NtChecked:
       checkedKind = CheckedPointerKind::NtArray;
+    case CheckedArrayKind::Tainted:
+      checkedKind = CheckedPointerKind::t_array_ptr;
+    case CheckedArrayKind::Nt_tainted:
+      checkedKind = CheckedPointerKind::t_nt_array_ptr;
   }
+
   QualType PtrTy = getPointerType(PrettyArrayType->getElementType(),
                                   checkedKind);
 

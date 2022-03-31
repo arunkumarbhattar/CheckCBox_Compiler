@@ -1465,6 +1465,11 @@ enum class AutoTypeKeyword {
 ///      arithmetic is allowed.  It has overflow checking.
 ///   4. Checked C _Nt_Array_ptr: these are pointers to
 ///      null-terminated arrays. Pointer arithmetic is allowed.
+///   5. Checked C Tainted type.
+///   6. Checked C Tainted _Ptr types.
+///   7. Checked C Tainted _Array_ptr types.
+///   8. Checked C Tainted _Nt_array_ptr types.
+
 enum class CheckedPointerKind {
   /// \brief Unchecked C pointer.
   Unchecked = 0,
@@ -1474,13 +1479,23 @@ enum class CheckedPointerKind {
   Array,
   /// \brief Checked C _Nt_array_ptr type (pointer-to null-terminated array)
   NtArray,
+  /// \brief Tainted C type.
+  t,
+  /// \brief Tainted C _Ptr type
+  t_ptr,
+  /// \brief Tainted C _Array_ptr type
+  t_array_ptr,
+  /// \brief Tainted C _Nt_array_ptr type
+  t_nt_array_ptr
 };
 
 /// Checked C generalizes arrays to 3 different kinds of arrays.
 enum class CheckedArrayKind {
   Unchecked = 0,
   Checked,        // Checked array
-  NtChecked       // Null-terminated checked array
+  NtChecked,       // Null-terminated checked array
+  Tainted,         //tainted array
+  Nt_tainted       //Null-terminated tainted array
 };
 
 class BoundsAnnotations {
@@ -1627,13 +1642,13 @@ protected:
     unsigned SizeModifier : 3;
 
     // Kind of checked array
-    unsigned CheckedArrayKind : 2;
+    unsigned CheckedArrayKind : 3;
   };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
 
-    unsigned : NumTypeBits + 3 + 3 + 2;
+    unsigned : NumTypeBits + 3 + 3 + 3;
 
     /// Whether we have a stored size expression.
     unsigned HasStoredSizeExpr : 1;
@@ -3038,6 +3053,8 @@ public:
   }
   bool isChecked() const { return getKind() != CheckedArrayKind::Unchecked; }
   bool isUnchecked() const { return getKind() == CheckedArrayKind::Unchecked; }
+  bool isTainted() const {return getKind() == CheckedArrayKind::Tainted;}
+
   bool isExactlyChecked() const {
     return  getKind() == CheckedArrayKind::Checked;
   }
