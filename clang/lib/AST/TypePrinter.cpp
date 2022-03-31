@@ -422,6 +422,18 @@ void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
       case CheckedPointerKind::NtArray:
         OS << "_Nt_array_ptr<";
         break;
+      case CheckedPointerKind::t:
+        OS << "_t";
+        break;
+      case CheckedPointerKind::t_ptr:
+        OS << "_t_ptr";
+        break;
+      case CheckedPointerKind::t_array:
+        OS << "_t_array_ptr";
+        break;
+      case CheckedPointerKind::t_nt_array:
+        OS << "_t_nt_array_ptr";
+        break;
     }
     print(T->getPointeeType(), OS, StringRef());
     OS << '>';

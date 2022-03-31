@@ -1664,10 +1664,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
           break;
         case DeclSpec::TST_t_plainPtr:
           Kind = CheckedPointerKind::t_ptr;
+          break;
         case DeclSpec::TST_t_arrayPtr:
           Kind = CheckedPointerKind::t_array;
+          break;
         case DeclSpec::TST_t_nt_arrayPtr:
           Kind = CheckedPointerKind::t_nt_array;
+          break;
         default:
             llvm_unreachable("unexpected type spec type");
             break;

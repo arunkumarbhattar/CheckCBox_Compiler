@@ -435,7 +435,9 @@ private:
     return (T == TST_typename || T == TST_typeofType ||
             T == TST_underlyingType || T == TST_atomic ||
             T == TST_plainPtr || T == TST_arrayPtr ||
-            T == TST_nt_arrayPtr || T == TST_exists);
+            T == TST_nt_arrayPtr || T == TST_exists ||
+            T == TST_t_arrayPtr || T == TST_t_plainPtr ||
+            T == TST_nt_arrayPtr);
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype || T == TST_extint);

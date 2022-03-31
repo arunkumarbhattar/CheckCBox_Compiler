@@ -4149,6 +4149,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw__t_nt_array_ptr:
     case tok::kw__t_ptr:
     {
+      ParseTaintedPointerSpecifiers(DS);
       // Continue to keep the current token from being consumed.
       continue;
     }
@@ -7909,6 +7910,65 @@ void Parser::ParseCheckedPointerSpecifiers(DeclSpec &DS) {
         DiagID, Result.get(),
         Actions.getASTContext().getPrintingPolicy()))
         Diag(StartLoc, DiagID) << PrevSpec;
+}
+
+/// [Checked C]  new pointer types:
+///           _Ptr &lt type name &gt
+///           _Array_ptr &lt type name &gt
+///           _Nt_array_ptr &lt type name & gt
+void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
+  assert((Tok.is(tok::kw__t_ptr) || Tok.is(tok::kw__Array_ptr) ||
+          Tok.is(tok::kw__t_nt_array_ptr)) &&
+         "Not a tainted pointer specifier");
+  tok::TokenKind Kind = Tok.getKind();
+  SourceLocation StartLoc = ConsumeToken();
+  if (ExpectAndConsume(tok::less)) {
+    return;
+  }
+
+  TypeResult Result = ParseTypeName();
+  if (Result.isInvalid()) {
+    SkipUntil(tok::greater, StopAtSemi);
+    return;
+  }
+
+  // The starting location of the last token in the type
+  SourceLocation EndLoc = Tok.getLocation();
+
+  // Match the '>'
+  if (Tok.getKind() == tok::greater) {
+    ConsumeToken();
+  }
+  else if (Tok.getKind() == tok::greatergreater) {
+    Tok.setKind(tok::greater);
+    Tok.setLocation(Tok.getLocation().getLocWithOffset(1));
+  }
+  else if (Tok.getKind() == tok::greatergreaterequal) {
+    Tok.setKind(tok::greaterequal);
+    Tok.setLocation(Tok.getLocation().getLocWithOffset(1));
+  }
+  else {
+    // we know this will fail and generate a diagnostic
+    ExpectAndConsume(tok::greater);
+    return;
+  }
+
+  DS.SetRangeEnd(EndLoc);
+
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  TypeSpecifierType pointerKind = TST_plainPtr;
+  if (Kind == tok::kw__t_ptr)
+    pointerKind = TST_t_plainPtr;
+  else if (Kind == tok::kw__t_array_ptr)
+    pointerKind = TST_t_arrayPtr;
+  else if (Kind == tok::kw__t_nt_array_ptr)
+    pointerKind = TST_t_ntarray_Ptr;
+
+  if (DS.SetTypeSpecType(pointerKind, StartLoc, PrevSpec,
+                         DiagID, Result.get(),
+                         Actions.getASTContext().getPrintingPolicy()))
+    Diag(StartLoc, DiagID) << PrevSpec;
 }
 
 /// [Checked C] Parse a specifier for an existential type.

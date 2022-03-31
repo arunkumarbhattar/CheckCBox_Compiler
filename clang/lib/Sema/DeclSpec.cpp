@@ -603,6 +603,9 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_plainPtr: return "_Ptr";
   case DeclSpec::TST_nt_arrayPtr: return "_Nt_array_ptr";
   case DeclSpec::TST_exists: return "_Exists";
+  case DeclSpec::TST_t_plainPtr: return "_t_ptr";
+  case DeclSpec::TST_t_arrayPtr: return "_t_array_ptr";
+  case DeclSpec::TST_t_nt_arrayPtr: return "_t_nt_array_Ptr";
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   case DeclSpec::TST_##ImgType##_t: \
     return #ImgType "_t";
