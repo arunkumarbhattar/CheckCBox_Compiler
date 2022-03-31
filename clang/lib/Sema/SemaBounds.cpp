@@ -949,6 +949,18 @@ namespace {
         return true;
       }
 
+      // E->F.  This is equivalent to (*E).F.
+      if (Base->getType()->isTaintedPointerArrayType()) {
+        BoundsExpr *Bounds = S.CheckNonModifyingBounds(BaseBounds, Base);
+        if (Bounds->isUnknown()) {
+          S.Diag(Base->getBeginLoc(), diag::err_expected_bounds) << Base->getSourceRange();
+          Bounds = S.CreateInvalidBoundsExpr();
+        } else {
+          CheckBoundsAtMemoryAccess(E, Bounds, BCK_Normal, CSS, EquivExprs);
+        }
+        E->setBoundsExpr(Bounds);
+        return true;
+      }
       return false;
     }
 
@@ -6495,15 +6507,22 @@ Expr *Sema::GetArrayPtrDereference(Expr *E, QualType &Result) {
     case Expr::ArraySubscriptExprClass: {
       // e1[e2] is a synonym for *(e1 + e2).
       ArraySubscriptExpr *AS = cast<ArraySubscriptExpr>(E);
-      // An important invariant for array types in Checked C is that all
-      // dimensions of a multi-dimensional array are either checked or
-      // unchecked.  This ensures that the intermediate values for
+      // An important invariant for array types in Checked C /CheckCBox C
+      // is that all dimensions of a multi-dimensional array are either
+      // checked, tainted or unchecked.
+      // This ensures that the intermediate values for
       // multi-dimensional array accesses have checked type and preserve
       //  the "checkedness" of the outermost array.
 
       // getBase returns the pointer-typed expression.
       if (getLangOpts().UncheckedPointersDynamicCheck ||
           AS->getBase()->getType()->isCheckedPointerArrayType()) {
+        Result = AS->getBase()->getType();
+        return E;
+      }
+
+      if (getLangOpts().UncheckedPointersDynamicCheck ||
+          AS->getBase()->getType()->isTaintedPointerArrayType()) {
         Result = AS->getBase()->getType();
         return E;
       }
@@ -6527,6 +6546,10 @@ Expr *Sema::GetArrayPtrDereference(Expr *E, QualType &Result) {
         return E;
       }
 
+      if (MS->getBase()->getType()->isTaintedPointerArrayType()) {
+        Result = MS->getBase()->getType();
+        return E;
+      }
       return nullptr;
     }
     default: {
