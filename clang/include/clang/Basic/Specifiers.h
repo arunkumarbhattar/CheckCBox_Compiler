@@ -80,8 +80,11 @@ namespace clang {
     TST_atomic,           // C11 _Atomic
     TST_plainPtr,     // Checked C _Ptr type
     TST_arrayPtr,     // Checked C _Array_ptr type
-    TST_ntarrayPtr ,  // Chcecked C _Nt_array_ptr type
+    TST_ntarrayPtr ,  // Checked C _Nt_array_ptr type
     TST_exists,       // Checked C _Exists type
+    TST_t_plainPtr,   //Checked C Tainted _Ptr type
+    TST_t_arrayPtr,   //Checked C Tainted _Array_ptr type
+    TST_t_ntarray_Ptr, // Checked C _Nt_array_ptr type
 #define GENERIC_IMAGE_TYPE(ImgType, Id) TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
     TST_error // erroneous type

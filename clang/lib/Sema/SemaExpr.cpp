@@ -8149,7 +8149,17 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
        // have have a null terminator.
        resultKind = CheckedPointerKind::Array;
        incompatibleCheckedPointer = CompositeTy.isNull();
-     } else {
+     }
+     else if ((lhsKind == CheckedPointerKind::t_nt_array &&
+               rhsKind == CheckedPointerKind::t_array) ||
+              (rhsKind == CheckedPointerKind::t_nt_array &&
+               lhsKind == CheckedPointerKind::t_array)) {
+       // NtArray can't be the upper bound type because the Array value may not
+       // have have a null terminator.
+       resultKind = CheckedPointerKind::Array;
+       incompatibleCheckedPointer = CompositeTy.isNull();
+     }
+     else {
        // Must have different kinds of checked pointers (_Ptr vs.
        // _Array_ptr or _Nt_Array_ptr). Implicit conversions between these
        // kinds of pointers are not allowed.
@@ -9249,6 +9259,16 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
       return ConvTy;
     }
 
+    if (lhptee->isVoidType() && (lhkind == CheckedPointerKind::t_ptr ||
+                                 lhkind == CheckedPointerKind::t_array) &&
+        rhptee->isIncompleteOrObjectType()) {
+      if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
+          && rhptee->containsCheckedValue(true) != Type::NoCheckedValue)
+        return Sema::IncompatibleCheckedCVoid;
+      return ConvTy;
+    }
+
+
     // Implicit conversions from void pointers to checked pointers.
     // - In unchecked scopes and bounds-safe checked scopes, allow any void
     // pointer to be converted to a _Ptr or _Array_ptr type
@@ -9263,6 +9283,17 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
       if (rhkind != CheckedPointerKind::Ptr &&
           (lhkind == CheckedPointerKind::Ptr ||
            lhkind == CheckedPointerKind::Array)) {
+        if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
+            && lhptee->containsCheckedValue(true) != Type::NoCheckedValue)
+          return Sema::IncompatibleCheckedCVoid;
+        return ConvTy;
+      }
+    }
+
+    if (rhptee->isVoidType() && lhptee->isIncompleteOrObjectType()) {
+      if (rhkind != CheckedPointerKind::t_ptr &&
+          (lhkind == CheckedPointerKind::t_ptr ||
+           lhkind == CheckedPointerKind::t_array)) {
         if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
             && lhptee->containsCheckedValue(true) != Type::NoCheckedValue)
           return Sema::IncompatibleCheckedCVoid;
@@ -9287,6 +9318,16 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
 
     if (lhkind == CheckedPointerKind::NtArray &&
         rhkind != CheckedPointerKind::NtArray)
+      return Sema::Incompatible;
+  }
+
+  if (!S.getLangOpts()._3C) {
+    if (rhkind != CheckedPointerKind::Unchecked &&
+        lhkind == CheckedPointerKind::Unchecked)
+      return Sema::Incompatible;
+
+    if (lhkind == CheckedPointerKind::t_nt_array &&
+        rhkind != CheckedPointerKind::t_nt_array)
       return Sema::Incompatible;
   }
 

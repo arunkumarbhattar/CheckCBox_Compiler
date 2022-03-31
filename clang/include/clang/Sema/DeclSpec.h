@@ -297,6 +297,9 @@ public:
   static const TST TST_plainPtr = clang::TST_plainPtr;
   static const TST TST_arrayPtr = clang::TST_arrayPtr;
   static const TST TST_nt_arrayPtr = clang::TST_ntarrayPtr;
+  static const TST TST_t_plainPtr = clang::TST_t_plainPtr;
+  static const TST TST_t_arrayPtr = clang::TST_t_arrayPtr;
+  static const TST TST_t_nt_arrayPtr = clang::TST_t_ntarray_Ptr;
   static const TST TST_exists = clang::TST_exists;
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;

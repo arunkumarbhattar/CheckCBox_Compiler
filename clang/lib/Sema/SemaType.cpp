@@ -1638,7 +1638,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_plainPtr:
   case DeclSpec::TST_arrayPtr:
-  case DeclSpec::TST_nt_arrayPtr: {
+  case DeclSpec::TST_nt_arrayPtr:
+  case DeclSpec::TST_t_plainPtr:
+  case DeclSpec::TST_t_arrayPtr:
+  case DeclSpec::TST_t_nt_arrayPtr:
+  {
       Result = S.GetTypeFromParser(DS.getRepAsType());
       assert(!Result.isNull() &&
              "Didn't get a type for _Ptr, _Array_ptr, or _Nt_array_ptr?");
@@ -1658,6 +1662,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         case DeclSpec::TST_nt_arrayPtr:
           Kind = CheckedPointerKind::NtArray;
           break;
+        case DeclSpec::TST_t_plainPtr:
+          Kind = CheckedPointerKind::t_ptr;
+        case DeclSpec::TST_t_arrayPtr:
+          Kind = CheckedPointerKind::t_array;
+        case DeclSpec::TST_t_nt_arrayPtr:
+          Kind = CheckedPointerKind::t_nt_array;
         default:
             llvm_unreachable("unexpected type spec type");
             break;
@@ -2153,9 +2163,11 @@ QualType Sema::BuildPointerType(QualType T, CheckedPointerKind kind,
   if (getLangOpts().OpenCL)
     T = deduceOpenCLPointeeAddrSpace(*this, T);
 
-  // In Checked C, _Array_ptr of functions is not allowed
+  // In Checked C, _Array_ptr/_t_Array_ptr of functions is not allowed
   if ((kind == CheckedPointerKind::Array ||
-       kind == CheckedPointerKind::NtArray) && T->isFunctionType()) {
+       kind == CheckedPointerKind::NtArray ||
+       kind == CheckedPointerKind::t_array ||
+       kind == CheckedPointerKind::t_nt_array) && T->isFunctionType()) {
     Diag(Loc, diag::err_illegal_decl_array_ptr_to_function)
       << getPrintableNameForEntity(Entity) << T;
     return QualType();
@@ -2163,7 +2175,7 @@ QualType Sema::BuildPointerType(QualType T, CheckedPointerKind kind,
 
   // In Checked C, null-terminated array_ptr of non-integer/non-pointer are not
   // allowed
-  if (kind == CheckedPointerKind::NtArray && !T->isIntegerType() &&
+  if ((kind == CheckedPointerKind::NtArray || kind == CheckedPointerKind::t_nt_array)&& !T->isIntegerType() &&
       !T->isPointerType()) {
     Diag(Loc, diag::err_illegal_decl_nt_array_ptr_of_nonscalar)
       << getPrintableNameForEntity(Entity) << T;

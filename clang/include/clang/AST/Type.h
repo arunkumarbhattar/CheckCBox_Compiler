@@ -1484,9 +1484,9 @@ enum class CheckedPointerKind {
   /// \brief Tainted C _Ptr type
   t_ptr,
   /// \brief Tainted C _Array_ptr type
-  t_array_ptr,
+  t_array,
   /// \brief Tainted C _Nt_array_ptr type
-  t_nt_array_ptr
+  t_nt_array
 };
 
 /// Checked C generalizes arrays to 3 different kinds of arrays.
@@ -7038,26 +7038,31 @@ inline bool Type::isUncheckedPointerType() const {
 
 inline bool Type::isCheckedPointerPtrType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckedPointerKind::Ptr;
+    return T->getKind() == CheckedPointerKind::Ptr ||
+           T->getKind() == CheckedPointerKind::t_ptr;
   return false;
 }
 
 inline bool Type::isCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
     return T->getKind() == CheckedPointerKind::Array ||
-           T->getKind() == CheckedPointerKind::NtArray;
+           T->getKind() == CheckedPointerKind::NtArray ||
+           T->getKind() == CheckedPointerKind::t_array ||
+           T->getKind() == CheckedPointerKind::t_nt_array;
   return false;
 }
 
 inline bool Type::isExactlyCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckedPointerKind::Array;
+    return T->getKind() == CheckedPointerKind::Array ||
+           T->getKind() == CheckedPointerKind::t_ptr;
   return false;
 }
 
 inline bool Type::isCheckedPointerNtArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckedPointerKind::NtArray;
+    return T->getKind() == CheckedPointerKind::NtArray ||
+           T->getKind() == CheckedPointerKind::t_nt_array;
   return false;
 }
 
