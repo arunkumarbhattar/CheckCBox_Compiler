@@ -1650,26 +1650,26 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       DeclarationName Name;
       if (declarator.getIdentifier())
         Name = declarator.getIdentifier();
-      CheckedPointerKind Kind = CheckedPointerKind::Ptr;
+      CheckCBox_PointerKind Kind = CheckCBox_PointerKind::Ptr;
       TypeSpecifierType TS = DS.getTypeSpecType();
       switch (TS) {
         case DeclSpec::TST_plainPtr:
-          Kind = CheckedPointerKind::Ptr;
+          Kind = CheckCBox_PointerKind::Ptr;
           break;
         case DeclSpec::TST_arrayPtr:
-          Kind = CheckedPointerKind::Array;
+          Kind = CheckCBox_PointerKind::Array;
           break;
         case DeclSpec::TST_nt_arrayPtr:
-          Kind = CheckedPointerKind::NtArray;
+          Kind = CheckCBox_PointerKind::NtArray;
           break;
         case DeclSpec::TST_t_plainPtr:
-          Kind = CheckedPointerKind::t_ptr;
+          Kind = CheckCBox_PointerKind::t_ptr;
           break;
         case DeclSpec::TST_t_arrayPtr:
-          Kind = CheckedPointerKind::t_array;
+          Kind = CheckCBox_PointerKind::t_array;
           break;
         case DeclSpec::TST_t_nt_arrayPtr:
-          Kind = CheckedPointerKind::t_nt_array;
+          Kind = CheckCBox_PointerKind::t_nt_array;
           break;
         default:
             llvm_unreachable("unexpected type spec type");
@@ -2139,7 +2139,7 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
 ///
 /// \returns A suitable pointer type, if there are no
 /// errors. Otherwise, returns a NULL type.
-QualType Sema::BuildPointerType(QualType T, CheckedPointerKind kind,
+QualType Sema::BuildPointerType(QualType T, CheckCBox_PointerKind kind,
                                 SourceLocation Loc, DeclarationName Entity) {
   if (T->isReferenceType()) {
     // C++ 8.3.2p4: There shall be no ... pointers to references ...
@@ -2167,10 +2167,10 @@ QualType Sema::BuildPointerType(QualType T, CheckedPointerKind kind,
     T = deduceOpenCLPointeeAddrSpace(*this, T);
 
   // In Checked C, _Array_ptr/_t_Array_ptr of functions is not allowed
-  if ((kind == CheckedPointerKind::Array ||
-       kind == CheckedPointerKind::NtArray ||
-       kind == CheckedPointerKind::t_array ||
-       kind == CheckedPointerKind::t_nt_array) && T->isFunctionType()) {
+  if ((kind == CheckCBox_PointerKind::Array ||
+       kind == CheckCBox_PointerKind::NtArray ||
+       kind == CheckCBox_PointerKind::t_array ||
+       kind == CheckCBox_PointerKind::t_nt_array) && T->isFunctionType()) {
     Diag(Loc, diag::err_illegal_decl_array_ptr_to_function)
       << getPrintableNameForEntity(Entity) << T;
     return QualType();
@@ -2178,7 +2178,7 @@ QualType Sema::BuildPointerType(QualType T, CheckedPointerKind kind,
 
   // In Checked C, null-terminated array_ptr of non-integer/non-pointer are not
   // allowed
-  if ((kind == CheckedPointerKind::NtArray || kind == CheckedPointerKind::t_nt_array)&& !T->isIntegerType() &&
+  if ((kind == CheckCBox_PointerKind::NtArray || kind == CheckCBox_PointerKind::t_nt_array)&& !T->isIntegerType() &&
       !T->isPointerType()) {
     Diag(Loc, diag::err_illegal_decl_nt_array_ptr_of_nonscalar)
       << getPrintableNameForEntity(Entity) << T;
@@ -2393,7 +2393,7 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
 /// returns a NULL type.
 QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
-                              CheckedArrayKind Kind, SourceRange Brackets,
+                              CheckCBox_ArrayKind Kind, SourceRange Brackets,
                               DeclarationName Entity) {
 
   SourceLocation Loc = Brackets.getBegin();
@@ -2450,7 +2450,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
-  if (Kind == CheckedArrayKind::NtChecked && !T->isIntegerType() &&
+  if (Kind == CheckCBox_ArrayKind::NtChecked && !T->isIntegerType() &&
       !T->isPointerType()) {
     Diag(Loc, diag::err_illegal_decl_nullterm_array_of_nonscalar)
       << getPrintableNameForEntity(Entity) << T;
@@ -2594,7 +2594,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
                 : CFT_InvalidTarget);
   }
   
-  if (getLangOpts().CheckedC && Kind != CheckedArrayKind::Unchecked) {
+  if (getLangOpts().CheckedC && Kind != CheckCBox_ArrayKind::Unchecked) {
     // checked extensions are not supported for variable length arrays.
     if (T->isVariableArrayType()) {
       Diag(Loc, diag::err_checked_vla);
@@ -4499,14 +4499,14 @@ QualType Sema::MakeCheckedArrayType(QualType T, bool Diagnose,
                                             constArrTy->getSizeExpr(),
                                             constArrTy->getSizeModifier(),
                                             T.getCVRQualifiers(),
-                                            CheckedArrayKind::Checked);
+                                            CheckCBox_ArrayKind::Checked);
       }
       case Type::IncompleteArray: {
         const IncompleteArrayType *incArrTy = cast<IncompleteArrayType>(ty);
         return Context.getIncompleteArrayType(elemTy,
                                               incArrTy->getSizeModifier(),
                                               T.getCVRQualifiers(),
-                                              CheckedArrayKind::Checked);
+                                              CheckCBox_ArrayKind::Checked);
       }
       case Type::DependentSizedArray:
       case Type::VariableArray:
@@ -4980,7 +4980,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         }
       }
 
-      T = S.BuildPointerType(T, CheckedPointerKind::Unchecked, DeclType.Loc, Name);
+      T = S.BuildPointerType(T, CheckCBox_PointerKind::Unchecked, DeclType.Loc, Name);
       if (DeclType.Ptr.TypeQuals)
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Ptr.TypeQuals);
       break;
@@ -5072,7 +5072,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         checkNullabilityConsistency(S, SimplePointerKind::Array, DeclType.Loc);
       }
 
-      CheckedArrayKind Kind = (CheckedArrayKind) ATI.kind;
+      CheckCBox_ArrayKind Kind = (CheckCBox_ArrayKind) ATI.kind;
       // Handle multi-dimensional arrays for Checked C. A multi-dimensional
       // array is an array of arrays, so look for a nested type that is an array.
       // - Dimensions must either all be checked or all be unchecked.
@@ -5081,11 +5081,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       //   of this declaration.
       if (const ArrayType *AT = dyn_cast<ArrayType>(T.getCanonicalType())) {
         if (Kind != AT->getKind()) {
-          if (Kind == CheckedArrayKind::Checked)
+          if (Kind == CheckCBox_ArrayKind::Checked)
             // The new array type is checked. Propagate this to nested array
             // types declared as part of this declaration.
             T = S.MakeCheckedArrayType(T, true, DeclType.Loc);
-          else if (Kind == CheckedArrayKind::NtChecked) {
+          else if (Kind == CheckCBox_ArrayKind::NtChecked) {
             // Do not propagate. Null-terminated arrays of arrays are illegal to
             // declare, so we don't care about the checkedness of arrays nested
             // with them.  The call to BuildArrayType below will issue a
@@ -5100,7 +5100,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               const DeclaratorChunk &DC = D.getTypeObject(x);
               if (DC.Kind == DeclaratorChunk::Array) {
                 const DeclaratorChunk::ArrayTypeInfo &ParentInfo = DC.Arr;
-                if ((CheckedArrayKind) ParentInfo.kind == CheckedArrayKind::Checked) {
+                if ((CheckCBox_ArrayKind) ParentInfo.kind == CheckCBox_ArrayKind::Checked) {
                   parentIsChecked = true;
                   break;
                 }

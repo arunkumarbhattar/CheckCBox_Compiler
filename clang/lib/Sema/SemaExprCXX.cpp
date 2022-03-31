@@ -2294,7 +2294,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     else if (ArraySize)
       InitType =
           Context.getIncompleteArrayType(AllocType, ArrayType::Normal, 0,
-                                         CheckedArrayKind::Unchecked);
+                                         CheckCBox_ArrayKind::Unchecked);
     else
       InitType = AllocType;
 

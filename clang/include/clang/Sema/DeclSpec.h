@@ -1728,7 +1728,7 @@ struct DeclaratorChunk {
   /// Return a DeclaratorChunk for an array.
   static DeclaratorChunk getArray(unsigned TypeQuals,
                                   bool isStatic, bool isStar,
-                                  CheckedArrayKind kind, Expr *NumElts,
+                                  CheckCBox_ArrayKind kind, Expr *NumElts,
                                   SourceLocation LBLoc, SourceLocation RBLoc) {
     DeclaratorChunk I;
     I.Kind          = Array;

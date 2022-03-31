@@ -5787,7 +5787,7 @@ namespace {
     }
 
     Expr *CreateAddressOfOperator(Expr *E) {
-      QualType Ty = Context.getPointerType(E->getType(), CheckedPointerKind::Array);
+      QualType Ty = Context.getPointerType(E->getType(), CheckCBox_PointerKind::Array);
       return UnaryOperator::Create(Context, E, UnaryOperatorKind::UO_AddrOf, Ty,
                                    ExprValueKind::VK_RValue,
                                    ExprObjectKind::OK_Ordinary,

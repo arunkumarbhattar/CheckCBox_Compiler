@@ -398,8 +398,8 @@ void TypePrinter::printComplexAfter(const ComplexType *T, raw_ostream &OS) {
 
 void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  CheckedPointerKind kind = T->getKind();
-  if (kind == CheckedPointerKind::Unchecked) {
+  CheckCBox_PointerKind kind = T->getKind();
+  if (kind == CheckCBox_PointerKind::Unchecked) {
     SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
     printBefore(T->getPointeeType(), OS);
     // Handle things like 'int (*A)[4];' correctly.
@@ -410,28 +410,25 @@ void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
   }
   else {
     switch (T->getKind()) {
-      case CheckedPointerKind::Unchecked:
+      case CheckCBox_PointerKind::Unchecked:
         llvm_unreachable("should have been handled already");
         break;
-      case CheckedPointerKind::Ptr:
+      case CheckCBox_PointerKind::Ptr:
         OS << "_Ptr<";
         break;
-      case CheckedPointerKind::Array:
+      case CheckCBox_PointerKind::Array:
         OS << "_Array_ptr<";
         break;
-      case CheckedPointerKind::NtArray:
+      case CheckCBox_PointerKind::NtArray:
         OS << "_Nt_array_ptr<";
         break;
-      case CheckedPointerKind::t:
-        OS << "_t";
-        break;
-      case CheckedPointerKind::t_ptr:
+      case CheckCBox_PointerKind::t_ptr:
         OS << "_t_ptr";
         break;
-      case CheckedPointerKind::t_array:
+      case CheckCBox_PointerKind::t_array:
         OS << "_t_array_ptr";
         break;
-      case CheckedPointerKind::t_nt_array:
+      case CheckCBox_PointerKind::t_nt_array:
         OS << "_t_nt_array_ptr";
         break;
     }
@@ -442,7 +439,7 @@ void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
 }
 
 void TypePrinter::printPointerAfter(const PointerType *T, raw_ostream &OS) {
-  if (T->getKind() == CheckedPointerKind::Unchecked) {
+  if (T->getKind() == CheckCBox_PointerKind::Unchecked) {
     IncludeStrongLifetimeRAII Strong(Policy);
     SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
     // Handle things like 'int (*A)[4];' correctly.

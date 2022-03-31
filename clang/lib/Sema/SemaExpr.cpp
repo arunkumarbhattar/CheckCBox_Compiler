@@ -569,8 +569,8 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
         }
       }
 
-    CheckedPointerKind kind = isCheckedScope ?
-      CheckedPointerKind::Ptr : CheckedPointerKind::Unchecked;
+    CheckCBox_PointerKind kind = isCheckedScope ?
+      CheckCBox_PointerKind::Ptr : CheckCBox_PointerKind::Unchecked;
     E = ImpCastExprToType(E, Context.getPointerType(Ty, kind),
                           CK_FunctionToPointerDecay, VK_RValue,
                           nullptr, Sema::CCK_ImplicitConversion,
@@ -823,10 +823,10 @@ ExprResult Sema::CallExprUnaryConversions(Expr *E) {
     // For Checked C, at uses of functions in checked scopes,
     // we also convert the function type to be fully checked
     // as part of the function-to-pointer decay.
-    CheckedPointerKind kind = CheckedPointerKind::Unchecked;
+    CheckCBox_PointerKind kind = CheckCBox_PointerKind::Unchecked;
     bool isBoundsSafeInterfaceCast = false;
     if (IsCheckedScope()) {
-      kind = CheckedPointerKind::Ptr;
+      kind = CheckCBox_PointerKind::Ptr;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
         if (isa<FunctionDecl>(DRE->getDecl()))
           if (Ty->isOrContainsUncheckedType()) {
@@ -1938,8 +1938,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   // Get an array type for the string, according to C99 6.4.5.  This includes
   // the nul terminator character as well as the string length for pascal
   // strings.
-  CheckedArrayKind ArrayKind = IsCheckedScope() ?
-    CheckedArrayKind::NtChecked : CheckedArrayKind::Unchecked;
+  CheckCBox_ArrayKind ArrayKind = IsCheckedScope() ?
+    CheckCBox_ArrayKind::NtChecked : CheckCBox_ArrayKind::Unchecked;
 
   QualType StrTy =
       Context.getStringLiteralArrayType(CharTy, Literal.GetNumStringChars(),
@@ -3663,8 +3663,8 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
 
     llvm::APInt LengthI(32, Length + 1);
     // Get an array type for the string, according to C99 6.4.5.
-    CheckedArrayKind ArrayKind = IsCheckedScope() ?
-      CheckedArrayKind::NtChecked : CheckedArrayKind::Unchecked;
+    CheckCBox_ArrayKind ArrayKind = IsCheckedScope() ?
+      CheckCBox_ArrayKind::NtChecked : CheckCBox_ArrayKind::Unchecked;
 
     if (IK == PredefinedExpr::LFunction || IK == PredefinedExpr::LFuncSig) {
       ResTy =
@@ -5630,7 +5630,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
     // Array subscripting not allowed on ptr<T> values
-    if (PTy->getKind() == CheckedPointerKind::Ptr &&
+    if (PTy->getKind() == CheckCBox_PointerKind::Ptr &&
         !getLangOpts()._3C) {
         return ExprError(Diag(LLoc, diag::err_typecheck_ptr_subscript)
             << LHSTy << LHSExp->getSourceRange() << RHSExp->getSourceRange());
@@ -5653,7 +5653,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     BaseExpr = RHSExp;
     IndexExpr = LHSExp;
     // Array subscripting not allowed on ptr<T> values
-    if (PTy->getKind() == CheckedPointerKind::Ptr &&
+    if (PTy->getKind() == CheckCBox_PointerKind::Ptr &&
         !getLangOpts()._3C) {
         return ExprError(Diag(LLoc, diag::err_typecheck_ptr_subscript)
             << RHSTy << LHSExp->getSourceRange() << RHSExp->getSourceRange());
@@ -8089,13 +8089,13 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
 
   QualType CompositeTy = S.Context.mergeTypes(lhptee, rhptee);
 
-  CheckedPointerKind resultKind = CheckedPointerKind::Unchecked;
+  CheckCBox_PointerKind resultKind = CheckCBox_PointerKind::Unchecked;
   bool incompatibleCheckedPointer = false;
   if (!IsBlockPointer) {
       // Check the compatibility of the pointer kind and compute the resulting
       // pointer kind.  For checked pointers, enforce that pointees merge too.
-     CheckedPointerKind lhsKind = LHSTy->castAs<PointerType>()->getKind();
-     CheckedPointerKind rhsKind = RHSTy->castAs<PointerType>()->getKind();
+     CheckCBox_PointerKind lhsKind = LHSTy->castAs<PointerType>()->getKind();
+     CheckCBox_PointerKind rhsKind = RHSTy->castAs<PointerType>()->getKind();
      if (lhsKind == rhsKind) {
        resultKind = lhsKind;
        // maybe the lhptee and rhptee did not merge because the array types
@@ -8112,9 +8112,9 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
          }
        }
        // For checked pointers, the pointee types must merge.
-       incompatibleCheckedPointer = resultKind != CheckedPointerKind::Unchecked && CompositeTy.isNull();
+       incompatibleCheckedPointer = resultKind != CheckCBox_PointerKind::Unchecked && CompositeTy.isNull();
      }
-     else if (lhsKind == CheckedPointerKind::Unchecked) {
+     else if (lhsKind == CheckCBox_PointerKind::Unchecked) {
        // The rhs must be a checked pointer type. The least upper bound is determined
        // as follows:
        //    Unchecked ^ Array =  Array
@@ -8123,8 +8123,8 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
        // This is provided that the pointee types are compatible or the 
        // pointee types are array types that differ in compatibility only
        // because one is more "checked" than the other.
-       resultKind = (rhsKind == CheckedPointerKind::NtArray) ?
-         CheckedPointerKind::Array : rhsKind;
+       resultKind = (rhsKind == CheckCBox_PointerKind::NtArray) ?
+         CheckCBox_PointerKind::Array : rhsKind;
        // Again, maybe the lhptee and rhptee did not merge because the array types
        // differ in whether they are checked. Only the rhsptee can be checked because
        // otherwise this implicitly casts away checkedness, which is not allowed.
@@ -8133,30 +8133,30 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
        }
        incompatibleCheckedPointer = CompositeTy.isNull();
      }
-     else if (rhsKind == CheckedPointerKind::Unchecked) {
+     else if (rhsKind == CheckCBox_PointerKind::Unchecked) {
        // Same as above, but reversed.
-       resultKind = (lhsKind == CheckedPointerKind::NtArray) ?
-         CheckedPointerKind::Array : lhsKind;
+       resultKind = (lhsKind == CheckCBox_PointerKind::NtArray) ?
+         CheckCBox_PointerKind::Array : lhsKind;
        if (CompositeTy.isNull() && S.Context.pointeeTypesAreAssignable(lhptee, rhptee)) {
          CompositeTy = lhptee;
        }
        incompatibleCheckedPointer = CompositeTy.isNull();
-     } else if ((lhsKind == CheckedPointerKind::NtArray &&
-                 rhsKind == CheckedPointerKind::Array) ||
-                (rhsKind == CheckedPointerKind::NtArray &&
-                 lhsKind == CheckedPointerKind::Array)) {
+     } else if ((lhsKind == CheckCBox_PointerKind::NtArray &&
+                 rhsKind == CheckCBox_PointerKind::Array) ||
+                (rhsKind == CheckCBox_PointerKind::NtArray &&
+                 lhsKind == CheckCBox_PointerKind::Array)) {
        // NtArray can't be the upper bound type because the Array value may not
        // have have a null terminator.
-       resultKind = CheckedPointerKind::Array;
+       resultKind = CheckCBox_PointerKind::Array;
        incompatibleCheckedPointer = CompositeTy.isNull();
      }
-     else if ((lhsKind == CheckedPointerKind::t_nt_array &&
-               rhsKind == CheckedPointerKind::t_array) ||
-              (rhsKind == CheckedPointerKind::t_nt_array &&
-               lhsKind == CheckedPointerKind::t_array)) {
+     else if ((lhsKind == CheckCBox_PointerKind::t_nt_array &&
+               rhsKind == CheckCBox_PointerKind::t_array) ||
+              (rhsKind == CheckCBox_PointerKind::t_nt_array &&
+               lhsKind == CheckCBox_PointerKind::t_array)) {
        // NtArray can't be the upper bound type because the Array value may not
        // have have a null terminator.
-       resultKind = CheckedPointerKind::Array;
+       resultKind = CheckCBox_PointerKind::Array;
        incompatibleCheckedPointer = CompositeTy.isNull();
      }
      else {
@@ -8165,7 +8165,7 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
        // kinds of pointers are not allowed.
        incompatibleCheckedPointer = !S.getLangOpts()._3C;
        // _Array_ptr is less likely to cause spurious downstream warnings.
-       resultKind = CheckedPointerKind::Array;
+       resultKind = CheckCBox_PointerKind::Array;
      }
 
      if (incompatibleCheckedPointer) {
@@ -8266,15 +8266,15 @@ checkConditionalObjectPointersCompatibility(Sema &S, ExprResult &LHS,
   const PointerType *rhpt = RHSTy->castAs<PointerType>();
   QualType lhptee = lhpt->getPointeeType();
   QualType rhptee = rhpt->getPointeeType();
-  CheckedPointerKind lhkind = lhpt->getKind();
-  CheckedPointerKind rhkind = rhpt->getKind();
+  CheckCBox_PointerKind lhkind = lhpt->getKind();
+  CheckCBox_PointerKind rhkind = rhpt->getKind();
 
   // ignore qualifiers on void (C99 6.5.15p3, clause 6)
   if (lhptee->isVoidType() && rhptee->isIncompleteOrObjectType() && 
-      (lhkind == rhkind || rhkind == CheckedPointerKind::Unchecked)) {
+      (lhkind == rhkind || rhkind == CheckCBox_PointerKind::Unchecked)) {
     // Null-terminated void pointers are illegal, so we don't have to worry
     // about that case.
-    assert(lhkind != CheckedPointerKind::NtArray);
+    assert(lhkind != CheckCBox_PointerKind::NtArray);
     // In checked scopes, casting one arm to void pointer to match
     // the other arm is not allowed.
     if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory &&
@@ -8294,10 +8294,10 @@ checkConditionalObjectPointersCompatibility(Sema &S, ExprResult &LHS,
     return destType;
   }
   if (rhptee->isVoidType() && lhptee->isIncompleteOrObjectType() &&
-     (lhkind == rhkind || lhkind == CheckedPointerKind::Unchecked)) {
+     (lhkind == rhkind || lhkind == CheckCBox_PointerKind::Unchecked)) {
     // Null-terminated void pointers are illegal, so we don't have to worry
     // about that case.
-    assert(rhkind != CheckedPointerKind::NtArray);
+    assert(rhkind != CheckCBox_PointerKind::NtArray);
     if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory &&
         lhptee->containsCheckedValue(true) != Type::NoCheckedValue) {
       S.Diag(Loc, diag::err_checkedc_void_pointer_cond) << LHSTy << RHSTy <<
@@ -9172,8 +9172,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   std::tie(rhptee, rhq) =
       cast<PointerType>(RHSType)->getPointeeType().split().asPair();
 
-  CheckedPointerKind lhkind = cast<PointerType>(LHSType)->getKind();
-  CheckedPointerKind rhkind = cast<PointerType>(RHSType)->getKind();
+  CheckCBox_PointerKind lhkind = cast<PointerType>(LHSType)->getKind();
+  CheckCBox_PointerKind rhkind = cast<PointerType>(RHSType)->getKind();
 
   Sema::AssignConvertType ConvTy = Sema::Compatible;
 
@@ -9216,8 +9216,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   // version of void...
 
   // Handle the plain C case (where both pointers unchecked).
-  if (lhkind == CheckedPointerKind::Unchecked &&
-      rhkind == CheckedPointerKind::Unchecked) {
+  if (lhkind == CheckCBox_PointerKind::Unchecked &&
+      rhkind == CheckCBox_PointerKind::Unchecked) {
 
     if (lhptee->isVoidType()) {
       if (rhptee->isIncompleteOrObjectType())
@@ -9239,8 +9239,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   }
 
   // Handle Checked C cases (where one pointer is checked).
-  if (lhkind != CheckedPointerKind::Unchecked ||
-      rhkind != CheckedPointerKind::Unchecked) {
+  if (lhkind != CheckCBox_PointerKind::Unchecked ||
+      rhkind != CheckCBox_PointerKind::Unchecked) {
     // Implicit conversions to checked void pointers.
     // - In unchecked scopes and bounds-safe checked scopes, allow conversions
     // from any pointer to a _Ptr or _Array_ptr void type.
@@ -9250,8 +9250,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     // code would not allow conversions to it, if it were.
     // - Do not have an extension allowing casts from checked function
     // pointers to checked void pointers.
-    if (lhptee->isVoidType() && (lhkind == CheckedPointerKind::Ptr ||
-                                 lhkind == CheckedPointerKind::Array) &&
+    if (lhptee->isVoidType() && (lhkind == CheckCBox_PointerKind::Ptr ||
+                                 lhkind == CheckCBox_PointerKind::Array) &&
         rhptee->isIncompleteOrObjectType()) {
       if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
           && rhptee->containsCheckedValue(true) != Type::NoCheckedValue)
@@ -9259,8 +9259,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
       return ConvTy;
     }
 
-    if (lhptee->isVoidType() && (lhkind == CheckedPointerKind::t_ptr ||
-                                 lhkind == CheckedPointerKind::t_array) &&
+    if (lhptee->isVoidType() && (lhkind == CheckCBox_PointerKind::t_ptr ||
+                                 lhkind == CheckCBox_PointerKind::t_array) &&
         rhptee->isIncompleteOrObjectType()) {
       if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
           && rhptee->containsCheckedValue(true) != Type::NoCheckedValue)
@@ -9280,9 +9280,9 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     // - Do not have an extension allowing casts from checked void pointers
     // to checked function pointers.
     if (rhptee->isVoidType() && lhptee->isIncompleteOrObjectType()) {
-      if (rhkind != CheckedPointerKind::Ptr &&
-          (lhkind == CheckedPointerKind::Ptr ||
-           lhkind == CheckedPointerKind::Array)) {
+      if (rhkind != CheckCBox_PointerKind::Ptr &&
+          (lhkind == CheckCBox_PointerKind::Ptr ||
+           lhkind == CheckCBox_PointerKind::Array)) {
         if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
             && lhptee->containsCheckedValue(true) != Type::NoCheckedValue)
           return Sema::IncompatibleCheckedCVoid;
@@ -9291,9 +9291,9 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     }
 
     if (rhptee->isVoidType() && lhptee->isIncompleteOrObjectType()) {
-      if (rhkind != CheckedPointerKind::t_ptr &&
-          (lhkind == CheckedPointerKind::t_ptr ||
-           lhkind == CheckedPointerKind::t_array)) {
+      if (rhkind != CheckCBox_PointerKind::t_ptr &&
+          (lhkind == CheckCBox_PointerKind::t_ptr ||
+           lhkind == CheckCBox_PointerKind::t_array)) {
         if (S.GetCheckedScopeInfo() == CheckedScopeSpecifier::CSS_Memory
             && lhptee->containsCheckedValue(true) != Type::NoCheckedValue)
           return Sema::IncompatibleCheckedCVoid;
@@ -9312,22 +9312,22 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   //   or _Array_ptr
 
   if (!S.getLangOpts()._3C) {
-    if (rhkind != CheckedPointerKind::Unchecked &&
-        lhkind == CheckedPointerKind::Unchecked)
+    if (rhkind != CheckCBox_PointerKind::Unchecked &&
+        lhkind == CheckCBox_PointerKind::Unchecked)
       return Sema::Incompatible;
 
-    if (lhkind == CheckedPointerKind::NtArray &&
-        rhkind != CheckedPointerKind::NtArray)
+    if (lhkind == CheckCBox_PointerKind::NtArray &&
+        rhkind != CheckCBox_PointerKind::NtArray)
       return Sema::Incompatible;
   }
 
   if (!S.getLangOpts()._3C) {
-    if (rhkind != CheckedPointerKind::Unchecked &&
-        lhkind == CheckedPointerKind::Unchecked)
+    if (rhkind != CheckCBox_PointerKind::Unchecked &&
+        lhkind == CheckCBox_PointerKind::Unchecked)
       return Sema::Incompatible;
 
-    if (lhkind == CheckedPointerKind::t_nt_array &&
-        rhkind != CheckedPointerKind::t_nt_array)
+    if (lhkind == CheckCBox_PointerKind::t_nt_array &&
+        rhkind != CheckCBox_PointerKind::t_nt_array)
       return Sema::Incompatible;
   }
 
@@ -12496,7 +12496,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       else {
         QualType TargetType =
           Context.getPointerType(LCanPointeeTy,
-                                 CheckedPointerKind::Unchecked);
+                                 CheckCBox_PointerKind::Unchecked);
         LHS = ImpCastExprToType(LHS.get(), TargetType, Kind);
         RHS = ImpCastExprToType(RHS.get(), TargetType, Kind);
       }
@@ -14275,14 +14275,14 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   // In a checked scope, the operator produces an array_ptr<T> except for
   // function type. For address-of function type, it produces ptr not array_ptr.
   // In an unchecked scope, it continues to produce (T *).
-  CheckedPointerKind kind;
+  CheckCBox_PointerKind kind;
   if (IsCheckedScope()) {
     if (op->getType()->isFunctionType())
-      kind = CheckedPointerKind::Ptr;
+      kind = CheckCBox_PointerKind::Ptr;
     else
-      kind = CheckedPointerKind::Array;
+      kind = CheckCBox_PointerKind::Array;
   } else
-    kind = CheckedPointerKind::Unchecked;
+    kind = CheckCBox_PointerKind::Unchecked;
 
   return Context.getPointerType(op->getType(), kind);
 }
@@ -15614,7 +15614,7 @@ ExprResult Sema::ActOnAddrLabel(SourceLocation OpLoc, SourceLocation LabLoc,
   TheDecl->markUsed(Context);
   // Create the AST node.  The address of a label always has type 'void*'.
   return new (Context) AddrLabelExpr(OpLoc, LabLoc, TheDecl,
-                                     Context.getPointerType(Context.VoidTy, CheckedPointerKind::Unchecked));
+                                     Context.getPointerType(Context.VoidTy, CheckCBox_PointerKind::Unchecked));
 }
 
 void Sema::ActOnStartStmtExpr() {

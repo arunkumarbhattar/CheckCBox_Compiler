@@ -4144,7 +4144,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue; 
     }
 
-    case tok::kw__t:
     case tok::kw__t_array_ptr:
     case tok::kw__t_nt_array_ptr:
     case tok::kw__t_ptr:
@@ -5325,7 +5324,6 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw__Exists:
   case tok::kw__Unpack:
 
-  case tok::kw__t:
   case tok::kw__t_array_ptr:
   case tok::kw__t_nt_array_ptr:
   case tok::kw__t_ptr:
@@ -5458,8 +5456,6 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw__Ptr:
   case tok::kw__Array_ptr:
   case tok::kw__Nt_array_ptr:
-
-  case tok::kw__t:
   case tok::kw__t_array_ptr:
   case tok::kw__t_nt_array_ptr:
   case tok::kw__t_ptr:
@@ -5638,7 +5634,6 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw__Exists:
   case tok::kw__Unpack:
 
-  case tok::kw__t:
   case tok::kw__t_array_ptr:
   case tok::kw__t_nt_array_ptr:
   case tok::kw__t_ptr:
@@ -7530,9 +7525,9 @@ void Parser::ParseParameterDeclarationClause(
 /// checked to indicate a checked array.
 void Parser::ParseBracketDeclarator(Declarator &D) {
   SourceLocation startLocation = Tok.getLocation();
-  CheckedArrayKind kind = CheckedArrayKind::Unchecked;
+  CheckCBox_ArrayKind kind = CheckCBox_ArrayKind::Unchecked;
   if (Tok.is(tok::kw__Checked)) {
-    kind = CheckedArrayKind::Checked;
+    kind = CheckCBox_ArrayKind::Checked;
     ConsumeToken();
     if (!Tok.is(tok::l_square)) {
       Diag(Tok.getLocation(), diag::err_expected_lbracket_after) << "_Checked";
@@ -7541,7 +7536,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
   }
 
   if (Tok.is(tok::kw__Nt_checked)) {
-    kind = CheckedArrayKind::NtChecked;
+    kind = CheckCBox_ArrayKind::NtChecked;
     ConsumeToken();
     if (!Tok.is(tok::l_square)) {
       Diag(Tok.getLocation(), diag::err_expected_lbracket_after) << "_Nt_checked";
@@ -7917,7 +7912,7 @@ void Parser::ParseCheckedPointerSpecifiers(DeclSpec &DS) {
 ///           _Array_ptr &lt type name &gt
 ///           _Nt_array_ptr &lt type name & gt
 void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
-  assert((Tok.is(tok::kw__t_ptr) || Tok.is(tok::kw__Array_ptr) ||
+  assert((Tok.is(tok::kw__t_ptr) || Tok.is(tok::kw__t_array_ptr) ||
           Tok.is(tok::kw__t_nt_array_ptr)) &&
          "Not a tainted pointer specifier");
   tok::TokenKind Kind = Tok.getKind();

@@ -116,7 +116,7 @@ bool QualType::isConstant(QualType T, const ASTContext &Ctx) {
 //       size is specified by a constant expression that is
 //       value-dependent,
 ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
-                     ArraySizeModifier sm, unsigned tq, CheckedArrayKind k,
+                     ArraySizeModifier sm, unsigned tq, CheckCBox_ArrayKind k,
                      const Expr *sz)
     // Note, we need to check for DependentSizedArrayType explicitly here
     // because we use a DependentSizedArrayType with no size expression as the
@@ -137,7 +137,7 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
       ElementType(et) {
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = sm;
-  ArrayTypeBits.CheckedArrayKind = (unsigned)k;
+  ArrayTypeBits.CheckCBox_ArrayKind = (unsigned)k;
 }
 
 void BoundsAnnotations::Profile(llvm::FoldingSetNodeID &ID,
@@ -205,7 +205,7 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Context, QualType ET,
                                 const llvm::APInt &ArraySize,
                                 const Expr *SizeExpr, ArraySizeModifier SizeMod,
-                                unsigned TypeQuals, CheckedArrayKind kind) {
+                                unsigned TypeQuals, CheckCBox_ArrayKind kind) {
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(ArraySize.getZExtValue());
   ID.AddInteger(SizeMod);
@@ -222,7 +222,7 @@ DependentSizedArrayType::DependentSizedArrayType(const ASTContext &Context,
                                                  unsigned tq,
                                                  SourceRange brackets)
     : ArrayType(DependentSizedArray, et, can, sm, tq,
-                CheckedArrayKind::Unchecked, e),
+                CheckCBox_ArrayKind::Unchecked, e),
       Context(Context), SizeExpr((Stmt*) e), Brackets(brackets) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,

@@ -3238,7 +3238,7 @@ void Parser::ParseDirectNewDeclarator(Declarator &D) {
 
     D.AddTypeInfo(DeclaratorChunk::getArray(0,
                                             /*isStatic=*/false, /*isStar=*/false,
-                                            CheckedArrayKind::Unchecked,
+                                            CheckCBox_ArrayKind::Unchecked,
                                             Size.get(), T.getOpenLocation(),
                                             T.getCloseLocation()),
                   std::move(Attrs), T.getCloseLocation());

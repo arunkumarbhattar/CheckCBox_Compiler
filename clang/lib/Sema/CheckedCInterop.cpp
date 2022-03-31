@@ -43,7 +43,7 @@ QualType Sema::SynthesizeInteropType(QualType Ty, bool isParam) {
   if (const PointerType  *PtrType = Ty->getAs<PointerType>()) {
     if (PtrType->isUnchecked()) {
       ResultType = Context.getPointerType(PtrType->getPointeeType(),
-                                          CheckedPointerKind::Array);
+                                          CheckCBox_PointerKind::Array);
       ResultType.setLocalFastQualifiers(Ty.getCVRQualifiers());
     }
     else {
