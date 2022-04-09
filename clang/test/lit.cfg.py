@@ -110,11 +110,11 @@ if config.clang_staticanalyzer:
         config.available_features.add('z3')
 
 def is_there(name):
-    #from distutils.spawn import find_executable
-    #return find_executable(name) is not None
+    from distutils.spawn import find_executable
+    return find_executable(name) is not None
 
-#if is_there("seahorn"):
-#    config.available_features.add('seahorn')
+if is_there("seahorn"):
+    config.available_features.add('seahorn')
 
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ['FreeBSD']:
