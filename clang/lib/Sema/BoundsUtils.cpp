@@ -1,4 +1,4 @@
-//===----------- BoundsUtils.cpp: Utility functions for bounds ----------===//
+//===----------- Utils.cpp: Utility functions for bounds ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -4144,9 +4144,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue; 
     }
 
-    case tok::kw__t_array_ptr:
-    case tok::kw__t_nt_array_ptr:
-    case tok::kw__t_ptr:
+    case tok::kw__TArray_ptr:
+    case tok::kw__TNt_array_ptr:
+    case tok::kw__TPtr:
     {
       ParseTaintedPointerSpecifiers(DS);
       // Continue to keep the current token from being consumed.
@@ -5324,9 +5324,9 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw__Exists:
   case tok::kw__Unpack:
 
-  case tok::kw__t_array_ptr:
-  case tok::kw__t_nt_array_ptr:
-  case tok::kw__t_ptr:
+  case tok::kw__TArray_ptr:
+  case tok::kw__TNt_array_ptr:
+  case tok::kw__TPtr:
 
     return true;
   }
@@ -5456,9 +5456,9 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw__Ptr:
   case tok::kw__Array_ptr:
   case tok::kw__Nt_array_ptr:
-  case tok::kw__t_array_ptr:
-  case tok::kw__t_nt_array_ptr:
-  case tok::kw__t_ptr:
+  case tok::kw__TArray_ptr:
+  case tok::kw__TNt_array_ptr:
+  case tok::kw__TPtr:
 
     return true;
 
@@ -5634,9 +5634,9 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw__Exists:
   case tok::kw__Unpack:
 
-  case tok::kw__t_array_ptr:
-  case tok::kw__t_nt_array_ptr:
-  case tok::kw__t_ptr:
+  case tok::kw__TArray_ptr:
+  case tok::kw__TNt_array_ptr:
+  case tok::kw__TPtr:
 
     return true;
 
@@ -7912,8 +7912,8 @@ void Parser::ParseCheckedPointerSpecifiers(DeclSpec &DS) {
 ///           _Array_ptr &lt type name &gt
 ///           _Nt_array_ptr &lt type name & gt
 void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
-  assert((Tok.is(tok::kw__t_ptr) || Tok.is(tok::kw__t_array_ptr) ||
-          Tok.is(tok::kw__t_nt_array_ptr)) &&
+  assert((Tok.is(tok::kw__TPtr) || Tok.is(tok::kw__TArray_ptr) ||
+          Tok.is(tok::kw__TNt_array_ptr)) &&
          "Not a tainted pointer specifier");
   tok::TokenKind Kind = Tok.getKind();
   SourceLocation StartLoc = ConsumeToken();
@@ -7953,11 +7953,11 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
   const char *PrevSpec = nullptr;
   unsigned DiagID;
   TypeSpecifierType pointerKind = TST_plainPtr;
-  if (Kind == tok::kw__t_ptr)
+  if (Kind == tok::kw__TPtr)
     pointerKind = TST_t_plainPtr;
-  else if (Kind == tok::kw__t_array_ptr)
+  else if (Kind == tok::kw__TArray_ptr)
     pointerKind = TST_t_arrayPtr;
-  else if (Kind == tok::kw__t_nt_array_ptr)
+  else if (Kind == tok::kw__TNt_array_ptr)
     pointerKind = TST_t_ntarray_Ptr;
 
   if (DS.SetTypeSpecType(pointerKind, StartLoc, PrevSpec,

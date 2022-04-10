@@ -1626,7 +1626,7 @@ protected:
     friend class PointerType;
 
     unsigned : NumTypeBits;
-    unsigned CheckCBox_PointerKind : 2;
+    unsigned CheckCBox_PointerKind : 3;
   };
 
   class ArrayTypeBitfields {

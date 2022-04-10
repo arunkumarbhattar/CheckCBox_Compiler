@@ -712,9 +712,9 @@ KEYWORD(_And                       , KEYCHECKEDC)
 KEYWORD(_Bundled                   , KEYCHECKEDC)
 
 //CheckCBox Extension for tainted types (as of now, ditto)
-KEYWORD(_t_ptr, KEYCHECKEDC)
-KEYWORD(_t_array_ptr, KEYCHECKEDC)
-KEYWORD(_t_nt_array_ptr, KEYCHECKEDC)
+KEYWORD(_TPtr, KEYCHECKEDC)
+KEYWORD(_TArray_ptr, KEYCHECKEDC)
+KEYWORD(_TNt_array_ptr, KEYCHECKEDC)
 
 // Borland Extensions which should be disabled in strict conformance mode.
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)

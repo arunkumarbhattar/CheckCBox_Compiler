@@ -380,8 +380,11 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_wchar:
     case TST_BFloat16:
     case TST_arrayPtr:
+    case TST_t_arrayPtr:
     case TST_plainPtr:
+    case TST_t_plainPtr:
     case TST_ntarrayPtr:
+    case TST_t_ntarray_Ptr:
     case TST_exists:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
