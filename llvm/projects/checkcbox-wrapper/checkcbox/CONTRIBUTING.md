@@ -1,11 +1,11 @@
-# Contributing to Checked C
+# Contributing to CheckCBox
 
-We welcome contributions to the Checked C Project.  Contributions can take many forms depending
+We welcome contributions to the CheckCBox Project.  Contributions can take many forms depending
 on your level of interest:
 
-* Participating in [discussions](https://github.com/microsoft/checkedc/discussions)
+* Participating in [discussions](https://github.com/arunkumarbhattar/checkedc-llvm-project/discussions)
   on the specification and reviewing proposed changes to it.
-* Helping out with the [Checked C clang compiler implementation](https://github.com/Microsoft/checkedc-clang). We could
+* Helping out with the [CheckCBox compiler implementation](https://github.com/arunkumarbhattar/checkedc-llvm-project). We could
  particularly use code reviewers for compiler changes.  There are also a number of self-contained small features that 
  you could implement.
  * Adding test code and samples.
@@ -14,7 +14,7 @@ clarifying wording, adding examples, adding related work, improving the existing
 * Proposing significant new functionality.  We have focused on bounds checking so far, and welcome proposals
 for checking type casts and memory management.
 
-If you choose to contribute code to the [Checked C clang compiler implementation](https://github.com/Microsoft/checkedc-clang),
+If you choose to contribute code to the [CheckCBox clang compiler implementation](https://github.com/arunkumarbhattar/checkedc-llvm-project),
 please follow the guidelines below while submitting PRs:
 - Please break your changes into multiple small PRs rather than submitting one big PR as smaller changes are easier and faster to review.
 - Please place changes to the compiler core and to any other compiler tools in separate PRs.
@@ -32,20 +32,19 @@ to the specification, tests, examples, or implement compiler features.
 
  - To submit changes, please create a personal fork of the appropriate repo.  For specification changes,
    examples, and tests, fork the  [Checked C repo](https://github.com/Microsoft/checkedc).   For compiler
-   changes, fork the [Checked C clang repo](https://github.com/Microsoft/checkedc-clang).
+   changes, fork the [CheckCBox Repo](https://github.com/arunkumarbhattar/checkedc-llvm-project).
 -  Make your changes in  your fork and then make a pull request to merge those changes into  the master branch of the appropriate
    repo.
  - For small changes (such as typos and clarifying wording), you can just directly submit a pull request.
  - For more substantial changes or changes where discussion is likely needed, please use the Github issues 
-   system for the appropriate repo to track your changes.   For the specification, tests, and examples use
- [Checked C issues](https://github.com/Microsoft/checkedc/issues).
-   For compiler implementation issues, use [Checked C clang issues](https://github.com/Microsoft/checkedc-clang/issues). 
+   system for the appropriate repo to track your changes.   For the CheckCBox related issues, use
+ [CheckCBox issues](https://github.com/arunkumarbhattar/checkedc-llvm-project/issues).
  - Please be sure to test your changes before making the pull request. 
 
 ## Licensing
 
 You are free to discuss the specification using the email lists or the
-[Checked C issues](https://github.com/Microsoft/checkedc/issues) system. These are public forums, so do not
+[CheckCBox issues](https://github.com/arunkumarbhattar/checkedc-llvm-project/issues) system. These are public forums, so do not
 share confidential information.
 
 ### Specification

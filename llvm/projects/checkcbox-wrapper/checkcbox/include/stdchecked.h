@@ -1,9 +1,9 @@
 #ifndef __STDCHECKED_H
 #define __STDCHECKED_H
 
-#define ptr _Ptr
-#define array_ptr _Array_ptr
-#define nt_array_ptr _Nt_array_ptr
+#define ptr _TPtr
+#define array_ptr _TArray_ptr
+#define nt_array_ptr _TNt_array_ptr
 #define checked _Checked
 #define nt_checked _Nt_checked
 #define unchecked _Unchecked
