@@ -1527,6 +1527,13 @@ def err_single_bounds_expr_allowed : Error<
 def err_single_itype_expr_allowed : Error<
   "only one itype expression allowed">;
 
+//CheckCBox Parsing errors
+def err_invalid_tainted_ptr_checked : Error<
+  "Tainted Pointers cannot point to Checked pointers">;
+
+def err_invalid_tainted_ptr_unchecked : Error<
+  "Tainted Pointer cannot point to Un-Checked pointers">;
+
 // generic function declaration parsing error.
 def err_forany_type_variable_declaration_expected : Error<
   "expected list of type variables">;

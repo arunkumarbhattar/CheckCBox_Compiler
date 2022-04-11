@@ -7921,6 +7921,20 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
     return;
   }
 
+
+  if((Tok.is(tok::kw__Array_ptr)) ||
+     (Tok.is(tok::kw__Nt_array_ptr)) || (Tok.is(tok::kw__Ptr)))
+  {
+    Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+    return;
+  }
+
+  if(NextToken().is(tok::star))
+  {
+    Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
+    return;
+  }
+
   TypeResult Result = ParseTypeName();
   if (Result.isInvalid()) {
     SkipUntil(tok::greater, StopAtSemi);
