@@ -7921,17 +7921,26 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
     return;
   }
 
-
   if((Tok.is(tok::kw__Array_ptr)) ||
      (Tok.is(tok::kw__Nt_array_ptr)) || (Tok.is(tok::kw__Ptr)))
   {
     Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+    SkipUntil(tok::r_paren, StopAtSemi);
     return;
   }
 
   if(NextToken().is(tok::star))
   {
     Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  if(NextToken().is(tok::kw__Checked)
+       || (NextToken().is(tok::kw__Nt_checked)))
+  {
+    Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+    SkipUntil(tok::r_paren, StopAtSemi);
     return;
   }
 
@@ -7960,6 +7969,31 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
     // we know this will fail and generate a diagnostic
     ExpectAndConsume(tok::greater);
     return;
+  }
+
+  if(Tok.is(tok::kw__Checked) || (Tok.is(tok::kw__Nt_checked)))
+  {
+    /// from the point of detection of Checked identified
+    /// till the detection of semi-colon, keep looking for
+    /// a greater than symbol or a greatergreater symbol.
+    /// If you find any of the above two symbols, it means Checked specifier
+    /// is nested within the tainted pointer nesting
+    /// then you gotta bail out with an error.
+
+    int curr_loc = 0;
+    while(!NextToken(curr_loc).is(tok::semi))
+    {
+      if(NextToken(curr_loc).is(tok::greater)
+           || (NextToken(curr_loc).is(tok::greatergreater)))
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return;
+      }
+      else {
+        curr_loc = curr_loc + 1;
+      }
+    }
   }
 
   DS.SetRangeEnd(EndLoc);

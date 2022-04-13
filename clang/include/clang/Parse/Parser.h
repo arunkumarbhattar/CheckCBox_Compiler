@@ -823,6 +823,12 @@ public:
     return PP.LookAhead(0);
   }
 
+  /// NextTokenAtLoc - This peeks "Loc" tokens ahead and returns it without
+  /// consuming it
+  const Token &NextToken(int Loc) {
+    return PP.LookAhead(Loc);
+  }
+
   /// getTypeAnnotation - Read a parsed type out of an annotation token.
   static TypeResult getTypeAnnotation(const Token &Tok) {
     if (!Tok.getAnnotationValue())

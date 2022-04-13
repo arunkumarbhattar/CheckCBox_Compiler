@@ -41,7 +41,7 @@ void handle_error(int err) {
 
 // This signature for main is exactly what we want here,
 // it also means any uses of argv[i] are checked too!
-int main(int argc, array_ptr<char*> argv : count(argc)) {
+int main(int argc, _Array_ptr<char*> argv : count(argc)) {
 
   // Set up the handler for a failing bounds check.  Currently the Checked C
   // clang implementation raises a SIGILL when a bounds check fails.  This
