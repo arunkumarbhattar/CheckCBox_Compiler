@@ -2956,6 +2956,8 @@ private:
   bool ParseForanySpecifierHelper(DeclSpec &DS, Scope::ScopeFlags S);
   void ParseItypeforanySpecifier(DeclSpec &DS);
   void ParseTaintedPointerSpecifiers(DeclSpec &DS);
+  bool CheckCurrentTaintedPointerSanity();
+
   ExprResult ParseAlignArgument(SourceLocation Start,
                                 SourceLocation &EllipsisLoc);
   void ParseAlignmentSpecifier(ParsedAttributes &Attrs,

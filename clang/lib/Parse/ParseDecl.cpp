@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <unordered_set>
 
 using namespace clang;
 
@@ -7906,7 +7907,86 @@ void Parser::ParseCheckedPointerSpecifiers(DeclSpec &DS) {
         Actions.getASTContext().getPrintingPolicy()))
         Diag(StartLoc, DiagID) << PrevSpec;
 }
+bool Parser::CheckCurrentTaintedPointerSanity()
+{
+  std::stack<tok::TokenKind> Stack_of_Braces;
+  //Currently you should be pointing to <
+  //load this and continue until your stack is empty
+  Stack_of_Braces.push(Tok.getKind());
+  int curr_tok = 1;
+  while(!Stack_of_Braces.empty())
+  {
+    if(Stack_of_Braces.size()==1)
+    {
+      /// This means we are in the relevant context
+      if((GetLookAheadToken(curr_tok).is(tok::kw__Array_ptr)) ||
+          (GetLookAheadToken(curr_tok).is(tok::kw__Nt_array_ptr)) ||
+          (GetLookAheadToken(curr_tok).is(tok::kw__Ptr)))
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return false;
+      }
 
+      if(GetLookAheadToken(curr_tok).is(tok::star))
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return false;
+      }
+
+      if(GetLookAheadToken(curr_tok).is(tok::kw__Checked)
+          || (GetLookAheadToken(curr_tok).is(tok::kw__Nt_checked))) {
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return false;
+      }
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::less)) {
+      Stack_of_Braces.push(GetLookAheadToken(curr_tok).getKind());
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::lessless)) {
+      int no_of_tokens = 2;
+      while((!Stack_of_Braces.empty()) && (no_of_tokens--))
+      {
+        Stack_of_Braces.push(tok::less);
+      }
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::lesslessless)) {
+      int no_of_tokens = 3;
+      while((!Stack_of_Braces.empty()) && (no_of_tokens--))
+      {
+        Stack_of_Braces.push(tok::less);
+      }
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::greater)) {
+      Stack_of_Braces.pop();
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::greatergreater)) {
+      int no_of_tokens = 2;
+      while((!Stack_of_Braces.empty()) && (no_of_tokens--))
+      {
+        Stack_of_Braces.pop();
+      }
+    }
+
+    if(GetLookAheadToken(curr_tok).is(tok::greatergreatergreater)) {
+      int no_of_tokens = 3;
+      while((!Stack_of_Braces.empty()) && (no_of_tokens--))
+      {
+        Stack_of_Braces.pop();
+      }
+    }
+
+    curr_tok = curr_tok + 1;
+  }
+  return true;
+}
 /// [Checked C]  new pointer types:
 ///           _Ptr &lt type name &gt
 ///           _Array_ptr &lt type name &gt
@@ -7917,30 +7997,15 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
          "Not a tainted pointer specifier");
   tok::TokenKind Kind = Tok.getKind();
   SourceLocation StartLoc = ConsumeToken();
+  /// Call a subroutine that performs lexical sanity check for Checked
+  /// and Unchecked pointers within this tainted pointer scope
+  /// Returns False: Is Sanity Fails
+  /// ERROR DIAG Message printed within this function
+
+  if(!CheckCurrentTaintedPointerSanity())
+      return;
+
   if (ExpectAndConsume(tok::less)) {
-    return;
-  }
-
-  if((Tok.is(tok::kw__Array_ptr)) ||
-     (Tok.is(tok::kw__Nt_array_ptr)) || (Tok.is(tok::kw__Ptr)))
-  {
-    Diag(Tok, diag::err_invalid_tainted_ptr_checked);
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return;
-  }
-
-  if(NextToken().is(tok::star))
-  {
-    Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return;
-  }
-
-  if(NextToken().is(tok::kw__Checked)
-       || (NextToken().is(tok::kw__Nt_checked)))
-  {
-    Diag(Tok, diag::err_invalid_tainted_ptr_checked);
-    SkipUntil(tok::r_paren, StopAtSemi);
     return;
   }
 
@@ -7969,31 +8034,6 @@ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
     // we know this will fail and generate a diagnostic
     ExpectAndConsume(tok::greater);
     return;
-  }
-
-  if(Tok.is(tok::kw__Checked) || (Tok.is(tok::kw__Nt_checked)))
-  {
-    /// from the point of detection of Checked identified
-    /// till the detection of semi-colon, keep looking for
-    /// a greater than symbol or a greatergreater symbol.
-    /// If you find any of the above two symbols, it means Checked specifier
-    /// is nested within the tainted pointer nesting
-    /// then you gotta bail out with an error.
-
-    int curr_loc = 0;
-    while(!NextToken(curr_loc).is(tok::semi))
-    {
-      if(NextToken(curr_loc).is(tok::greater)
-           || (NextToken(curr_loc).is(tok::greatergreater)))
-      {
-        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return;
-      }
-      else {
-        curr_loc = curr_loc + 1;
-      }
-    }
   }
 
   DS.SetRangeEnd(EndLoc);

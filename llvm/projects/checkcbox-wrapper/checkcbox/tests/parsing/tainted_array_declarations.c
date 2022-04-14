@@ -177,8 +177,8 @@ extern int (*incomplete_array_of_unchecked_ptr_to_func _Checked[])(int x, int y)
 extern int (*nullterm_incomplete_array_of_unchecked_ptr_to_func _Nt_checked[])(int x, int y);
 _TPtr<int(int x, int  y)> array_of_ptr_to_func _Checked[10];
 extern _TPtr<int(int x, int  y)> array_of_ptr_to_func _Checked[];
-_TPtr<int(int x _Checked[10], int y)> aptr2 _Checked[10];
-_TPtr<int(int x _Nt_checked[10], int y)> aptr3 _Nt_checked[10];
+_TPtr<int(int x _Checked[10], int y)> aptr2 _Checked[10]; // expected-error {{Tainted Pointers cannot point to Checked pointers}}
+_TPtr<int(int x _Nt_checked[10], int y)> aptr3 _Nt_checked[10];// expected-error {{Tainted Pointers cannot point to Checked pointers}}
 
 //
 // Declaring pointers to arrays and arrays of pointers
@@ -214,20 +214,20 @@ _TArray_ptr<int>(*unchecked_ptr_to_null_term_array_of_array_ptrs) _Nt_checked[5]
 /*ALL OF THE BELOW MUST FAIL*/
 // Declare ptr to checked arrays of pointers
 _TPtr<int *_Checked[5]> ptr_to_array_of_unchecked_ptrs; // expected-error {{Tainted Pointer cannot point to Un-Checked pointers}}
-_TPtr<_TPtr<int> _Checked[5]> ptr_to_array_of_ptrs; // expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
-_TPtr<_TArray_ptr<int> _Checked[5]> ptr_to_array_of_array_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
-_TPtr<_TArray_ptr<int> _Nt_checked[5]> ptr_to_nullterm_array_of_array_ptrs; // expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
-_TPtr<_TNt_array_ptr<int> _Nt_checked[5]> ptr_to_nullterm_array_of_nullterm_array_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
+_TPtr<_TPtr<int> _Checked[5]> ptr_to_array_of_ptrs; // expected-error {{Tainted Pointers cannot point to Checked pointers}} 
+_TPtr<_TArray_ptr<int> _Checked[5]> ptr_to_array_of_array_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} 
+_TPtr<_TArray_ptr<int> _Nt_checked[5]> ptr_to_nullterm_array_of_array_ptrs; // expected-error {{Tainted Pointers cannot point to Checked pointers}} 
+_TPtr<_TNt_array_ptr<int> _Nt_checked[5]> ptr_to_nullterm_array_of_nullterm_array_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} 
 
 // Declare ptr to a checked array of function pointers
-_TPtr<int (*_Checked[5])(int x, int y)> ptr_to_array_of_unchecked_func_ptrs;
-_TPtr<_TPtr<int (int x, int y)>_Checked [5]> ptr_to_array_of_checked_func_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
-_TPtr<_TPtr<int (int x, int y)>_Nt_checked [5]> ptr_to_nullterm_array_of_checked_func_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
+_TPtr<int (*_Checked[5])(int x, int y)> ptr_to_array_of_unchecked_func_ptrs; //expected-error {{Tainted Pointer cannot point to Un-Checked pointers}}
+_TPtr<_TPtr<int (int x, int y)>_Checked [5]> ptr_to_array_of_checked_func_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} 
+_TPtr<_TPtr<int (int x, int y)>_Nt_checked [5]> ptr_to_nullterm_array_of_checked_func_ptrs;// expected-error {{Tainted Pointers cannot point to Checked pointers}} 
 // Make parameter and return types be ptrs too.
 _TPtr<_TPtr<_TPtr<int>(_TPtr<int> x, _TPtr<int> y)>_Checked[5]>// expected-error {{Tainted Pointers cannot point to Checked pointers}}
-ptr_to_array_of_checked_func_ptrs_with_ptr_parameters; //expected-error {{expected a type}}
+ptr_to_array_of_checked_func_ptrs_with_ptr_parameters; 
 _TPtr<_TPtr<_TPtr<int> (_TPtr<int> x, _TPtr<int> y)>_Nt_checked[5]>// expected-error {{Tainted Pointers cannot point to Checked pointers}}
-  ptr_to_nullterm_array_of_checked_func_ptrs_with_ptr_parameters; //expected-error {{expected a type}}
+  ptr_to_nullterm_array_of_checked_func_ptrs_with_ptr_parameters; 
 
 
 //
@@ -251,6 +251,8 @@ void parse_operators_with_types(void) {
     int s2 = sizeof(_TPtr<int _Checked[5]>);// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{type name requires a specifier or qualifier}} expected-error {{expected ')'}}
     int s3 = sizeof(_TArray_ptr<int _Checked[5]>);// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{type name requires a specifier or qualifier}} expected-error {{expected ')'}}
     int s4 = sizeof(_TPtr<int>_Checked[5]);
+    int s44 = sizeof(_TPtr<int>*);
+    int s45 = sizeof(_TPtr<_TPtr<int>*>*); //expected-error {{Tainted Pointer cannot point to Un-Checked pointers}} expected-error {{type name requires a specifier or qualifier}} expected-error {{expected ')'}}
     int s5 = sizeof(_TArray_ptr<int> _Checked[5]);
 
     // null-terminated versions.
@@ -289,6 +291,6 @@ void parse_operators_with_types(void) {
     parr = (int (*)_Checked[5]) ((int (*)_Checked[]) &arr); //expected-error {{use of undeclared identifier 'parr'; did you mean 'arr'?}} expected-error {{array type 'int _Checked[5]' is not assignable}}
     // ptr to function type
     _TPtr<int (int x, int y)> pfunc = (_TPtr<int (int x, int y)>) 0;
-    _TPtr<_TPtr<int (int x, int y)>_Checked [5]> ptr_to_pfunc_arr = (_TPtr<_TPtr<int (int x, int y)>_Checked[5]>) 0;// expected-error {{Tainted Pointers cannot point to Checked pointers}} expected-error {{expected a type}}
+    _TPtr<_TPtr<int (int x, int y)>_Checked [5]> ptr_to_pfunc_arr = (_TPtr<_TPtr<int (int x, int y)>_Checked[5]>) 0;// expected-error {{Tainted Pointers cannot point to Checked pointers}}
 }
 
