@@ -3150,6 +3150,11 @@ namespace {
           break;
         case Expr::BinaryOperatorClass:
         case Expr::CompoundAssignOperatorClass:
+          if(IsTaintedAssignmentValid(cast<BinaryOperator>(S), CSS)
+              == false)
+          {
+            return CreateBoundsEmpty();
+          }
           ResultBounds = CheckBinaryOperator(cast<BinaryOperator>(S),
                                              CSS, State);
           break;
@@ -3342,6 +3347,35 @@ namespace {
       return false;
     }
 
+    bool IsTaintedAssignmentValid(BinaryOperator *E, CheckedScopeSpecifier CSS)
+    {
+      Expr *LHS = E->getLHS();
+      Expr *RHS = E->getRHS();
+
+      BinaryOperatorKind Op = E->getOpcode();
+
+      if(BinaryOperator::isAssignmentOp(Op))
+      {
+        if(LHS->getType()->isTaintedPointerType())
+        {
+          if(RHS->getType()->isCheckedPointerType())
+          {
+            S.Diag(RHS->getBeginLoc(),
+                   diag::err_incompatible_tainted_pointer_2_checked_assignment)
+                << RHS->getSourceRange();
+            return false;
+          }
+          else if(RHS->getType()->isPointerType())
+          {
+            S.Diag(RHS->getBeginLoc(),
+                   diag::err_incompatible_tainted_pointer_2_unchecked_assignment)
+                << RHS->getSourceRange();
+            return false;
+          }
+        }
+      }
+      return true;
+    }
   // Methods to infer bounds for an expression that produces an rvalue.
 
   private:

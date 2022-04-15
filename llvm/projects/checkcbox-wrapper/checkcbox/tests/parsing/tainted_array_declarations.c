@@ -241,7 +241,7 @@ typedef _TPtr<int> checked_arr_ty _Checked[5];
 typedef _TPtr<int> incomplete_checked_array_ty _Checked[];
 typedef _TPtr<int> nullterm_checked_arr_ty _Nt_checked[5];
 typedef _TPtr<int> nullterm_incomplete_checked_array_ty _Nt_checked[];
-
+typedef _Ptr<_TPtr<int>_Checked[5]>* tmp;
 //
 // Operators that take types
 //

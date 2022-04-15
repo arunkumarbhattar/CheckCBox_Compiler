@@ -7051,9 +7051,17 @@ inline bool Type::isCheckedPointerPtrType() const {
   return false;
 }
 
-inline bool Type::isTaintedPointerType() const {
+inline bool Type::isTaintedPointerPtrType() const {
   if (const PointerType *T = getAs<PointerType>())
     return T->getKind() == CheckCBox_PointerKind::t_ptr;
+  return false;
+}
+
+inline bool Type::isTaintedPointerType() const {
+  if (const PointerType *T = getAs<PointerType>())
+    return T->getKind() == CheckCBox_PointerKind::t_ptr ||
+           T->getKind() == CheckCBox_PointerKind::t_array ||
+           T->getKind() == CheckCBox_PointerKind::t_nt_array;
   return false;
 }
 

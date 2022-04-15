@@ -9487,6 +9487,12 @@ def warn_falloff_noreturn_function : Warning<
   "function declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
 
+// CheckCBox specific error messages
+def err_incompatible_tainted_pointer_2_checked_assignment : Error<
+  "Tainted-pointers cannot point to Checked-pointers">;
+def err_incompatible_tainted_pointer_2_unchecked_assignment : Error<
+  "Tainted-pointers cannot point to Unchecked-pointers">;
+
 // Checked C specific error messages about returns
 def err_return_missing_expr : Error<
   "non-void function %0 must return a value in a checked scope">;
