@@ -1,72 +1,55 @@
-# The Checked C clang repo
+# The CheckCBox clang repo
 
 This repo contains a version of the LLVM/Clang toolchain that is being modified
-to support the Secure Software Development Project (SSDP) fork of Checked C. Checked C extends
+to support the CheckCBox fork of Checked C. Checked C extends
 C with checking to detect or prevent common programming errors such as out-of-bounds memory accesses.
 The SSDP fork of the Checked
 C specification is available at the
 [SSDP Checked C repo](https://github.com/secure-sw-dev/checkedc).
 
-## Announcements
+## Trying out CheckCBox
 
-### Source code update
+Programmers are welcome to use CheckCBox as it is being implemented.  You will
+have to build your own copy of the compiler. 
+Below are the directions on how to do it.
+```
+cd <WORK_DIR>
+```
+```
+git clone https://github.com/arunkumarbhattar/CheckCBox_Compiler.git src
+```
 
-On Feb 19, 2021 we updated the checkedc-clang sources to upstream release_110,
-specifically [this](https://github.com/llvm/llvm-project/commit/2e10b7a39b930ef8d9c4362509d8835b221fbc0a) commit.
+The Checked C language tests live in a folder within llvm/project. Change to the src/llvm/projects/checkedc-wrapper directory and clone the Checked C repo.
 
-On Feb 18, 2020 we updated the checkedc-clang sources to upstream release_90,
-specifically [this](https://github.com/llvm/llvm-project/commit/c89a3d78f43d81b9cff7b9248772ddf14d21b749) commit.
+```
+git clone https://github.com/Microsoft/checkedc
+```
 
-## Trying out Checked C
+Now change to src/llvm/projects/checkcbox-wrapper directory and clone the checkcbox repo
 
-Programmers are welcome to use Checked C as it is being implemented.  You will
-have to build your own copy of the compiler. For
-directions on how to do this, see the [Checked C clang
-wiki](https://github.com/secure-sw-dev/checkedc-llvm-project/wiki). The compiler user
-manual is
-[here](https://github.com/secure-sw-dev/checkedc-llvm-project/wiki/Checked-C-clang-user-manual).
-For more information on Checked C and pointers to example code, see our
-[Wiki](https://github.com/secure-sw-dev/checkedc/wiki).
+```
+git clone https://github.com/arunkumarbhattar/checkcbox.git
+```
+Now create a build directory generate the Cmake files 
 
-You can use `clangd` built from this repository to get similar IDE support for
-editing Checked C code as upstream `clangd` provides for C code. For example,
-you can jump to definition/references and get a real-time display of errors and
-warnings, etc. Here is [more information about Checked C's
-`clangd`](clang/docs/checkedc/clangd.md).
-
-## 3C: Semi-automated conversion of C code to Checked C
-
-This repository includes a tool called 3C that partially automates the
-conversion of C code to Checked C. Quick documentation links:
-
-* [General information](clang/docs/checkedc/3C/README.md), including development
-  status and how to contribute
-
-* [Build instructions](clang/docs/checkedc/3C/INSTALL.md)
-
-* [Usage instructions for the `3c` command-line tool](clang/tools/3c/README.md)
-
-## More information
-
-For more information on the SSDP Checked C clang compiler, see the [SSDP LLVM Project
-wiki](https://github.com/secure-sw-dev/checkedc-llvm-project/wiki).
-
-## Build Status
-
-Automated builds are not currently available.
-
-## Contributing
-
-We welcome contributions to the Checked C project. To get involved in the
-project, see [Contributing to Checked
-C](https://github.com/secure-sw-dev/checkedc/blob/main/CONTRIBUTING.md).
-
-For code contributions, we follow the standard [Github
-workflow](https://guides.github.com/introduction/flow/). See [Contributing to
-Checked C](https://github.com/secure-sw-dev/checkedc/blob/main/CONTRIBUTING.md)
-for more detail.
-
-## Code of conduct
-
-This project has adopted a
-[code of conduct](https://github.com/secure-sw-dev/checkedc/blob/main/CODE_OF_CONDUCT.md).
+```
+cd <WORK_DIR>/build
+cmake -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_LINKER=/usr/bin/gold DCMAKE_BUILD_TYPE=Debug -DLLVM_LIT_ARGS=-v -DLLVM_PARALLEL_LINK_JOBS=5 <WORK_DIR>/src/llvm
+```
+Now you are all set to build the target 
+Execute any of the following command in the build directory 
+```
+ninja // this command will build the compiler and all other supporting tools
+```
+```
+ninja clang //this command will only build the compiler
+```
+```
+ninja check-checkcbox // This command will run all the sanity test cases for checkcbox project 
+```
+```
+ninja check-checkedc // This command will run all the sanity test cases for checked project 
+```
+```
+ninja check-clang // This command will run all the sanity test cases for clang frontend
+```
