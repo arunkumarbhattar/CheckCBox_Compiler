@@ -53,3 +53,13 @@ ninja check-checkedc // This command will run all the sanity test cases for chec
 ```
 ninja check-clang // This command will run all the sanity test cases for clang frontend
 ```
+## Testing Playground for CheckCBox
+
+After the checkcbox tests have been cloned in the src/llvm/projects/checkcbox-wrapper directory by performing git clone https://github.com/arunkumarbhattar/checkcbox.git in the above mentioned directory
+
+You are presented with a comprehensive test case suit that test various aspets of checkcbox.
+
+Please switch to https://github.com/arunkumarbhattar/checkcbox/tree/main/tests directory in your respective project folder.
+
+From here you can switch to directory of any particular sub-feature you are interested in and add/modify code to test the operation of your interest.
+After the file has been changed, you can directory compile the target "check-checkcbox" in your build directory to test the changes.
