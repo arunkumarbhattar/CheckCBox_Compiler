@@ -14240,11 +14240,26 @@ ExprResult TreeTransform<Derived>::TransformBoundsCastExpr(BoundsCastExpr *E) {
   if (!getDerived().AlwaysRebuild() && Type == E->getTypeInfoAsWritten() &&
       SubExpr.get() == E->getSubExpr() && Bounds == E->getBoundsExpr())
     return E;
+  tok::TokenKind tok_kind ;
+  if(E->getCastKind() == CK_DynamicPtrBounds)
+  {
+    tok_kind = tok::TokenKind::kw__Dynamic_bounds_cast;
+  }
+  else if (E->getCastKind() == CK_AssumePtrBounds)
+  {
+    tok_kind = tok::TokenKind::kw__Assume_bounds_cast;
+  }
+  else if(E->getCastKind() == CK_TaintedDynamicPtrBounds)
+  {
+    tok_kind = tok::TokenKind::kw__Tainted_Dynamic_bounds_cast;
+  }
+  else if(E->getCastKind() == CK_TaintedAssumePtrBounds)
+  {
+    tok_kind = tok::TokenKind::kw__Tainted_Assume_bounds_cast;
+  }
 
   return getDerived().RebuildBoundsCastExpr(
-      E->getOperatorLoc(), (E->getCastKind() == CK_DynamicPtrBounds)
-                               ? tok::TokenKind::kw__Dynamic_bounds_cast
-                               : tok::TokenKind::kw__Assume_bounds_cast,
+      E->getOperatorLoc(), tok_kind,
       Type, E->getAngleBrackets(), E->getRParenLoc(), SubExpr.get(), Bounds);
 }
 

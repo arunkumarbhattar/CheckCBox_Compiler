@@ -667,6 +667,13 @@ bool InverseUtil::IsCastExprInvertible(Sema &S, Expr *LValue, CastExpr *E) {
       assert(Temp);
       return IsInvertible(S, LValue, Temp->getSubExpr());
     }
+    case CastKind::CK_TaintedDynamicPtrBounds:
+    case CastKind::CK_TaintedAssumePtrBounds: {
+      CHKCBindTemporaryExpr *Temp =
+          dyn_cast<CHKCBindTemporaryExpr>(E->getSubExpr());
+      assert(Temp);
+      return IsInvertible(S, LValue, Temp->getSubExpr());
+    }
     // Potentially non-narrowing casts, depending on type sizes
     case CastKind::CK_IntegralToPointer:
     case CastKind::CK_PointerToIntegral:

@@ -1479,6 +1479,10 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__Dynamic_bounds_cast:
     Res = ParseBoundsCastExpression();
     break;
+  case tok::kw__Tainted_Assume_bounds_cast:
+  case tok::kw__Tainted_Dynamic_bounds_cast:
+    Res = ParseTaintedPtrBoundsCastExpression();
+    break;
   case tok::kw__Return_value:
     Res = ParseReturnValueExpression();
     break;
@@ -3967,6 +3971,87 @@ ExprResult Parser::ParseBoundsCastExpression() {
         RAngleBracketLoc, LParenLoc, RParenLoc, E1.get(), Bounds);
   else
     Result = Actions.ActOnBoundsCastExprSingle(
+        getCurScope(), OpLoc, Kind, LAngleBracketLoc, Ty.get(),
+        RAngleBracketLoc, LParenLoc, RParenLoc, E1.get());
+
+  return Result;
+}
+
+ExprResult Parser::ParseTaintedPtrBoundsCastExpression() {
+  tok::TokenKind Kind = Tok.getKind();
+  const char *CastName = nullptr;
+  switch (Kind) {
+  default:
+    llvm_unreachable("Unknown CheckedC Bounds Cast!");
+  case tok::kw__Tainted_Dynamic_bounds_cast:
+    CastName = "_Tainted_Dynamic_bounds_cast";
+    break;
+  case tok::kw__Tainted_Assume_bounds_cast:
+    CastName = "_Tainted_Assume_bounds_cast";
+    break;
+  }
+
+  SourceLocation OpLoc = ConsumeToken();
+  SourceLocation LAngleBracketLoc = Tok.getLocation();
+
+  if (ExpectAndConsume(tok::less, diag::err_expected_less_after, CastName))
+    return ExprError();
+
+  TypeResult Ty = ParseTypeName();
+
+  if (Ty.isInvalid()) {
+    SkipUntil(tok::greater, StopAtSemi);
+    return ExprError();
+  }
+
+  SourceLocation RAngleBracketLoc = Tok.getLocation();
+  if (ExpectAndConsume(tok::greater))
+    return ExprError(Diag(RAngleBracketLoc, diag::note_matching) << tok::less);
+
+  SourceLocation LParenLoc, RParenLoc;
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+
+  if (T.expectAndConsume(diag::err_expected_lparen_after, CastName))
+    return ExprError();
+
+  LParenLoc = T.getOpenLocation();
+
+  // Parsing e1 or e1, bounds-expression
+  ExprResult E1(true);
+  BoundsExpr *Bounds = nullptr;
+
+  E1 = Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+  if (E1.isInvalid()) {
+
+    return ExprError();
+  }
+
+  if (Tok.is(tok::comma)) {
+    ConsumeToken();
+    ExprResult ParsedBounds = ParseBoundsExpression();
+    bool Error = ParsedBounds.isInvalid();
+    if (!Error && StartsRelativeBoundsClause(Tok))
+      if (ParseRelativeBoundsClauseForDecl(ParsedBounds))
+        Error = true;
+
+    if (Error) {
+      SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+      return ExprError();
+    } else
+      Bounds = cast<BoundsExpr>(ParsedBounds.get());
+  }
+
+  // Match the ')'.
+  T.consumeClose();
+  RParenLoc = T.getCloseLocation();
+
+  ExprResult Result(true);
+  if (Bounds)
+    Result = Actions.ActOnBoundsTaintedCastExprBounds(
+        getCurScope(), OpLoc, Kind, LAngleBracketLoc, Ty.get(),
+        RAngleBracketLoc, LParenLoc, RParenLoc, E1.get(), Bounds);
+  else
+    Result = Actions.ActOnBoundsTaintedCastExprSingle(
         getCurScope(), OpLoc, Kind, LAngleBracketLoc, Ty.get(),
         RAngleBracketLoc, LParenLoc, RParenLoc, E1.get());
 

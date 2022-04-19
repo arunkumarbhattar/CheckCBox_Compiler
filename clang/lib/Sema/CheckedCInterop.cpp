@@ -47,7 +47,7 @@ QualType Sema::SynthesizeInteropType(QualType Ty, bool isParam) {
       ResultType.setLocalFastQualifiers(Ty.getCVRQualifiers());
     }
     else {
-      assert(PtrType->isChecked());
+      assert(PtrType->isChecked() || PtrType->isTaintedPointerType());
       ResultType = Ty;
     }
   }

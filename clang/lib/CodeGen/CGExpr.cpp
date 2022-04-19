@@ -4708,6 +4708,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
 
   case CK_DynamicPtrBounds:
   case CK_AssumePtrBounds:
+  case CK_TaintedDynamicPtrBounds:
+  case CK_TaintedAssumePtrBounds:
     return MakeNaturalAlignAddrLValue(
         EmitBoundsCast(const_cast<CastExpr *>(E)), E->getType());
 
@@ -5521,6 +5523,12 @@ llvm::Value *CodeGenFunction::EmitBoundsCast(CastExpr *CE) {
     Addr = Address(Result, Align);
   }
   if (Kind == CK_DynamicPtrBounds) {
+    BoundsCastExpr *BCE = cast<BoundsCastExpr>(CE);
+    EmitDynamicBoundsCastCheck(Addr,
+                               BCE->getNormalizedBoundsExpr(),
+                               BCE->getSubExprBoundsExpr());
+  }
+  else if (Kind == CK_TaintedDynamicPtrBounds){
     BoundsCastExpr *BCE = cast<BoundsCastExpr>(CE);
     EmitDynamicBoundsCastCheck(Addr,
                                BCE->getNormalizedBoundsExpr(),

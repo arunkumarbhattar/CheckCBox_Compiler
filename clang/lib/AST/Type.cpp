@@ -4396,34 +4396,35 @@ bool Type::hasSizedVLAType() const {
   return false;
 }
 
-// isOrContainsCheckedType - check whether a type is a checked type or is a
+// isOrContainsCheckedOrTaintedType - check whether a type is a checked or tainted type or is a
 // constructed type (array, pointer, function) that uses a checked type.
-bool Type::isOrContainsCheckedType() const {
+bool Type::isOrContainsCheckedOrTaintedType() const {
   const Type *current = CanonicalType.getTypePtr();
   switch (current->getTypeClass()) {
     case Type::Pointer: {
       const PointerType *ptr = cast<PointerType>(current);
-      if (ptr->isCheckedPointerType()) {
+      if ((ptr->isCheckedPointerType())
+              || (ptr->isTaintedPointerType())){
         return true;
       }
-      return ptr->getPointeeType()->isOrContainsCheckedType();
+      return ptr->getPointeeType()->isOrContainsCheckedOrTaintedType();
     }
     case Type::ConstantArray:
     case Type::DependentSizedArray:
     case Type::IncompleteArray:
     case Type::VariableArray: {
      const ArrayType *arr = cast<ArrayType>(current);
-      if (arr->isChecked())
+      if ((arr->isChecked()) || (arr->isTainted()))
         return true;
-      return arr->getElementType()->isOrContainsCheckedType();
+      return arr->getElementType()->isOrContainsCheckedOrTaintedType();
     }
     case Type::FunctionProto: {
       const FunctionProtoType *fpt =  cast<FunctionProtoType>(current);
-      if (fpt->getReturnType()->isOrContainsCheckedType())
+      if (fpt->getReturnType()->isOrContainsCheckedOrTaintedType())
         return true;
       unsigned int paramCount = fpt->getNumParams();
       for (unsigned int i = 0; i < paramCount; i++) {
-        if (fpt->getParamType(i)->isOrContainsCheckedType())
+        if (fpt->getParamType(i)->isOrContainsCheckedOrTaintedType())
           return true;
       }
       return false;
@@ -4449,7 +4450,7 @@ bool Type::isOrContainsUncheckedType() const {
     case Type::IncompleteArray:
     case Type::VariableArray: {
      const ArrayType *arr = cast<ArrayType>(current);
-      if (!arr->isChecked())
+      if ((!arr->isChecked()) && (!arr->isTainted()))
         return true;
       return arr->getElementType()->isOrContainsUncheckedType();
     }

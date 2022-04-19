@@ -2143,6 +2143,7 @@ public:
   bool isDependentSizedArrayType() const;
   /// \brief whether this is a Checked C checked array type.
   bool isCheckedArrayType() const; // includes _Nt_checked arrays
+  bool isTaintedArrayType() const;
   bool isExactlyCheckedArrayType() const;
   bool isNtCheckedArrayType() const;
   bool isUncheckedArrayType() const;
@@ -2315,7 +2316,7 @@ public:
   bool hasUnnamedOrLocalType() const;
 
   /// \brief Whether this type is or contains a checked type
-  bool isOrContainsCheckedType() const;
+  bool isOrContainsCheckedOrTaintedType() const;
 
   enum CheckedValueKind {
     NoCheckedValue,
@@ -2801,7 +2802,8 @@ public:
   }
 
   bool isNTChecked() const { return getKind() == CheckCBox_PointerKind::NtArray; }
-  bool isChecked() const { return getKind() != CheckCBox_PointerKind::Unchecked; }
+  bool isChecked() const { return ((getKind() != CheckCBox_PointerKind::Unchecked)
+                                    && (!isTaintedPointerType()));}
   bool isUnchecked() const { return getKind() == CheckCBox_PointerKind::Unchecked; }
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -3061,7 +3063,7 @@ public:
   }
   bool isChecked() const { return getKind() != CheckCBox_ArrayKind::Unchecked; }
   bool isUnchecked() const { return getKind() == CheckCBox_ArrayKind::Unchecked; }
-  bool isTainted() const {return getKind() == CheckCBox_ArrayKind::Tainted;}
+  bool isTainted() const {return isTaintedPointerType();}
 
   bool isExactlyChecked() const {
     return  getKind() == CheckCBox_ArrayKind::Checked;
@@ -7046,8 +7048,7 @@ inline bool Type::isUncheckedPointerType() const {
 
 inline bool Type::isCheckedPointerPtrType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::Ptr ||
-           T->getKind() == CheckCBox_PointerKind::t_ptr;
+    return T->getKind() == CheckCBox_PointerKind::Ptr;
   return false;
 }
 
@@ -7068,9 +7069,7 @@ inline bool Type::isTaintedPointerType() const {
 inline bool Type::isCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
     return T->getKind() == CheckCBox_PointerKind::Array ||
-           T->getKind() == CheckCBox_PointerKind::NtArray ||
-           T->getKind() == CheckCBox_PointerKind::t_array ||
-           T->getKind() == CheckCBox_PointerKind::t_nt_array;
+           T->getKind() == CheckCBox_PointerKind::NtArray;
   return false;
 }
 
@@ -7083,8 +7082,7 @@ inline bool Type::isTaintedPointerArrayType() const {
 
 inline bool Type::isExactlyCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::Array ||
-           T->getKind() == CheckCBox_PointerKind::t_ptr;
+    return T->getKind() == CheckCBox_PointerKind::Array;
   return false;
 }
 
@@ -7096,8 +7094,7 @@ inline bool Type::isExactlyTaintedPointerArrayType() const {
 
 inline bool Type::isCheckedPointerNtArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::NtArray ||
-           T->getKind() == CheckCBox_PointerKind::t_nt_array;
+    return T->getKind() == CheckCBox_PointerKind::NtArray;
   return false;
 }
 
@@ -7192,6 +7189,13 @@ inline bool Type::isDependentSizedArrayType() const {
 inline bool Type::isCheckedArrayType() const {
   if (const ArrayType *T = dyn_cast<ArrayType>(CanonicalType))
     return T->isChecked();
+  else
+    return false;
+}
+
+inline bool Type::isTaintedArrayType() const {
+  if (const ArrayType *T = dyn_cast<ArrayType>(CanonicalType))
+    return T->isTainted();
   else
     return false;
 }

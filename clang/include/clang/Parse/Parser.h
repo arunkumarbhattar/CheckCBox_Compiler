@@ -2086,8 +2086,9 @@ private:
   void SkipInvalidBoundsExpr(SourceLocation CurrentLoc);
 
   ExprResult ParseBoundsCastExpression();
+  ExprResult ParseTaintedPtrBoundsCastExpression();
 
-  ExprResult ParseBoundsExpression();
+      ExprResult ParseBoundsExpression();
   ExprResult ParseGenericFunctionApplication(ExprResult TypeFunc, SourceLocation Loc);
 
   using TypeArgVector = SmallVector<TypeArgument, 4>;

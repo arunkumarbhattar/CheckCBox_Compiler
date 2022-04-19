@@ -715,6 +715,8 @@ KEYWORD(_Bundled                   , KEYCHECKEDC)
 KEYWORD(_TPtr, KEYCHECKEDC)
 KEYWORD(_TArray_ptr, KEYCHECKEDC)
 KEYWORD(_TNt_array_ptr, KEYCHECKEDC)
+KEYWORD(_Tainted_Assume_bounds_cast , KEYCHECKEDC)
+KEYWORD(_Tainted_Dynamic_bounds_cast , KEYCHECKEDC)
 
 // Borland Extensions which should be disabled in strict conformance mode.
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)

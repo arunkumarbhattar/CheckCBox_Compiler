@@ -11201,11 +11201,11 @@ def err_unchecked_array_of_checked_array : Error<
 
 def err_bounds_declaration_unchecked_local_pointer : Error<
   "bounds declaration not allowed for local variable with "
-  "unchecked pointer type">;
+  "untainted or unchecked pointer type">;
 
 def err_bounds_declaration_unchecked_local_array : Error<
   "bounds declaration not allowed for local variable with "
-  "unchecked array type">;
+  "untainted or unchecked array type">;
 
 def err_bounds_safe_interface_type_annotation_local_variable : Error<
   "bounds-safe interface type annotation not allowed for local variable">;
@@ -11548,8 +11548,14 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_bounds_cast_expected_ptr_or_unchecked : Error<
     "expected _Ptr or * type">;
 
+  def err_bounds_cast_expected_tainted_ptr : Error<
+    "expected _TPtr">;
+
   def err_bounds_cast_expected_array_ptr : Error<
     "expected _Array_ptr type">;
+
+  def err_bounds_cast_expected_tainted_array_ptr : Error<
+       "expected _TArray_ptr type">;
 
   def warn_bounds_declaration_invalid : Warning<
     "cannot prove declared bounds for '%1' are valid after "

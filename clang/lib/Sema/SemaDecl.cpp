@@ -4146,15 +4146,15 @@ static SourceLocation getInteropLocation(const DeclaratorDecl *D) {
     return SourceLocation();
 }
 
-/// \brief Diagnose Checked C-specific compatibility issues for function decls.
+/// \brief Diagnose CheckCBox-specific compatibility issues for function decls.
 /// Handle cases where (1) there are mismatched bounds declarations for
 /// parameters or return types or (2) cases where one declaration has no
 /// prototype and the other one has a prototype that uses a checked type or has
 /// a bounds interface (Checked C compatibility rules are described in
 /// Section 5.5 of the Checked C language extension specification).
 ////
-/// Returns true if it diagnosed a Checked C bounds-only problem or a
-/// problem involving the Checked C extensions to type compatibility.
+/// Returns true if it diagnosed a CheckCBox bounds-only problem or a
+/// problem involving the CheckCBox extensions to type compatibility.
 bool Sema::DiagnoseCheckedCFunctionCompatibility(FunctionDecl *New,
                                                  FunctionDecl *Old) {
   bool OldHasPrototype = Old->hasPrototype();
@@ -4300,7 +4300,7 @@ bool Sema::CheckedCFunctionDeclCompatibility(FunctionDecl *Old,
   return !Context.typesAreCompatible(OldType, NewType);
 }
 
-/// \brief Checked C specific merging of function declarations.  Returns true
+/// \brief CheckCBox specific merging of function declarations.  Returns true
 /// if there was an error, false otherwise.
 bool Sema::CheckedCMergeFunctionDecls(FunctionDecl *New, FunctionDecl *Old) {
   // Check for mismatches between the new function declaration and the old
@@ -10502,6 +10502,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   // Checked C - type restrictions on declarations in checked blocks.
+  // Tainted Pointers are allowed in checked blocks
   // Check the function return value type.   Parameters are handled
   // separately by checking on variable declarations.
   for (unsigned I = 0, E = NewFD->getNumParams(); I != E; ++I) {
@@ -13336,7 +13337,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       }
     }
 
-    // Checked C: automatic variables with (1) type _Ptr or (2) a bounds
+    // CheckCBox: automatic variables with (1) type _Ptr or (2) type _TPtr
+    // or (3) a bounds
     // declaration and not having an array type must be initialized.
     //
     // Static variables are initialized to 0 if there is no initializer.
@@ -13352,7 +13354,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (InCheckedScope && Var->hasInteropTypeExpr())
         Ty = Var->getInteropType();
 
-      if (Ty->isCheckedPointerPtrType() && !getLangOpts()._3C)
+      if ((Ty->isCheckedPointerPtrType() || Ty->isTaintedPointerPtrType() )
+          && !getLangOpts()._3C)
         Diag(Var->getLocation(), diag::err_initializer_expected_for_ptr)
           << Var;
       else if (B && !B->isInvalid() && !B->isUnknown() &&
@@ -14762,8 +14765,8 @@ static bool checkBoundsDeclWithTypeAnnotation(Sema &S, QualType DeclaredTy,
     Errors |= Annot_Illegal_Type;
   }
 
-  // Make sure that the annotation type is a checked type.
-  if (!(Errors & Annot_Illegal_Type) && !AnnotTy->isOrContainsCheckedType()) {
+  // Make sure that the annotation type is a checked or tainted type.
+  if (!(Errors & Annot_Illegal_Type) && !AnnotTy->isOrContainsCheckedOrTaintedType()) {
     S.Diag(AnnotTyLoc,
            diag::err_typecheck_bounds_type_annotation_must_be_checked_type);
     Errors |= Annot_Unchecked;
@@ -14818,7 +14821,7 @@ static bool checkBoundsDeclWithBoundsExpr(Sema &S, QualType Ty,
   // problems to more specific problems.   We don't want to suggest
   // fixes that will not work because there's a more general problem.
 
-  if (Ty->isCheckedPointerPtrType())
+  if ((Ty->isCheckedPointerPtrType()) || (Ty->isTaintedPointerPtrType()))
     // _Ptr types cannot have bounds expressions
     DiagId = IsReturnAnnots ? diag::err_typecheck_ptr_return_with_bounds
                             : diag::err_typecheck_ptr_decl_with_bounds;
@@ -14916,7 +14919,8 @@ bool Sema::DiagnoseBoundsDeclType(QualType Ty, DeclaratorDecl *D,
 
   if (IType && BE && !BE->isInvalid() && (!D || !D->isInvalidDecl())) {
      QualType QT = IType->getType();
-     if (!QT.isNull() && QT->isCheckedPointerPtrType()) {
+     if (!QT.isNull() && ((QT->isCheckedPointerPtrType())
+                          || (QT->isTaintedPointerPtrType()))) {
        isError = true;
        if (D) {
          Diag(BE->getBeginLoc(),
@@ -14930,7 +14934,7 @@ bool Sema::DiagnoseBoundsDeclType(QualType Ty, DeclaratorDecl *D,
   return isError;
 }
 
-// Attach a Checked C bounds annotations to a declaration.  If there are no
+// Attach a CheckCBox bounds annotations to a declaration.  If there are no
 // bounds annotation, Annots is null.  (This method needs to be called even when
 // bounds annotations are omitted for a declaration because there may be a
 // default bounds expression for a type).
@@ -14991,9 +14995,11 @@ void Sema::ActOnBoundsDecl(DeclaratorDecl *D, BoundsAnnotations Annots,
     }
 
     if (BoundsExpr) {
-      if (Ty->isPointerType() && !Ty->isCheckedPointerType())
+      if (Ty->isPointerType() && !Ty->isCheckedPointerType()
+          && !Ty->isTaintedPointerType())
         DiagId = diag::err_bounds_declaration_unchecked_local_pointer;
-      else if (Ty->isArrayType() && !Ty->isCheckedArrayType())
+      else if (Ty->isArrayType() && !Ty->isCheckedArrayType()
+               && !Ty->isTaintedPointerArrayType())
         DiagId = diag::err_bounds_declaration_unchecked_local_array;
 
       if (DiagId) {
@@ -15050,7 +15056,7 @@ void Sema::ActOnBoundsDecl(DeclaratorDecl *D, BoundsAnnotations Annots,
   D->setBoundsExpr(getASTContext(), BoundsExpr);
   D->setInteropTypeExpr(getASTContext(), IType);
 
-  // if this is a member bounds dedclaration, update information mapping
+  // if this is a member bounds declaration, update information mapping
   // members to what bounds declarations depend upon them.
   if (FieldDecl *FD = dyn_cast<FieldDecl>(D))
     TrackMemberBoundsDependences(FD, BoundsExpr);
@@ -15081,6 +15087,9 @@ void Sema::InferBoundsAnnots(QualType Ty, BoundsAnnotations &Annots, bool IsPara
     if (!BoundsExpr)
       if (Ty->isCheckedPointerNtArrayType() || (IType &&
                    IType->getType()->isCheckedPointerNtArrayType()))
+        BoundsExpr = Context.getPrebuiltCountZero();
+      else if (Ty->isTaintedPointerNtArrayType()
+               || (IType && IType->getType()->isTaintedPointerNtArrayType()))
         BoundsExpr = Context.getPrebuiltCountZero();
   }
 
