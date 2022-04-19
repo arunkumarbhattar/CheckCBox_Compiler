@@ -3086,6 +3086,10 @@ void CastOperation::CheckBoundsCast(tok::TokenKind kind) {
     Kind = CK_AssumePtrBounds;
   else if (kind == tok::kw__Dynamic_bounds_cast)
     Kind = CK_DynamicPtrBounds;
+  else if(kind == tok::kw__Tainted_Assume_bounds_cast)
+    Kind = CK_TaintedAssumePtrBounds;
+  else if(kind == tok::kw__Tainted_Dynamic_bounds_cast)
+    Kind = CK_TaintedDynamicPtrBounds;
 
   // Checked C - No C-style casts to unchecked pointer/array type or variadic
   // type in a checked block.

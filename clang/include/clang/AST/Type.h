@@ -7046,8 +7046,7 @@ inline bool Type::isUncheckedPointerType() const {
 
 inline bool Type::isCheckedPointerPtrType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::Ptr ||
-           T->getKind() == CheckCBox_PointerKind::t_ptr;
+    return T->getKind() == CheckCBox_PointerKind::Ptr;
   return false;
 }
 
@@ -7068,9 +7067,7 @@ inline bool Type::isTaintedPointerType() const {
 inline bool Type::isCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
     return T->getKind() == CheckCBox_PointerKind::Array ||
-           T->getKind() == CheckCBox_PointerKind::NtArray ||
-           T->getKind() == CheckCBox_PointerKind::t_array ||
-           T->getKind() == CheckCBox_PointerKind::t_nt_array;
+           T->getKind() == CheckCBox_PointerKind::NtArray;
   return false;
 }
 
@@ -7083,8 +7080,7 @@ inline bool Type::isTaintedPointerArrayType() const {
 
 inline bool Type::isExactlyCheckedPointerArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::Array ||
-           T->getKind() == CheckCBox_PointerKind::t_ptr;
+    return T->getKind() == CheckCBox_PointerKind::Array;
   return false;
 }
 
@@ -7096,8 +7092,7 @@ inline bool Type::isExactlyTaintedPointerArrayType() const {
 
 inline bool Type::isCheckedPointerNtArrayType() const {
   if (const PointerType *T = getAs<PointerType>())
-    return T->getKind() == CheckCBox_PointerKind::NtArray ||
-           T->getKind() == CheckCBox_PointerKind::t_nt_array;
+    return T->getKind() == CheckCBox_PointerKind::NtArray;
   return false;
 }
 

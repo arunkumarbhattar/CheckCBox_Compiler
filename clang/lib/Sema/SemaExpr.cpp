@@ -16138,6 +16138,35 @@ ExprResult Sema::ActOnBoundsCastExprBounds(
                              SourceRange(LParenLoc, RParenLoc), E1, Bounds);
 }
 
+ExprResult Sema::ActOnBoundsTaintedCastExprBounds(
+    Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
+    SourceLocation LAngleBracketLoc, ParsedType D,
+    SourceLocation RAngleBracketLoc,
+    SourceLocation LParenLoc, SourceLocation RParenLoc, Expr *E1,
+    BoundsExpr *Bounds) {
+  TypeSourceInfo *CastTInfo;
+
+  QualType DestTy = GetTypeFromParser(D, &CastTInfo);
+  SourceLocation TypeLoc =
+      CastTInfo ? (CastTInfo->getTypeLoc()).getBeginLoc() : LAngleBracketLoc;
+
+  if (CheckBoundsCastBaseType(E1))
+    return ExprError();
+
+  if (!DestTy->isTaintedPointerArrayType()) {
+    Diag(TypeLoc, diag::err_bounds_cast_expected_array_ptr);
+    return ExprError();
+  } else if (Bounds->isElementCount() && DestTy->isVoidPointerType()) {
+    Diag(Bounds->getBeginLoc(),
+         diag::err_typecheck_void_pointer_count_bounds_cast);
+    return ExprError();
+  }
+
+  return BuildBoundsCastExpr(OpLoc, Kind, CastTInfo,
+                             SourceRange(LAngleBracketLoc, RAngleBracketLoc),
+                             SourceRange(LParenLoc, RParenLoc), E1, Bounds);
+}
+
 ExprResult Sema::ActOnBoundsCastExprSingle(
     Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
     SourceLocation LAngleBracketLoc, ParsedType D,
@@ -16160,6 +16189,44 @@ ExprResult Sema::ActOnBoundsCastExprSingle(
       Bounds = Context.getPrebuiltCountOne();
   } else {
     Diag(TypeLoc, diag::err_bounds_cast_expected_ptr_or_unchecked);
+    return ExprError();
+  }
+
+  return BuildBoundsCastExpr(OpLoc, Kind, CastTInfo,
+                             SourceRange(LAngleBracketLoc, RAngleBracketLoc),
+                             SourceRange(LParenLoc, RParenLoc), E1,
+                             Bounds);
+}
+
+ExprResult Sema::ActOnBoundsTaintedCastExprSingle(
+    Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
+    SourceLocation LAngleBracketLoc, ParsedType D,
+    SourceLocation RAngleBracketLoc,
+    SourceLocation LParenLoc, SourceLocation RParenLoc, Expr *E1) {
+  TypeSourceInfo *CastTInfo;
+  BoundsExpr *Bounds;
+
+  QualType DestTy = GetTypeFromParser(D, &CastTInfo);
+  SourceLocation TypeLoc =
+      CastTInfo ? (CastTInfo->getTypeLoc()).getBeginLoc() : LAngleBracketLoc;
+
+  if (CheckBoundsCastBaseType(E1))
+    return ExprError();
+
+  if(DestTy->isUncheckedPointerType())
+  {
+    Diag(TypeLoc, diag::err_bounds_cast_expected_tainted_ptr);
+    return ExprError();
+  }
+
+  if (DestTy->isTaintedPointerPtrType()) {
+    if (DestTy->isVoidPointerType())
+      Bounds = Context.getPrebuiltByteCountOne();
+    else
+      Bounds = Context.getPrebuiltCountOne();
+
+  } else {
+    Diag(TypeLoc, diag::err_bounds_cast_expected_tainted_ptr);
     return ExprError();
   }
 

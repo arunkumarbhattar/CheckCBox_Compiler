@@ -11548,8 +11548,14 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_bounds_cast_expected_ptr_or_unchecked : Error<
     "expected _Ptr or * type">;
 
+  def err_bounds_cast_expected_tainted_ptr : Error<
+    "expected _TPtr">;
+
   def err_bounds_cast_expected_array_ptr : Error<
     "expected _Array_ptr type">;
+
+  def err_bounds_cast_expected_tainted_array_ptr : Error<
+       "expected _TArray_ptr type">;
 
   def warn_bounds_declaration_invalid : Warning<
     "cannot prove declared bounds for '%1' are valid after "

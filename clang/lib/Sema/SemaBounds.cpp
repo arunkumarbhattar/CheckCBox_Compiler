@@ -3845,7 +3845,8 @@ namespace {
       // - bounds(lb, ub):  If the declared bounds of the cast operation are
       // (e2, e3),  a runtime check that lb <= e2 && e3 <= ub is inserted
       // during code generation.
-      if (CK == CK_DynamicPtrBounds || CK == CK_AssumePtrBounds) {
+      if (CK == CK_DynamicPtrBounds || CK == CK_AssumePtrBounds || CK == CK_TaintedDynamicPtrBounds
+          || CK == CK_TaintedAssumePtrBounds) {
         CHKCBindTemporaryExpr *TempExpr = dyn_cast<CHKCBindTemporaryExpr>(SubExpr);
         assert(TempExpr);
 
@@ -3858,7 +3859,7 @@ namespace {
                                               CastKind::CK_BitCast,
                                               TempUse, true);
 
-        if (CK == CK_AssumePtrBounds)
+        if ((CK == CK_AssumePtrBounds) || (CK == CK_TaintedAssumePtrBounds))
           return BoundsUtil::ExpandToRange(S, SubExprAtNewType, E->getBoundsExpr());
 
         BoundsExpr *DeclaredBounds = E->getBoundsExpr();
@@ -6171,6 +6172,8 @@ namespace {
         }
         case CastKind::CK_DynamicPtrBounds:
         case CastKind::CK_AssumePtrBounds:
+        case CastKind::CK_TaintedDynamicPtrBounds:
+        case CastKind::CK_TaintedAssumePtrBounds:
           llvm_unreachable("unexpected rvalue bounds cast");
         default:
           return BoundsUtil::CreateBoundsAlwaysUnknown(S);

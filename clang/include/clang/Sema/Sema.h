@@ -5763,7 +5763,20 @@ public:
                             SourceLocation LParenLoc, SourceLocation RParenLoc,
                             Expr *E1, BoundsExpr *ParsedBounds);
 
+  ExprResult
+  ActOnBoundsTaintedCastExprBounds(Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
+                                   SourceLocation LAnagleBracketLoc, ParsedType D,
+                                   SourceLocation RAngleBracketLoc,
+                                   SourceLocation LParenLoc, SourceLocation RParenLoc,
+                                   Expr *E1, BoundsExpr *ParsedBounds);
+
   ExprResult ActOnBoundsCastExprSingle(
+      Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
+      SourceLocation LAnagleBracketLoc, ParsedType D,
+      SourceLocation RAngleBracketLoc,
+      SourceLocation LParenLoc, SourceLocation RParenLoc, Expr *E1);
+
+  ExprResult ActOnBoundsTaintedCastExprSingle(
       Scope *S, SourceLocation OpLoc, tok::TokenKind Kind,
       SourceLocation LAnagleBracketLoc, ParsedType D,
       SourceLocation RAngleBracketLoc,
