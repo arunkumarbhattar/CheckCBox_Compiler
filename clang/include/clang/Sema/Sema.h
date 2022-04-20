@@ -12015,7 +12015,11 @@ public:
 
     /// Incompatible - We reject this conversion outright, it is invalid to
     /// represent it in the AST.
-    Incompatible
+    Incompatible,
+
+    /// IncompatibleTaintedAssignment - We Reject this conversion outright,
+    /// it is invalid to represent it in the AST.
+    IncompatibleTaintedAssignment
   };
 
   /// DiagnoseAssignmentResult - Emit a diagnostic, if required, for the

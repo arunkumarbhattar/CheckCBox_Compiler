@@ -9153,7 +9153,19 @@ static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
   }
   return false;
 }
-
+bool isTaintedAssignmentValid(CheckCBox_PointerKind &lhkind, CheckCBox_PointerKind &rhkind)
+{
+  if((lhkind == CheckCBox_PointerKind::t_nt_array
+      || lhkind == CheckCBox_PointerKind::t_array
+      || lhkind == CheckCBox_PointerKind::t_ptr)
+      && (rhkind != CheckCBox_PointerKind::t_nt_array
+          && rhkind != CheckCBox_PointerKind::t_array
+          && rhkind != CheckCBox_PointerKind::t_ptr))
+  {
+      return false;
+  }
+  return true;
+}
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
@@ -9176,6 +9188,13 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   CheckCBox_PointerKind rhkind = cast<PointerType>(RHSType)->getKind();
 
   Sema::AssignConvertType ConvTy = Sema::Compatible;
+
+  //Check if Non-Tainted Pointers are being assigned to Tainted Pointers
+  if(!isTaintedAssignmentValid(lhkind, rhkind))
+  {
+    ConvTy = Sema::IncompatibleTaintedAssignment;
+    return ConvTy;
+  }
 
   // C99 6.5.16.1p1: This following citation is common to constraints
   // 3 & 4 (below). ...and the type *pointed to* by the left has all the
@@ -17056,6 +17075,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     return true;
   }
   case Incompatible:
+  case IncompatibleTaintedAssignment:
     if (maybeDiagnoseAssignmentToFunction(*this, DstType, SrcExpr)) {
       if (Complained)
         *Complained = true;

@@ -423,13 +423,13 @@ void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
         OS << "_Nt_array_ptr<";
         break;
       case CheckCBox_PointerKind::t_ptr:
-        OS << "_t_ptr";
+        OS << "_TPtr<";
         break;
       case CheckCBox_PointerKind::t_array:
-        OS << "_t_array_ptr";
+        OS << "_TArray_ptr<";
         break;
       case CheckCBox_PointerKind::t_nt_array:
-        OS << "_t_nt_array_ptr";
+        OS << "_TNt_array_ptr<";
         break;
     }
     print(T->getPointeeType(), OS, StringRef());

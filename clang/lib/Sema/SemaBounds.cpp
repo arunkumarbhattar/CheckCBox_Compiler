@@ -3819,7 +3819,8 @@ namespace {
       // _Ptr is invalid, that will be diagnosed separately.
       if (E->getStmtClass() == Stmt::ImplicitCastExprClass ||
           E->getStmtClass() == Stmt::CStyleCastExprClass) {
-        if (E->getType()->isCheckedPointerPtrType())
+        if ((E->getType()->isCheckedPointerPtrType())
+            || (E->getType()->isTaintedPointerPtrType()))
           ResultBounds = CreateTypeBasedBounds(E, E->getType(), false, false);
         else
           ResultBounds = RValueCastBounds(E, SubExprTargetBounds,
