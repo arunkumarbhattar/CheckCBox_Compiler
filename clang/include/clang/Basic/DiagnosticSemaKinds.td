@@ -11526,6 +11526,14 @@ def err_bounds_type_annotation_lost_checking : Error<
     "%0 cannot be cast to %1 in a checked scope because "
     "%0 might not point to a null-terminated array">;
 
+  def err_checked_scope_no_cast_to_nt_array_ptr : Error<
+    "%0 cannot be cast to %1 in because "
+    "%0 might not point to a null-terminated array">;
+
+  def err_untainted_cast_to_tainted : Error<
+    "Untainted Pointer %0 cannot be cast to Tainted Pointer %1 "
+    "Address pointed by %0 should not be exposed to Unchecked Region">;
+
   def err_checked_on_non_function : Error<
   "%select{'_Unchecked'|'_Checked _Bounds_only|'_Checked'}0 "
   "can only appear on functions">;
