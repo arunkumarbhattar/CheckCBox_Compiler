@@ -2958,6 +2958,29 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope) {
     }
   }
 
+  //CheckCBox - Non-Tainted Pointers Cannot be Cast to Tainted Pointers
+  if (DestType->isTaintedPointerType()) {
+    if (!SrcType->isTaintedPointerType()) {
+      Self.Diag(SrcExpr.get()->getExprLoc(),
+                diag::err_untainted_cast_to_tainted)
+          << SrcType << DestType << SrcExpr.get()->getSourceRange();
+      SrcExpr = ExprError();
+      return;
+    }
+  }
+
+  // Disallow cast from other Tainted Pointer types to TNt_array_ptr because
+  // the SrcType might not point to a NULL-terminated array.
+  if (DestType->isPointerType() && DestType->isTaintedPointerNtArrayType()) {
+    if (SrcType->isPointerType() && !SrcType->isTaintedPointerNtArrayType()) {
+      Self.Diag(SrcExpr.get()->getExprLoc(),
+                diag::err_tainted_no_cast_to_nt_array_ptr)
+          << SrcType << DestType << SrcExpr.get()->getSourceRange();
+      SrcExpr = ExprError();
+      return;
+    }
+  }
+
   // Checked C - No C-style casts to unchecked pointer/array type or variadic
   // type in a checked block.
   if (IsCheckedScope) {
@@ -2974,7 +2997,7 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope) {
       return;
     }
 
-    // Disallow cast from other Checked Pointer types to nt_arary_ptr because 
+    // Disallow cast from other Checked Pointer types to Nt_array_ptr because
     // the SrcType might not point to a NULL-terminated array.
     if (DestType->isPointerType() && DestType->isCheckedPointerNtArrayType()) {
         if (SrcType->isPointerType() && !SrcType->isCheckedPointerNtArrayType()) {
@@ -3105,6 +3128,7 @@ void CastOperation::CheckBoundsCast(tok::TokenKind kind) {
       return;
     }
   }
+
 }
 
 ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
