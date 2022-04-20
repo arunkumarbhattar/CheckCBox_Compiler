@@ -2613,6 +2613,11 @@ namespace {
       ProofFailure Cause;
       bool IsStaticPtrCast = (Src->getType()->isCheckedPointerPtrType() &&
                               Cast->getType()->isCheckedPointerPtrType());
+      if(!IsStaticPtrCast)
+      {
+        IsStaticPtrCast = (Src->getType()->isTaintedPointerPtrType() &&
+                           Cast->getType()->isTaintedPointerPtrType());
+      }
       ProofStmtKind Kind = IsStaticPtrCast ? ProofStmtKind::StaticBoundsCast :
                              ProofStmtKind::BoundsDeclaration;
       FreeVariableListTy FreeVars;
@@ -3554,6 +3559,13 @@ namespace {
             RHS->getType()->isCheckedPointerPtrType()) {
           // ptr<T> to ptr<T> assignment, no obligation to check assignment bounds
         }
+
+        if (!E->isCompoundAssignmentOp() &&
+            LHSType->isTaintedPointerPtrType() &&
+            RHS->getType()->isTaintedPointerPtrType()) {
+          // TPtr<T> to TPtr<T> assignment, no obligation to check assignment bounds
+        }
+
         else if (LHSType->isCheckedPointerType() ||
                   LHSType->isIntegerType() ||
                   IsBoundsSafeInterfaceAssignment(LHSType, RHS)) {
@@ -5950,7 +5962,7 @@ namespace {
       // Infer target bounds for variables without array type.
 
       bool IsParam = isa<ParmVarDecl>(DRE->getDecl());
-      if (DRE->getType()->isCheckedPointerPtrType())
+      if ((DRE->getType()->isCheckedPointerPtrType()) || (DRE->getType()->isTaintedPointerPtrType()))
         return CreateTypeBasedBounds(DRE, DRE->getType(), IsParam, false);
 
       if (!VD)
@@ -6084,17 +6096,17 @@ namespace {
       // it is a function pointer type, in which case it has no required
       // bounds.
 
-      if (Ty->isCheckedPointerPtrType()) {
+      if ((Ty->isCheckedPointerPtrType()) || (Ty->isTaintedPointerPtrType())){
         if (Ty->isFunctionPointerType())
           BE = CreateBoundsEmpty();
         else if (Ty->isVoidPointerType())
           BE = Context.getPrebuiltByteCountOne();
         else
           BE = Context.getPrebuiltCountOne();
-      } else if (Ty->isCheckedArrayType()) {
+      } else if ((Ty->isCheckedArrayType()) || (Ty->isTaintedArrayType())){
         assert(IsParam && IsBoundsSafeInterface && "unexpected checked array type");
         BE = CreateBoundsForArrayType(Ty);
-      } else if (Ty->isCheckedPointerNtArrayType()) {
+      } else if ((Ty->isCheckedPointerNtArrayType()) || (Ty->isTaintedPointerNtArrayType())) {
         BE = Context.getPrebuiltCountZero();
       }
    
@@ -6213,7 +6225,8 @@ namespace {
                                CHKCBindTemporaryExpr *ResultName,
                                CheckedScopeSpecifier CSS) {
       BoundsExpr *ReturnBounds = nullptr;
-      if (CE->getType()->isCheckedPointerPtrType()) {
+      if ((CE->getType()->isCheckedPointerPtrType())
+              || (CE->getType()->isTaintedPointerPtrType())){
         if (CE->getType()->isVoidPointerType())
           ReturnBounds = Context.getPrebuiltByteCountOne();
         else
