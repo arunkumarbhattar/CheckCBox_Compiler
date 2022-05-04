@@ -3766,6 +3766,39 @@ namespace {
       return ResultBounds;
     }
 
+    bool IsCastExpressionValid(CastKind &CK, Expr *SubExpr)
+    {
+
+      /// RULE 1: A Non-Tainted pointer cannot be passed as part of
+      /// an expression in a _Tainted_Dynamic_bounds_cast Operation
+      /// RULE 2: A Tainted pointer cannot be passed as part of
+      /// an expression in a _Dynamic_bounds_cast Operation
+      /// RULE 3: A Non-Tainted pointer cannot be passed as part of
+      /// an expression in a _Tainted_Assume_bounds_cast Operation
+      /// RULE 4: A Tainted pointer cannot be passed as part of
+      /// an expression in a _Assume_bounds_cast Operation
+
+      if((CK == clang::CK_DynamicPtrBounds) ||
+          (CK == clang::CK_AssumePtrBounds))
+      {
+        if(SubExpr->getType()->isTaintedPointerType() == true)
+        {
+          S.Diag(SubExpr->getBeginLoc(), diag::err_bounds_expression_tainted_pointers_not_expected);
+          return false;
+        }
+      }
+      else if((CK == clang::CK_TaintedDynamicPtrBounds) ||
+               (CK == clang::CK_TaintedAssumePtrBounds))
+      {
+        if(SubExpr->getType()->isTaintedPointerType() != true)
+        {
+          S.Diag(SubExpr->getBeginLoc(), diag::err_bounds_expression_expected_tainted_pointer);
+          return false;
+        }
+      }
+      return true;
+    }
+
     // If e is an rvalue, CheckCastExpr returns the bounds for
     // the value produced by e.
     // If e is an lvalue, it returns unknown bounds (CheckCastLValue
@@ -3780,6 +3813,10 @@ namespace {
       Expr *SubExpr = E->getSubExpr();
       CastKind CK = E->getCastKind();
 
+      if(!IsCastExpressionValid(CK, SubExpr))
+      {
+        return ResultBounds;
+      }
       bool IncludeNullTerm =
           E->getType()->getPointeeOrArrayElementType()->isNtCheckedArrayType();
       bool PreviousIncludeNullTerminator = IncludeNullTerminator;

@@ -11565,6 +11565,14 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_bounds_cast_expected_tainted_array_ptr : Error<
        "expected _TArray_ptr type">;
 
+  def err_bounds_expression_expected_tainted_pointer: Error<
+        "Only Tainted-pointers allowed as part of bounds expression"
+        " for Tainted Cast Operations">;
+
+  def err_bounds_expression_tainted_pointers_not_expected: Error<
+        "Tainted Pointers are not allowed as part of bounds expression"
+        " for Non-Tainted Cast Operations">;
+
   def warn_bounds_declaration_invalid : Warning<
     "cannot prove declared bounds for '%1' are valid after "
     "%select{assignment|decrement|increment|initialization|statement}0">,
