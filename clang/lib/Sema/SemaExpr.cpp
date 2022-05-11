@@ -9153,6 +9153,11 @@ static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
   }
   return false;
 }
+/*
+ * Description:
+ * Rule 1: Tainted pointers cannot be assigned to Un-Tainted pointers
+ * Rule 2: Un-Tainted pointers cannot be assigned to Tainted pointers
+ */
 bool isTaintedAssignmentValid(CheckCBox_PointerKind &lhkind, CheckCBox_PointerKind &rhkind)
 {
   if((lhkind == CheckCBox_PointerKind::t_nt_array
@@ -9164,6 +9169,16 @@ bool isTaintedAssignmentValid(CheckCBox_PointerKind &lhkind, CheckCBox_PointerKi
   {
       return false;
   }
+  else if((lhkind == CheckCBox_PointerKind::Ptr
+            || lhkind == CheckCBox_PointerKind::Array
+            || lhkind == CheckCBox_PointerKind::NtArray)
+           && (rhkind == CheckCBox_PointerKind::t_nt_array
+               || rhkind == CheckCBox_PointerKind::t_array
+               || rhkind == CheckCBox_PointerKind::t_ptr))
+  {
+    return false;
+  }
+
   return true;
 }
 // checkPointerTypesForAssignment - This is a very tricky routine (despite

@@ -7907,6 +7907,12 @@ void Parser::ParseCheckedPointerSpecifiers(DeclSpec &DS) {
         Actions.getASTContext().getPrintingPolicy()))
         Diag(StartLoc, DiagID) << PrevSpec;
 }
+
+/*
+ * Description: Function to check the sanity of the declared tainted pointer.
+ *              A Tainted pointer cannot have a nested Checked or a
+ *              Generic C-pointer type anywhere within its braces.
+ */
 bool Parser::CheckCurrentTaintedPointerSanity()
 {
   std::stack<tok::TokenKind> Stack_of_Braces;
@@ -7987,18 +7993,16 @@ bool Parser::CheckCurrentTaintedPointerSanity()
   }
   return true;
 }
-/// [Checked C]  new pointer types:
-///           _Ptr &lt type name &gt
-///           _Array_ptr &lt type name &gt
-///           _Nt_array_ptr &lt type name & gt
-void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
+/*   Description: Handle Tainted Pointer declarations.
+*/
+ void Parser::ParseTaintedPointerSpecifiers(DeclSpec &DS) {
   assert((Tok.is(tok::kw__TPtr) || Tok.is(tok::kw__TArray_ptr) ||
           Tok.is(tok::kw__TNt_array_ptr)) &&
          "Not a tainted pointer specifier");
   tok::TokenKind Kind = Tok.getKind();
   SourceLocation StartLoc = ConsumeToken();
-  /// Call a subroutine that performs lexical sanity check for Checked
-  /// and Unchecked pointers within this tainted pointer scope
+  /// Call a subroutine that performs lexical sanity check for
+  /// the undesired presence of Checked or Unchecked pointers within this tainted pointer scope
   /// Returns False: Is Sanity Fails
   /// ERROR DIAG Message printed within this function
 

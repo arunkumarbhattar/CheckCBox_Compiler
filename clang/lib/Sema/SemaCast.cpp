@@ -2958,11 +2958,22 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope) {
     }
   }
 
-  //CheckCBox - Non-Tainted Pointers Cannot be Cast to Tainted Pointers
+  //CheckCBox - Un-Tainted Pointers Cannot be Cast to Tainted Pointers
   if (DestType->isTaintedPointerType()) {
-    if (!SrcType->isTaintedPointerType()) {
+    if ((!SrcType->isTaintedPointerType())){
       Self.Diag(SrcExpr.get()->getExprLoc(),
                 diag::err_untainted_cast_to_tainted)
+          << SrcType << DestType << SrcExpr.get()->getSourceRange();
+      SrcExpr = ExprError();
+      return;
+    }
+  }
+
+  //CheckCBox - Tainted Pointers Cannot be Cast to Un-Tainted Pointers
+  if (!DestType->isTaintedPointerType()) {
+    if ((SrcType->isTaintedPointerType())){
+      Self.Diag(SrcExpr.get()->getExprLoc(),
+                diag::err_tainted_cast_to_untainted)
           << SrcType << DestType << SrcExpr.get()->getSourceRange();
       SrcExpr = ExprError();
       return;

@@ -1452,11 +1452,11 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
-/// CheckCBox generalizes pointer types to 6[NEW] different kinds of
+/// CheckCBox generalizes pointer types to 6 different kinds of
 /// pointers.  Each has different static and dynamic checking
-/// to detect programming errors:
-///   1. Unchecked C pointers: these are * pointers.  They have
-///      have no checking.
+/// to detect programming errors and enforce restrictions:
+///   1. Unchecked C pointers: these are the C's generic * pointers.
+///      They have no checking.
 ///   2. Checked C _Ptr types: these have null checks before
 ///      memory accesses.  No pointer arithmetic is allowed.
 ///   3. Checked C _Array_ptr types: these have null checks
@@ -1465,15 +1465,31 @@ enum class AutoTypeKeyword {
 ///      arithmetic is allowed.  It has overflow checking.
 ///   4. Checked C _Nt_Array_ptr: these are pointers to
 ///      null-terminated arrays. Pointer arithmetic is allowed.
-///   5. Checked C Tainted _Ptr types: _Ptr checks plus one extra check.
+///      Below are Tainted Pointers:
+///      General Concept:
+///         The Software program is partitioned into two regions based on Memory.
+///         Region A: Application Memory Region (SAFE): Security Sensitive information
+///                   MAY exist in this region. Here is where Checked
+///                   and Un-Checked Pointers exist. Tainted pointers should
+///                   NOT point to this memory region.
+///         Region B: Tainted Memory Region: Functions annotated as __tainted
+///                   execute in this potentially unsafe (Ex: Publicly exposed APIs)
+///                   Memory region. Tainted Pointers SHOULD ONLY point to this
+///                   Memory region and there are Dynamic Checks introduced to ensure the same.
+///
+///        Data Exchange: De-referencing tainted pointers in Region A is met with
+///                      an additional check to ensure this pointer points to Region B.
+///
+///   5. CheckCBox Tainted _Ptr types: Similar to Checked C _Ptr type
+///      except for one extra check:
 ///      Pointer is verified before de-referencing to make sure it does
-///      NOT point to application memory.
+///      NOT point to application memory (Region A).
 ///   6. Checked C Tainted _Array_ptr types: _Array_ptr checks plus one
 ///      extra check. Pointer is verified before de-referencing to make
-///      sure it does NOT point to application memory.
+///      sure it does NOT point to application memory (Region A).
 ///   7. Checked C Tainted _Nt_array_ptr types: _Nt_Array_ptr checks
 ///      plus one extra check. Pointer is verified before de-referencing
-///      to make sure it does NOT point to application memory.
+///      to make sure it does NOT point to application memory (Region A).
 
 enum class CheckCBox_PointerKind {
   /// \brief Unchecked C pointer.

@@ -3688,8 +3688,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
 
   // C: Function types need to be compatible, not identical. This handles
   // duplicate function decls like "void f(int); void f(enum X);" properly.
-  if (!getLangOpts().CPlusPlus &&
-      Context.typesAreCompatible(OldQType, NewQType)) {
+  //if (!getLangOpts().CPlusPlus &&
+  //  Context.typesAreCompatible(OldQType, NewQType)) {
+    if (!getLangOpts().CPlusPlus){
     const FunctionType *OldFuncType = OldQType->getAs<FunctionType>();
     const FunctionType *NewFuncType = NewQType->getAs<FunctionType>();
     const FunctionProtoType *OldProto = nullptr;
@@ -4110,9 +4111,7 @@ static bool diagnoseBoundsError(Sema &S,
   const InteropTypeExpr *OldIType = OldAnnots.getInteropTypeExpr();
   const InteropTypeExpr *NewIType = NewAnnots.getInteropTypeExpr();
   if (!S.Context.EquivalentInteropTypes(OldIType, NewIType)) {
-    if (OldIType && NewIType)
-      DiagId = diag::err_decl_conflicting_annot;
-    else if (!IsUncheckedType || IsInconsistent)
+    if (!IsUncheckedType || IsInconsistent)
       DiagId = NewIType ?
                  diag::err_decl_added_annot :
                  diag::err_decl_dropped_annot;
