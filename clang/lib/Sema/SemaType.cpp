@@ -7658,6 +7658,19 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }
+  else if(attr.getKind() == ParsedAttr::AT_Tainted){
+    if (S.CheckAttrNoArgs(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    // Otherwise we can process right away.
+    FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().withTainted(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
 
   if (attr.getKind() == ParsedAttr::AT_CmseNSCall) {
     // Delay if this is not a function type.

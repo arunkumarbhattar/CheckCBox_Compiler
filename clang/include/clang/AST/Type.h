@@ -3855,8 +3855,8 @@ public:
     // adjust the Bits field below, and if you add bits, you'll need to adjust
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
-    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|
-    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |
+    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|Tainted|
+    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |   14  |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x1F };
@@ -3869,6 +3869,7 @@ public:
     };
     enum { NoCfCheckMask = 0x800 };
     enum { CmseNSCallMask = 0x1000 };
+    enum { TaintedMask = 0x2000};
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -3876,11 +3877,12 @@ public:
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
-    ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
+    ExtInfo(bool noReturn, bool Tainted, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
             bool cmseNSCall) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
+             ((unsigned)cc) | (Tainted ? TaintedMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
              (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
@@ -3897,6 +3899,7 @@ public:
     ExtInfo(CallingConv CC) : Bits(CC) {}
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
+    bool getTainted() const{ return Bits & TaintedMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
@@ -3927,6 +3930,13 @@ public:
         return ExtInfo(Bits | NoReturnMask);
       else
         return ExtInfo(Bits & ~NoReturnMask);
+    }
+
+    ExtInfo withTainted(bool tainted) const {
+      if (tainted)
+        return ExtInfo(Bits | TaintedMask);
+      else
+        return ExtInfo(Bits & ~TaintedMask);
     }
 
     ExtInfo withProducesResult(bool producesResult) const {

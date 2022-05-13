@@ -1934,6 +1934,8 @@ void CodeGenModule::ConstructAttributeList(
   CallingConv = FI.getEffectiveCallingConvention();
   if (FI.isNoReturn())
     FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+  if(FI.isTainted())
+    FuncAttrs.addAttribute(llvm::Attribute::Tainted);
   if (FI.isCmseNSCall())
     FuncAttrs.addAttribute("cmse_nonsecure_call");
 

@@ -1801,8 +1801,15 @@ public:
   }
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
+  /// Determine if the call is to a tainted function.
+  bool isTainted() const {return hasFnAttr(Attribute::Tainted);}
+
   void setDoesNotReturn() {
     addAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
+  }
+
+  void setTainted() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::Tainted);
   }
 
   /// Determine if the call should not perform indirect branch tracking.

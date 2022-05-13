@@ -574,8 +574,18 @@ public:
   bool doesNotReturn() const {
     return hasFnAttribute(Attribute::NoReturn);
   }
+
+  /// Determine if the function is marked tainted.
+  bool isTainted() const {
+    return hasFnAttribute(Attribute::Tainted);
+  }
+
   void setDoesNotReturn() {
     addFnAttr(Attribute::NoReturn);
+  }
+
+  void setTainted() {
+    addFnAttr(Attribute::Tainted);
   }
 
   /// Determine if the function should not perform indirect branch tracking.

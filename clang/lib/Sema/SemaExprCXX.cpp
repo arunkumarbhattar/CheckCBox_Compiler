@@ -6717,6 +6717,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
         EPI1.ExtInfo = EPI1.ExtInfo.withNoReturn(Noreturn);
         EPI2.ExtInfo = EPI2.ExtInfo.withNoReturn(Noreturn);
 
+
         // The result is nothrow if both operands are.
         SmallVector<QualType, 8> ExceptionTypeStorage;
         EPI1.ExceptionSpec = EPI2.ExceptionSpec =

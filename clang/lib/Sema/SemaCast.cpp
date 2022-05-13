@@ -2958,6 +2958,7 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope) {
     }
   }
 
+  /* Temporary disable
   //CheckCBox - Un-Tainted Pointers Cannot be Cast to Tainted Pointers
   if (DestType->isTaintedPointerType()) {
     if ((!SrcType->isTaintedPointerType())){
@@ -2968,7 +2969,7 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope) {
       return;
     }
   }
-
+*/
   //CheckCBox - Tainted Pointers Cannot be Cast to Un-Tainted Pointers
   if (!DestType->isTaintedPointerType()) {
     if ((SrcType->isTaintedPointerType())){

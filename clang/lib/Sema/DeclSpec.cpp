@@ -475,7 +475,7 @@ unsigned DeclSpec::getParsedSpecifiers() const {
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
       FS_noreturn_specified || FS_forceinline_specified ||
-      FS_checked_specified)
+      FS_checked_specified || FS_tainted_specified)
     Res |= PQ_FunctionSpecifier;
   return Res;
 }
@@ -1085,6 +1085,21 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   }
   FS_noreturn_specified = true;
   FS_noreturnLoc = Loc;
+  return false;
+}
+
+bool DeclSpec::setFunctionSpecTainted(SourceLocation Loc,
+                                       const char *&PrevSpec,
+                                       unsigned &DiagID) {
+  // '_Tainted _Tainted' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_tainted_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_Tainted";
+    return true;
+  }
+  FS_tainted_specified = true;
+  FS_taintedLoc = Loc;
   return false;
 }
 

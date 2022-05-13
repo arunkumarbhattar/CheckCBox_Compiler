@@ -2005,6 +2005,26 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Noreturn ")
                     : FixItHint());
     }
+
+    //The _Tainted keyword can't appear here
+    // If we find the keyword here, tell the user to put it
+    // at the start instead.
+    if (Tok.is(tok::kw__Tainted)) {
+      SourceLocation Loc = ConsumeToken();
+      const char *PrevSpec;
+      unsigned DiagID;
+
+      // We can offer a fixit if it's valid to mark this function as _Tainted
+      // and we don't have any other declarators in this declaration.
+      bool Fixit = !DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
+      MaybeParseGNUAttributes(D, &LateParsedAttrs);
+      Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
+
+      Diag(Loc, diag::err_c11_noreturn_misplaced)
+          << (Fixit ? FixItHint::CreateRemoval(Loc) : FixItHint())
+          << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Tainted ")
+                    : FixItHint());
+    }
   }
 
   // Check to see if we have a function *definition* which must have a body.
@@ -3916,6 +3936,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
 
+   case tok::kw__Tainted:
+      if(!getLangOpts().C11)
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+      isInvalid = DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
+      break;
+
     // alignment-specifier
     case tok::kw__Alignas:
       if (!getLangOpts().C11)
@@ -5595,6 +5621,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
+  case tok::kw__Tainted:
   case tok::kw__For_any:
   case tok::kw__Itype_for_any:
 

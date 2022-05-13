@@ -2544,6 +2544,10 @@ public:
   /// an attribute on its declaration or its type.
   bool isNoReturn() const;
 
+  /// Determines whether this function is known to be 'tainted', through
+  /// an attribute on its declaration or its type.
+  bool isTainted() const;
+
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
   void setHasSkippedBody(bool Skipped = true) {

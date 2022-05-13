@@ -554,6 +554,9 @@ class CGFunctionInfo final
   /// Whether this function is noreturn.
   unsigned NoReturn : 1;
 
+  /// Whetehr this function is tainted
+  unsigned Tainted : 1;
+
   /// Whether this function is returns-retained.
   unsigned ReturnsRetained : 1;
 
@@ -645,6 +648,8 @@ public:
 
   bool isNoReturn() const { return NoReturn; }
 
+  bool isTainted() const { return Tainted;}
+
   /// In ARC, whether this function retains its return value.  This
   /// is not always reliable for call sites.
   bool isReturnsRetained() const { return ReturnsRetained; }
@@ -678,7 +683,7 @@ public:
   unsigned getRegParm() const { return RegParm; }
 
   FunctionType::ExtInfo getExtInfo() const {
-    return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
+    return FunctionType::ExtInfo(isNoReturn(), isTainted(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
                                  isCmseNSCall());
@@ -717,6 +722,7 @@ public:
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(NoReturn);
+    ID.AddBoolean(Tainted);
     ID.AddBoolean(ReturnsRetained);
     ID.AddBoolean(NoCallerSavedRegs);
     ID.AddBoolean(HasRegParm);
@@ -745,6 +751,7 @@ public:
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(info.getNoReturn());
+    ID.AddBoolean(info.getTainted());
     ID.AddBoolean(info.getProducesResult());
     ID.AddBoolean(info.getNoCallerSavedRegs());
     ID.AddBoolean(info.getHasRegParm());
