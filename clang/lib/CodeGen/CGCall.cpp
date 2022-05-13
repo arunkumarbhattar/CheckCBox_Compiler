@@ -183,10 +183,14 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
   // FIXME: Kill copy.
   appendParameterTypes(CGT, prefix, paramInfos, FTP);
   CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
+  FunctionType::ExtInfo func_info = FTP->getExtInfo();
+  if(CGT.getIsTainted()) {
+    func_info.setTainted(true);
+  }
 
   return CGT.arrangeLLVMFunctionInfo(resultType, instanceMethod,
                                      /*chainCall=*/false, prefix,
-                                     FTP->getExtInfo(), paramInfos,
+                                     func_info, paramInfos,
                                      Required);
 }
 
@@ -442,14 +446,22 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   CanQualType FTy = FD->getType()->getCanonicalTypeUnqualified();
 
   assert(isa<FunctionType>(FTy));
+
+  if(FD->isTainted() == 1)
+    this->setIsTainted(true);
+  else
+    this->setIsTainted(false);
+
   setCUDAKernelCallingConvention(FTy, CGM, FD);
 
   // When declaring a function without a prototype, always use a
   // non-variadic type.
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
+    FunctionType::ExtInfo noProto_ExtInfo = noProto->getExtInfo();
+    noProto_ExtInfo.setTainted(true);
     return arrangeLLVMFunctionInfo(
         noProto->getReturnType(), /*instanceMethod=*/false,
-        /*chainCall=*/false, None, noProto->getExtInfo(), {},RequiredArgs::All);
+        /*chainCall=*/false, None, noProto_ExtInfo, {},RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
@@ -820,6 +832,7 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC,
   FI->ChainCall = chainCall;
   FI->CmseNSCall = info.getCmseNSCall();
   FI->NoReturn = info.getNoReturn();
+  FI->Tainted = info.getTainted();
   FI->ReturnsRetained = info.getProducesResult();
   FI->NoCallerSavedRegs = info.getNoCallerSavedRegs();
   FI->NoCfCheck = info.getNoCfCheck();
@@ -1934,6 +1947,8 @@ void CodeGenModule::ConstructAttributeList(
   CallingConv = FI.getEffectiveCallingConvention();
   if (FI.isNoReturn())
     FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+  if(FI.isTainted())
+    FuncAttrs.addAttribute(llvm::Attribute::Tainted);
   if (FI.isCmseNSCall())
     FuncAttrs.addAttribute("cmse_nonsecure_call");
 
@@ -1957,6 +1972,8 @@ void CodeGenModule::ConstructAttributeList(
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     if (TargetDecl->hasAttr<NoReturnAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+    if (TargetDecl->hasAttr<TaintedAttr>())
+      FuncAttrs.addAttribute(llvm::Attribute::Tainted);
     if (TargetDecl->hasAttr<ColdAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::Cold);
     if (TargetDecl->hasAttr<HotAttr>())

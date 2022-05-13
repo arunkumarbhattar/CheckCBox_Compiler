@@ -570,6 +570,20 @@ static bool isNoReturnDef(const MachineOperand &MO) {
            !Called->hasFnAttribute(Attribute::NoUnwind));
 }
 
+static bool isTaintedDef(const MachineOperand &MO) {
+  // Anything which is not a noreturn function is a real def.
+  const MachineInstr &MI = *MO.getParent();
+  if (!MI.isCall())
+    return false;
+  const MachineBasicBlock &MBB = *MI.getParent();
+  if (!MBB.succ_empty())
+    return false;
+  const MachineFunction &MF = *MBB.getParent();
+  const Function *Called = getCalledFunction(MI);
+  return !(Called == nullptr || !Called->hasFnAttribute(Attribute::Tainted) ||
+           !Called->hasFnAttribute(Attribute::NoUnwind));
+}
+
 bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
                                             bool SkipNoReturnDef) const {
   if (UsedPhysRegMask.test(PhysReg))

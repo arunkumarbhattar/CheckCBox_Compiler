@@ -2726,7 +2726,12 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // C's _Noreturn is allowed to be added to a function after it is defined.
       ++I;
       continue;
-    } else if (isa<UuidAttr>(NewAttribute)) {
+    }
+    else if(isa<C11TaintedAttr>(NewAttribute)){
+      ++I;
+      continue;
+    }
+    else if (isa<UuidAttr>(NewAttribute)) {
       // msvc will allow a subsequent definition to add an uuid to a class
       ++I;
       continue;
@@ -3402,6 +3407,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     RequiresAdjustment = true;
   }
 
+  if (OldTypeInfo.getTainted() && !NewTypeInfo.getTainted()) {
+    NewTypeInfo = NewTypeInfo.setTainted(true);
+    RequiresAdjustment = true;
+  }
+
+
   // Merge regparm attribute.
   if (OldTypeInfo.getHasRegParm() != NewTypeInfo.getHasRegParm() ||
       OldTypeInfo.getRegParm() != NewTypeInfo.getRegParm()) {
@@ -3646,6 +3657,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       auto *OldType = OldQType->castAs<FunctionProtoType>();
       const FunctionType *OldTypeForComparison
         = Context.adjustFunctionType(OldType, OldTypeInfo.withNoReturn(true));
+      OldQTypeForComparison = QualType(OldTypeForComparison, 0);
+      assert(OldQTypeForComparison.isCanonical());
+    }
+
+    if (!OldTypeInfo.getTainted() && NewTypeInfo.getTainted()) {
+      auto *OldType = OldQType->castAs<FunctionProtoType>();
+      const FunctionType *OldTypeForComparison
+          = Context.adjustFunctionType(OldType, OldTypeInfo.setTainted(true));
       OldQTypeForComparison = QualType(OldTypeForComparison, 0);
       assert(OldQTypeForComparison.isCanonical());
     }
@@ -6592,6 +6611,10 @@ void Sema::DiagnoseFunctionSpecifiers(const DeclSpec &DS) {
     Diag(DS.getNoreturnSpecLoc(),
          diag::err_noreturn_non_function);
 
+  if(DS.isTaintedSpecified())
+    Diag(DS.getNoreturnSpecLoc(),
+         diag::err_tainted_non_function);
+
   if (DS.getCheckedScopeSpecifier() != CheckedScopeSpecifier::CSS_None)
     Diag(DS.getCheckedSpecLoc(), 
          diag::err_checked_on_non_function)
@@ -9446,6 +9469,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                               isVirtualOkay);
   if (!NewFD) return nullptr;
 
+
+  if(D.getDeclSpec().isTaintedSpecified())
+  {
+    //we need to set the Function's exttype class with this attribute
+    NewFD->setTaintedFunctionFlag(true);
+  }
+
   if (D.getDeclSpec().isForanySpecified() || D.getDeclSpec().isItypeforanySpecified()) {
     if (NewFD->hasPrototype()) {
       NewFD->setTypeVars(D.getDeclSpec().typeVariables());
@@ -11663,6 +11693,13 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     Diag(NoreturnLoc, diag::ext_noreturn_main);
     Diag(NoreturnLoc, diag::note_main_remove_noreturn)
       << FixItHint::CreateRemoval(NoreturnRange);
+  }
+  if(DS.isTaintedSpecified()){
+    SourceLocation TaintedLoc = DS.getTaintedSpecLoc();
+    SourceRange TaintedRange(TaintedLoc, getLocForEndOfToken(TaintedLoc));
+    Diag(TaintedLoc, diag::ext_tainted_main);
+    Diag(TaintedLoc, diag::note_main_remove_tainted)
+        << FixItHint::CreateRemoval(TaintedRange);
   }
   if (FD->isConstexpr()) {
     Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_main)

@@ -142,6 +142,9 @@ def NoRedZone : EnumAttr<"noredzone">;
 /// Mark the function as not returning.
 def NoReturn : EnumAttr<"noreturn">;
 
+/// Mark the function as tainted.
+def Tainted : EnumAttr<"tainted">;
+
 /// Function does not synchronize.
 def NoSync : EnumAttr<"nosync">;
 

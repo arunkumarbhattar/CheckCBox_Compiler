@@ -54,6 +54,7 @@ def LongDoublePtr : PtrType<LongDoubleType>;
 
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;
+def Tainted : NamedType<"_Tainted">;
 
 //types moved from stdc.td
 def VoidRestrictedPtr : RestrictedPtrType<VoidType>;

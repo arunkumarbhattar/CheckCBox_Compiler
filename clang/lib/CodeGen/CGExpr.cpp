@@ -3174,8 +3174,9 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 
   llvm::AttrBuilder B;
   if (!MayReturn) {
-    B.addAttribute(llvm::Attribute::NoReturn)
+     B.addAttribute(llvm::Attribute::NoReturn)
         .addAttribute(llvm::Attribute::NoUnwind);
+
   }
   B.addAttribute(llvm::Attribute::UWTable);
 

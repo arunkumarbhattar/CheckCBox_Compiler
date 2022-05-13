@@ -400,6 +400,7 @@ public:
     auto &ctx = R.getASTContext();
     QualType returnType = R.find("returnType").readQualType();
     bool noReturn = R.find("noReturn").readBool();
+    bool tainted = R.find("tainted").readBool();
     bool hasRegParm = R.find("hasRegParm").readBool();
     uint32_t regParm = R.find("regParm").readUInt32();
     CallingConv callingConvention = R.find("callingConvention").readCallingConv();
@@ -408,7 +409,7 @@ public:
     bool noCfCheck = R.find("noCfCheck").readBool();
     bool cmseNSCall = R.find("cmseNSCall").readBool();
     
-    auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
+    auto extInfo = FunctionType::ExtInfo(noReturn, tainted, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
                                          cmseNSCall);
@@ -436,6 +437,7 @@ public:
     bool isItypeGenericFunction = R.find("isItypeGenericFunction").readBool();
     QualType returnType = R.find("returnType").readQualType();
     bool noReturn = R.find("noReturn").readBool();
+    bool tainted = R.find("tainted").readBool();
     bool hasRegParm = R.find("hasRegParm").readBool();
     uint32_t regParm = R.find("regParm").readUInt32();
     CallingConv callingConvention = R.find("callingConvention").readCallingConv();
@@ -444,7 +446,7 @@ public:
     bool noCfCheck = R.find("noCfCheck").readBool();
     bool cmseNSCall = R.find("cmseNSCall").readBool();
     
-    auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
+    auto extInfo = FunctionType::ExtInfo(noReturn, tainted, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
                                          cmseNSCall);

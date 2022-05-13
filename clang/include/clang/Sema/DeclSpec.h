@@ -363,8 +363,11 @@ private:
   unsigned FS_forceinline_specified: 1;
   unsigned FS_virtual_specified : 1;
   unsigned FS_noreturn_specified : 1;
+
   // friend-specifier
   unsigned Friend_specified : 1;
+
+  unsigned FS_tainted_specified : 1;
 
   // constexpr-specifier
   unsigned ConstexprSpecifier : 2;
@@ -416,7 +419,8 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
-  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
+  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
+      FS_taintedLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   // Checked C - checked keyword location
@@ -468,6 +472,7 @@ public:
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
+        FS_tainted_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         FS_explicit_specifier(), Attrs(attrFactory),
@@ -637,7 +642,9 @@ public:
   }
 
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
+  bool isTaintedSpecified() const {return FS_tainted_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
+  SourceLocation getTaintedSpecLoc() const { return FS_taintedLoc; }
 
   CheckedScopeSpecifier getCheckedScopeSpecifier() const {
     return (CheckedScopeSpecifier) FS_checked_specified;
@@ -691,7 +698,9 @@ public:
     FS_explicitLoc = SourceLocation();
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
+    FS_tainted_specified = false;
     FS_noreturnLoc = SourceLocation();
+    FS_taintedLoc = SourceLocation();
     FS_checked_specified = CSS_None;
     FS_checkedLoc = SourceLocation();
     FS_forany_specified = false;
@@ -832,6 +841,8 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
+  bool setFunctionSpecTainted(SourceLocation Loc, const char *&PrevSpec,
+                              unsigned &DiagID);
   bool setFunctionSpecChecked(SourceLocation Loc, CheckedScopeSpecifier CSS,
                               const char *&PrevSpec, unsigned &DiagID);
   bool setFunctionSpecUnchecked(SourceLocation Loc, const char *&PrevSpec,

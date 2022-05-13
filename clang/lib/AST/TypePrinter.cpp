@@ -1091,6 +1091,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
 
   if (Info.getNoReturn())
     OS << " __attribute__((noreturn))";
+  if(Info.getTainted())
+    OS << "__attribute__((tainted))";
   if (Info.getCmseNSCall())
     OS << " __attribute__((cmse_nonsecure_call))";
   if (Info.getProducesResult())

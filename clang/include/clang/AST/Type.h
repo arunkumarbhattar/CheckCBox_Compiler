@@ -3855,8 +3855,8 @@ public:
     // adjust the Bits field below, and if you add bits, you'll need to adjust
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
-    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|
-    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |
+    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|Tainted|
+    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |   14  |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x1F };
@@ -3876,7 +3876,7 @@ public:
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
-    ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
+    ExtInfo(bool noReturn, bool Tainted, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
             bool cmseNSCall) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
@@ -3897,6 +3897,7 @@ public:
     ExtInfo(CallingConv CC) : Bits(CC) {}
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
+    bool getTainted() const{ return Actually_tainted; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
@@ -3919,6 +3920,7 @@ public:
       return Bits != Other.Bits;
     }
 
+    int Actually_tainted = 0;
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
 
@@ -3927,6 +3929,14 @@ public:
         return ExtInfo(Bits | NoReturnMask);
       else
         return ExtInfo(Bits & ~NoReturnMask);
+    }
+
+    ExtInfo setTainted(bool tainted) {
+      if (tainted)
+        return ExtInfo(Actually_tainted = 1);
+      else
+        return ExtInfo(Actually_tainted = 0);
+
     }
 
     ExtInfo withProducesResult(bool producesResult) const {
@@ -4009,6 +4019,9 @@ public:
   /// attribute. The C++11 [[noreturn]] attribute does not affect the function
   /// type.
   bool getNoReturnAttr() const { return getExtInfo().getNoReturn(); }
+  /// Determine whether this function type includes the GNU tainted
+  /// attribute.
+  bool getTaintedAttr() const { return getExtInfo().getTainted(); }
 
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }

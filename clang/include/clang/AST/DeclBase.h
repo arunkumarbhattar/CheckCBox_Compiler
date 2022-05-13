@@ -1565,6 +1565,9 @@ class DeclContext {
 
     // End of Checked C extensions
 
+    // Tainted C Extension to Checked-C
+    uint64_t IsTaintedFunction : 1;
+
     /// Indicates that this function is a multiversioned
     /// function using attribute 'target'.
     uint64_t IsMultiVersion : 1;

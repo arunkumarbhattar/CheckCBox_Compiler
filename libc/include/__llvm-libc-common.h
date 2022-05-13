@@ -20,6 +20,9 @@
 #undef _Noreturn
 #define _Noreturn [[noreturn]]
 
+#undef _Tainted
+#define _Tainted [[tainted]]
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

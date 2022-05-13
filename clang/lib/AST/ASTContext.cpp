@@ -9518,6 +9518,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   // FIXME: some uses, e.g. conditional exprs, really want this to be 'both'.
   bool NoReturn = lbaseInfo.getNoReturn() || rbaseInfo.getNoReturn();
+  bool Tainted = lbaseInfo.getTainted() || rbaseInfo.getTainted();
 
   if (lbaseInfo.getNoReturn() != NoReturn)
     allLTypes = false;
@@ -9525,6 +9526,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     allRTypes = false;
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
+  einfo = lbaseInfo.setTainted(Tainted);
+
   unsigned NumTypeVars = 0;
   bool IsITypeGenericFunction = false;
 
@@ -11204,7 +11207,10 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   FunctionType::ExtInfo EI(getDefaultCallingConvention(
       Variadic, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
-  if (BuiltinInfo.isNoReturn(Id)) EI = EI.withNoReturn(true);
+  if (BuiltinInfo.isNoReturn(Id)) {
+    EI = EI.withNoReturn(true);
+  }
+  if (BuiltinInfo.isTainted(Id)) EI = EI.setTainted(true);
 
 
   // We really shouldn't be making a no-proto type here.

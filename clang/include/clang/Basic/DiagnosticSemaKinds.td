@@ -411,6 +411,8 @@ def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
+def err_tainted_non_function: Error<
+  "'_Tainted' can only appear on functions">;
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
@@ -796,7 +798,10 @@ def ext_variadic_main : ExtWarn<
   "'main' is not allowed to be declared variadic">, InGroup<Main>;
 def ext_noreturn_main : ExtWarn<
   "'main' is not allowed to be declared _Noreturn">, InGroup<Main>;
+def ext_tainted_main : ExtWarn<
+    "'main' is not allowed to be declared _Tainted">, InGroup<Main>;
 def note_main_remove_noreturn : Note<"remove '_Noreturn'">;
+def note_main_remove_tainted : Note<"remove '_Tainted'">;
 def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
@@ -11201,11 +11206,11 @@ def err_unchecked_array_of_checked_array : Error<
 
 def err_bounds_declaration_unchecked_local_pointer : Error<
   "bounds declaration not allowed for local variable with "
-  "untainted or unchecked pointer type">;
+  "unchecked pointer type">;
 
 def err_bounds_declaration_unchecked_local_array : Error<
   "bounds declaration not allowed for local variable with "
-  "untainted or unchecked array type">;
+  "unchecked array type">;
 
 def err_bounds_safe_interface_type_annotation_local_variable : Error<
   "bounds-safe interface type annotation not allowed for local variable">;

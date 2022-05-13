@@ -1609,6 +1609,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   switch (Kind) {
   case Attribute::NoMerge:
   case Attribute::NoReturn:
+  case Attribute::Tainted:
   case Attribute::NoSync:
   case Attribute::WillReturn:
   case Attribute::NoCallback:

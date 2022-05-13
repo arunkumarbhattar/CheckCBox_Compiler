@@ -110,6 +110,8 @@ public:
   CodeGenTypes(CodeGenModule &cgm);
   ~CodeGenTypes();
 
+  unsigned Tainted = 0;
+
   const llvm::DataLayout &getDataLayout() const {
     return TheModule.getDataLayout();
   }
@@ -280,6 +282,15 @@ public:
   void addRecordTypeName(const RecordDecl *RD, llvm::StructType *Ty,
                          StringRef suffix);
 
+  void setIsTainted(bool f)
+  {
+    if(f)
+      Tainted = 1;
+    else
+      Tainted = 0;
+  }
+
+  unsigned getIsTainted() {return Tainted;}
 
 public:  // These are internal details of CGT that shouldn't be used externally.
   /// ConvertRecordDeclType - Lay out a tagged decl type like struct or union.

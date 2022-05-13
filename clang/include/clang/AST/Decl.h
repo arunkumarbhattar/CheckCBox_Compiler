@@ -2196,6 +2196,7 @@ public:
   }
 
   void setGenericFunctionFlag(bool f) { FunctionDeclBits.IsGenericFunction = f; }
+  void setTaintedFunctionFlag(bool f) { FunctionDeclBits.IsTaintedFunction = f; }
   bool isGenericFunction() const { return FunctionDeclBits.IsGenericFunction; }
 
   void setItypeGenericFunctionFlag(bool f) { FunctionDeclBits.IsItypeGenericFunction = f; }
@@ -2543,6 +2544,10 @@ public:
   /// Determines whether this function is known to be 'noreturn', through
   /// an attribute on its declaration or its type.
   bool isNoReturn() const;
+
+  /// Determines whether this function is known to be 'tainted', through
+  /// an attribute on its declaration or its type.
+  bool isTainted() const {return FunctionDeclBits.IsTaintedFunction;};
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
