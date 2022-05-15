@@ -3052,7 +3052,9 @@ private:
          DeclaratorContext DeclaratorContext,
          ParsedAttributes &attrs,
          SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-         SourceLocation &EllipsisLoc);
+         SourceLocation &EllipsisLoc, bool isTaintedDeclaration = false);
+  void CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLoc);
+  void CheckTaintedFunctionDeclarationIntegrity(Declarator&);
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
 

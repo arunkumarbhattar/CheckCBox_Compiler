@@ -349,6 +349,8 @@ def err_requires_clause_must_appear_after_trailing_return : Error<
   "trailing return type must appear before trailing requires clause">;
 def err_requires_clause_on_declarator_not_declaring_a_function : Error<
   "trailing requires clause can only be used when declaring a function">;
+def err_tainted_specified_functions_must_have_tainted_pointers : Error<
+  "Functions marked as Tainted should only have Tainted Pointers ">;
 def err_requires_clause_inside_parens : Error<
   "trailing requires clause should be placed outside parentheses">;
 def ext_auto_storage_class : ExtWarn<

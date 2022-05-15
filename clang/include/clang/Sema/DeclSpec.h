@@ -1922,7 +1922,7 @@ enum class DeclaratorContext {
   TemplateTypeArg,     // Template type argument (in default argument).
   AliasDecl,           // C++11 alias-declaration.
   AliasTemplate,       // C++11 alias-declaration template.
-  RequiresExpr         // C++2a requires-expression.
+  RequiresExpr        // C++2a requires-expression.
 };
 
 /// Information about one declarator, including the parsed type

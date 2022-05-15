@@ -3855,8 +3855,8 @@ public:
     // adjust the Bits field below, and if you add bits, you'll need to adjust
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
-    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|Tainted|
-    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |   14  |
+    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall
+    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x1F };
@@ -3876,7 +3876,7 @@ public:
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
-    ExtInfo(bool noReturn, bool Tainted, bool hasRegParm, unsigned regParm, CallingConv cc,
+    ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
             bool cmseNSCall) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
