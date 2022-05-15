@@ -409,7 +409,7 @@ public:
     bool noCfCheck = R.find("noCfCheck").readBool();
     bool cmseNSCall = R.find("cmseNSCall").readBool();
     
-    auto extInfo = FunctionType::ExtInfo(noReturn, tainted, hasRegParm, regParm,
+    auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
                                          cmseNSCall);
@@ -446,7 +446,7 @@ public:
     bool noCfCheck = R.find("noCfCheck").readBool();
     bool cmseNSCall = R.find("cmseNSCall").readBool();
     
-    auto extInfo = FunctionType::ExtInfo(noReturn, tainted, hasRegParm, regParm,
+    auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
                                          cmseNSCall);

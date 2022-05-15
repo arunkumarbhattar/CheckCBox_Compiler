@@ -6963,7 +6963,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   } else {
     if (Tok.isNot(tok::r_paren))
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
-                                      EllipsisLoc);
+                                      EllipsisLoc, D.getDeclSpec().isTaintedSpecified());
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7218,6 +7218,55 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     // The list continues if we see a comma.
   } while (TryConsumeToken(tok::comma));
 }
+void Parser::CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLoc) {
+  unsigned int curr_token = 1;
+  while ((GetLookAheadToken(curr_token).isNot(tok::comma)) &&
+         (GetLookAheadToken(curr_token).isNot(tok::r_paren))) {
+    if (GetLookAheadToken(curr_token).is(tok::star)) {
+      Diag(EllipsisLoc,
+           diag::err_tainted_specified_functions_must_have_tainted_pointers)
+          << FixItHint::CreateInsertion(EllipsisLoc.getLocWithOffset(1),
+                                        "Marshall this pointer data to tainted memory allocated by t_malloc ");
+      break;
+    }
+    curr_token++;
+  }
+}
+
+void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator)
+{
+  TypeSpecifierType Current_indentifier_type =
+      ParmDeclarator.getDeclSpec().getTypeSpecType();
+  SourceLocation Current_indentifier_type_loc =
+      ParmDeclarator.getDeclSpec().getTypeSpecTypeLoc();
+  if ((Current_indentifier_type == TST_plainPtr) ||
+      (Current_indentifier_type == TST_arrayPtr) ||
+      (Current_indentifier_type == TST_ntarrayPtr)) {
+    Diag(ParmDeclarator.getIdentifierLoc(),
+         diag::err_tainted_specified_functions_must_have_tainted_pointers)
+        << FixItHint::CreateInsertion(
+               Current_indentifier_type_loc,
+               "Marshall this pointer data to tainted memory allocated by t_malloc ");
+  }
+
+  // Currently the Token points to a comma,
+  // keep hopping tokens until you see a r_paren or a comma
+  unsigned int token_hop = 1;
+  while (GetLookAheadToken(token_hop).isNot(tok::comma) &&
+         (GetLookAheadToken(token_hop).isNot(tok::r_paren)) &&
+         (token_hop < ParmDeclarator.getEndLoc().getRawEncoding() -
+                          ParmDeclarator.getBeginLoc().getRawEncoding())) {
+    if (GetLookAheadToken(token_hop).is(tok::star)) {
+      Diag(ParmDeclarator.getIdentifierLoc().getLocWithOffset(2),
+           diag::err_tainted_specified_functions_must_have_tainted_pointers)
+          << FixItHint::CreateInsertion(
+                 Current_indentifier_type_loc.getLocWithOffset(2),
+                 "Marshall this pointer data to tainted memory allocated by t_malloc ");
+      break;
+    }
+    token_hop++;
+  }
+}
 
 /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
 /// after the opening parenthesis. This function will not parse a K&R-style
@@ -7255,7 +7304,7 @@ void Parser::ParseParameterDeclarationClause(
        DeclaratorContext DeclaratorCtx,
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-       SourceLocation &EllipsisLoc) {
+       SourceLocation &EllipsisLoc, bool isTaintedDeclaration) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7267,6 +7316,11 @@ void Parser::ParseParameterDeclarationClause(
         << ParmVarDecl::getMaxFunctionScopeDepth();
     cutOffParsing();
     return;
+  }
+
+  if(isTaintedDeclaration)
+  {
+    CheckTaintedFunctionDeclarationIntegrity(EllipsisLoc);
   }
 
   // Delay parsing/semantic checking of bounds expressions until after the
@@ -7298,7 +7352,7 @@ void Parser::ParseParameterDeclarationClause(
 
     SourceLocation DSStart = Tok.getLocation();
 
-    // If the caller parsed attributes for the first argument, add them now.
+    // If the caller parsed attributes for the first argument, add then now.
     // Take them so that we only apply the attributes to the first parameter.
     // FIXME: If we can leave the attributes in the token stream somehow, we can
     // get rid of a parameter (FirstArgAttrs) and this statement. It might be
@@ -7313,21 +7367,23 @@ void Parser::ParseParameterDeclarationClause(
     // Parse the declarator.  This is "PrototypeContext" or
     // "LambdaExprParameterContext", because we must accept either
     // 'declarator' or 'abstract-declarator' here.
-    Declarator ParmDeclarator(
-        DS, DeclaratorCtx == DeclaratorContext::RequiresExpr
-                ? DeclaratorContext::RequiresExpr
-                : DeclaratorCtx == DeclaratorContext::LambdaExpr
-                      ? DeclaratorContext::LambdaExprParameter
-                      : DeclaratorContext::Prototype);
+    Declarator ParmDeclarator(DS,
+                              DeclaratorCtx == DeclaratorContext::RequiresExpr
+                                  ? DeclaratorContext::RequiresExpr
+                              : DeclaratorCtx == DeclaratorContext::LambdaExpr
+                                  ? DeclaratorContext::LambdaExprParameter
+                                  : DeclaratorContext::Prototype);
     ParseDeclarator(ParmDeclarator);
 
-    // Checked C: exit _Forany or _Itype_forany scope.  This is intentionally done here
-    // because the bounds / interface type for the parameter shouldn't reference
-    // any bound type variable.
+    // Checked C: exit _Forany or _Itype_forany scope.  This is intentionally done here because the bounds / interface type for the parameter shouldn't reference any bound type variable.
     ExitQuantifiedTypeScope(DS);
 
     // Parse GNU attributes, if present.
     MaybeParseGNUAttributes(ParmDeclarator);
+
+    if (isTaintedDeclaration) {
+      CheckTaintedFunctionDeclarationIntegrity(ParmDeclarator);
+    }
 
     if (Tok.is(tok::kw_requires)) {
       // User tried to define a requires clause in a parameter declaration,
@@ -7346,6 +7402,9 @@ void Parser::ParseParameterDeclarationClause(
     // DefArgToks is used when the parsing of default arguments needs
     // to be delayed.
     std::unique_ptr<CachedTokens> DefArgToks;
+
+    //start from get begin loc
+    //and iterate through till the endloc and look for checked or * operators
 
     // If no parameter was specified, verify that *something* was specified,
     // otherwise we have a missing type and identifier.

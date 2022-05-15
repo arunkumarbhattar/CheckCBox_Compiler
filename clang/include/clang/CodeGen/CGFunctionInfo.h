@@ -683,7 +683,7 @@ public:
   unsigned getRegParm() const { return RegParm; }
 
   FunctionType::ExtInfo getExtInfo() const {
-    return FunctionType::ExtInfo(isNoReturn(), isTainted(), getHasRegParm(), getRegParm(),
+    return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
                                  isCmseNSCall());
