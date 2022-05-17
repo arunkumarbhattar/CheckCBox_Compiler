@@ -23,10 +23,12 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE  "tmalloc"
+#define DEBUG_TYPE  "tainted-malloc"
 
 
 //-----------------------------------------------------------------------------
@@ -51,36 +53,50 @@ void addCall(Module &M, Instruction &I, Value* size_param)
   Bld.CreateCall(&(create_sandbox_malloc(M)), size_param);
   return;
 }
-bool TaintedMalloc::runOnModule(Module &M){
-  bool modified = false;
-  for(auto &BB : M)
-  {
-    for(auto &I : BB)
-    {
-      //if this is a call instruction then CB will not be NULL
-      auto *CB = dyn_cast<CallBase>(&I);
-      if(nullptr == CB)
-      {
-        continue;
-      }
 
-      auto DirectInvoc = CB->getCalledFunction();
-      if(nullptr == DirectInvoc)
-      {
-        continue;
-      }
-
-      if(CB->getCalledFunction()->getName() == "t_malloc")
-      {
-        I.eraseFromParent();
-        addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
-        modified = true;
-      }
-
-    }
+namespace {
+struct TaintedMallocLegacyPass : public ModulePass {
+  static char ID;
+  TaintedMallocLegacyPass() : ModulePass(ID) {
+    initializeTaintedMallocLegacyPassPass(*PassRegistry::getPassRegistry());
   }
-  return modified;
-}
 
-char TaintedMalloc::ID = 0;
-static RegisterPass<TaintedMalloc> X ("TaintedMalloc", "t_malloc exists", false, false);
+  bool runOnModule(Module &M) override{
+    bool modified = false;
+    for (auto &BB : M) {
+      for (auto &I : BB) {
+        // if this is a call instruction then CB will not be NULL
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (nullptr == CB) {
+          continue;
+        }
+
+        auto DirectInvoc = CB->getCalledFunction();
+        if (nullptr == DirectInvoc) {
+          continue;
+        }
+
+        if (CB->getCalledFunction()->getName() == "t_malloc") {
+          I.eraseFromParent();
+          addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
+          modified = true;
+        }
+      }
+    }
+    return modified;
+  }
+};
+
+} //namespace
+
+char TaintedMallocLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(TaintedMallocLegacyPass, "tainted-malloc",
+                      "tainted memory allocation", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(TaintedMallocLegacyPass, "tainted-malloc",
+                    "tainted memory allocation", false, false)
+
+ModulePass *llvm::createTaintedMallocLegacyPass() {
+  return new TaintedMallocLegacyPass();
+}

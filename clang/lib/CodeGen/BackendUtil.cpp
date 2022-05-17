@@ -66,6 +66,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Insmtrumentation/TaintedMalloc.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -212,6 +213,11 @@ static void addAddDiscriminatorsPass(const PassManagerBuilder &Builder,
 static void addBoundsCheckingPass(const PassManagerBuilder &Builder,
                                   legacy::PassManagerBase &PM) {
   PM.add(createBoundsCheckingLegacyPass());
+}
+
+static void addTaintedMallocPass(const PassManagerBuilder &Builder,
+                                 legacy::PassManagerBase &PM){
+  PM.add(createTaintedMallocLegacyPass());
 }
 
 static SanitizerCoverageOptions
@@ -715,6 +721,11 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addBoundsCheckingPass);
   }
+
+  PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+                         addTaintedMallocPass);
+  PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+                           addTaintedMallocPass);
 
   if (CodeGenOpts.SanitizeCoverageType ||
       CodeGenOpts.SanitizeCoverageIndirectCalls ||
