@@ -17,21 +17,24 @@
 ///      $opt -laod-pass-plugin <BUILD_DIR>/lib/libTaintedMalloc.so '\'
 ///       -passes=-"tmalloc" <bitcode-file>
 
-#include "TaintedMalloc.h"
+#include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE  "tmalloc"
+#define DEBUG_TYPE  "tainted-malloc"
 
 
 //-----------------------------------------------------------------------------
 // TaintedMalloc implementation
 //-----------------------------------------------------------------------------
+
 
 Function &create_sandbox_malloc(Module &M)
 {
@@ -51,36 +54,64 @@ void addCall(Module &M, Instruction &I, Value* size_param)
   Bld.CreateCall(&(create_sandbox_malloc(M)), size_param);
   return;
 }
-bool TaintedMalloc::runOnModule(Module &M){
+
+static bool Instrument_tainted_malloc(Module& M)
+{
   bool modified = false;
-  for(auto &BB : M)
-  {
-    for(auto &I : BB)
-    {
-      //if this is a call instruction then CB will not be NULL
+  for (auto &BB : M) {
+    for (auto &I : BB) {
+      // if this is a call instruction then CB will not be NULL
       auto *CB = dyn_cast<CallBase>(&I);
-      if(nullptr == CB)
-      {
+      if (nullptr == CB) {
         continue;
       }
 
       auto DirectInvoc = CB->getCalledFunction();
-      if(nullptr == DirectInvoc)
-      {
+      if (nullptr == DirectInvoc) {
         continue;
       }
 
-      if(CB->getCalledFunction()->getName() == "t_malloc")
-      {
+      if (CB->getCalledFunction()->getName() == "t_malloc") {
         I.eraseFromParent();
         addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
         modified = true;
       }
-
     }
   }
   return modified;
 }
 
-char TaintedMalloc::ID = 0;
-static RegisterPass<TaintedMalloc> X ("TaintedMalloc", "t_malloc exists", false, false);
+PreservedAnalyses TaintedMallocPass::run(Function& F,
+                                         FunctionAnalysisManager &AM) {
+  auto module = F.getParent();
+  if (!Instrument_tainted_malloc(*module))
+    return PreservedAnalyses::all();
+  else
+    return PreservedAnalyses::none();
+}
+
+namespace {
+struct TaintedMallocLegacyPass : public ModulePass {
+  static char ID;
+  TaintedMallocLegacyPass() : ModulePass(ID) {
+    initializeTaintedMallocLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    errs() << "inside runOnFunction;\n";
+    return Instrument_tainted_malloc(M);
+  }
+};
+}//namespace
+
+char TaintedMallocLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(TaintedMallocLegacyPass, "tainted-malloc",
+                      "tainted memory allocation", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(TaintedMallocLegacyPass, "tainted-malloc",
+                    "tainted memory allocation", false, false)
+
+ModulePass *llvm::createTaintedMallocLegacyPass() {
+  return new TaintedMallocLegacyPass();
+}

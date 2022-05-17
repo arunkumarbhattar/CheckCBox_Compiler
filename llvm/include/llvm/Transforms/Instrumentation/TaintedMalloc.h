@@ -11,10 +11,14 @@
 //---------------------------------------------------------------
 // New PM Interface
 //---------------------------------------------------------------
-struct TaintedMalloc : public llvm::ModulePass{
-  static char ID;
-  TaintedMalloc() : ModulePass(ID) {};
-  bool runOnModule(llvm::Module &M);
+namespace llvm {
+
+struct TaintedMallocPass : public PassInfoMixin<TaintedMallocPass>{
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+/// Legacy pass creation function for the above pass.
+ModulePass *createTaintedMallocLegacyPass();
+
+}
 #endif // LLVM_TAINTEDMALLOC_H
