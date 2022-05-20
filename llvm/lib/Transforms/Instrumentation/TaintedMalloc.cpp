@@ -50,6 +50,7 @@ Function &create_sandbox_malloc(Module &M)
 {
   LLVMContext &Ctx = M.getContext();
 
+
   auto Callee = M.getOrInsertFunction("malloc_in_sandbox",
                                       Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx));
 
@@ -67,28 +68,31 @@ void addCall(Module &M, Instruction &I, Value* size_param)
 
 static bool Instrument_tainted_malloc(Module& M)
 {
+  /*
   bool modified = false;
-  for (auto &BB : M) {
-    for (auto &I : BB) {
-      // if this is a call instruction then CB will not be NULL
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (nullptr == CB) {
-        continue;
-      }
+  for (auto &F : M) {
+    for(auto &BB : F) {
+      for (auto &I : BB) {
+        // if this is a call instruction then CB will not be NULL
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (nullptr == CB) {
+          continue;
+        }
 
-      auto DirectInvoc = CB->getCalledFunction();
-      if (nullptr == DirectInvoc) {
-        continue;
-      }
+        auto DirectInvoc = CB->getCalledFunction();
+        if (nullptr == DirectInvoc) {
+          continue;
+        }
 
-      if (CB->getCalledFunction()->getName() == "t_malloc") {
-        I.eraseFromParent();
-        addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
-        modified = true;
+        if (CB->getCalledFunction()->getName() == "t_malloc") {
+          I.eraseFromParent();
+          addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
+          modified = true;
+        }
       }
     }
   }
-  return modified;
+  return modified;*/
 }
 
 PreservedAnalyses TaintedMallocPass::run(Function& F,
