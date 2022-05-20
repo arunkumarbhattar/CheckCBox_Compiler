@@ -1250,8 +1250,8 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (SP->isNoReturn())
     addFlag(SPDie, dwarf::DW_AT_noreturn);
 
-  if(SP->isTainted())
-    addFlag(SPDie, dwarf::DW_AT_tainted);
+  //if(SP->isTainted())
+    //addFlag(SPDie, dwarf::DW_AT_tainted);
 
   if (SP->isProtected())
     addUInt(SPDie, dwarf::DW_AT_accessibility, dwarf::DW_FORM_data1,

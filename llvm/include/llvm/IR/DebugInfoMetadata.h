@@ -2004,7 +2004,7 @@ public:
   /// Check if this is marked as tainted.
   ///
   /// Return true if this subprogram is C11 _Tainted
-  bool isTainted() const { return getFlags() & FlagTainted; }
+  //bool isTainted() const { return getFlags() & FlagTainted; }
 
   // Check if this routine is a compiler-generated thunk.
   //
