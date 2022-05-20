@@ -73,12 +73,12 @@ static bool Instrument_tainted_malloc(Module& M)
   static IRBuilder<> Builder(M.getContext());
   bool modified = false;
   Value* RetVal;
+  Instruction* inst_to_delete;
   for (auto &F : M) {
     for(auto &BB : F) {
       for (auto &I : BB) {
         // if this is a call instruction then CB will not be NULL
         auto *CB = dyn_cast<CallBase>(&I);
-
 
         auto *BC = dyn_cast<BitCastOperator>(&I);
 
@@ -107,11 +107,13 @@ static bool Instrument_tainted_malloc(Module& M)
         if (CB->getCalledFunction()->getName() == "t_malloc") {
           RetVal =
               addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(0));
+          inst_to_delete = &I;
           modified = true;
         }
       }
     }
   }
+  inst_to_delete->eraseFromParent();
   return modified;
 }
 
