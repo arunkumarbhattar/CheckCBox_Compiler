@@ -70,7 +70,7 @@ static bool Instrument_tainted_free(Module& M)
 {
   static IRBuilder<> Builder(M.getContext());
   bool modified = false;
-  Instruction* inst_to_delete;
+  Instruction* inst_to_delete = nullptr;
   for (auto &F : M) {
     for(auto &BB : F) {
       for (auto &I : BB) {
@@ -94,7 +94,8 @@ static bool Instrument_tainted_free(Module& M)
       }
     }
   }
-  inst_to_delete->eraseFromParent();
+  if(inst_to_delete != nullptr)
+    inst_to_delete->eraseFromParent();
   return modified;
 }
 

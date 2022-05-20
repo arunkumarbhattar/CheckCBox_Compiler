@@ -67,6 +67,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
+#include "llvm/Transforms/Instrumentation/TaintedInvokeInSandbox.h"
 #include "llvm/Transforms/Instrumentation/TaintedFree.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -224,6 +225,11 @@ static void addTaintedMallocPass(const PassManagerBuilder &Builder,
 static void addTaintedFreePass(const PassManagerBuilder &Builder,
                                  legacy::PassManagerBase &PM){
   PM.add(createTaintedFreeLegacyPass());
+}
+
+static void addTaintedInvokeInSandboxPass(const PassManagerBuilder &Builder,
+                               legacy::PassManagerBase &PM){
+  PM.add(createTaintedInvokeInSandboxLegacyPass());
 }
 
 static SanitizerCoverageOptions
@@ -737,6 +743,11 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                          addTaintedFreePass);
   PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                          addTaintedFreePass);
+
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                         addTaintedInvokeInSandboxPass);
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                         addTaintedInvokeInSandboxPass);
 
   if (CodeGenOpts.SanitizeCoverageType ||
       CodeGenOpts.SanitizeCoverageIndirectCalls ||
@@ -1280,6 +1291,12 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
           MPM.addPass(createModuleToFunctionPassAdaptor(TaintedFreePass()));
         });
+
+    PB.registerPipelineStartEPCallback(
+        [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(TaintedInvokeInSandboxPass()));
+        });
+
 
     if (CodeGenOpts.SanitizeCoverageType ||
         CodeGenOpts.SanitizeCoverageIndirectCalls ||
