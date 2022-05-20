@@ -112,7 +112,7 @@ struct TaintedMallocLegacyPass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
-    errs() << "inside runOnFunction;\n";
+  //  errs() << "inside runOnFunction;\n";
     return Instrument_tainted_malloc(M);
   }
 };
