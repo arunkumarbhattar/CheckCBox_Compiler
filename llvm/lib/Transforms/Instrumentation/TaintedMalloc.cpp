@@ -18,10 +18,6 @@
 ///       -passes=-"tmalloc" <bitcode-file>
 
 #include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -29,13 +25,20 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Instrumentation/sandbox_interface.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <vector>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 using namespace llvm;
 
@@ -50,33 +53,50 @@ Function &create_sandbox_malloc(Module &M)
 {
   LLVMContext &Ctx = M.getContext();
 
-
+  Type* VOID_Ptr = const_cast<PointerType*>(Type::getInt8PtrTy(M.getContext()));
   auto Callee = M.getOrInsertFunction("malloc_in_sandbox",
-                                      Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx));
+                                      VOID_Ptr, Type::getInt64Ty(Ctx));
 
   auto F = dyn_cast<Constant>(Callee.getCallee());
   auto *new_func = cast<Function>(F);
   return *new_func;
 }
 
-void addCall(Module &M, Instruction &I, Value* size_param)
+Value* addCall(Module &M, Instruction &I, Value* size_param)
 {
   IRBuilder<>Bld(&I);
-  Bld.CreateCall(&(create_sandbox_malloc(M)), size_param);
-  return;
+  return Bld.CreateCall(&(create_sandbox_malloc(M)), size_param);
 }
 
 static bool Instrument_tainted_malloc(Module& M)
 {
-  /*
+  static IRBuilder<> Builder(M.getContext());
   bool modified = false;
+  Value* RetVal;
   for (auto &F : M) {
     for(auto &BB : F) {
       for (auto &I : BB) {
         // if this is a call instruction then CB will not be NULL
         auto *CB = dyn_cast<CallBase>(&I);
-        if (nullptr == CB) {
+
+
+        auto *BC = dyn_cast<BitCastOperator>(&I);
+
+        if ((nullptr == CB) && (BC == nullptr)) {
           continue;
+        }
+
+
+        if(BC != nullptr)
+        {
+          auto *CB_tmp = dyn_cast<CallBase>(I.getPrevNonDebugInstruction(true));
+          if((CB_tmp != nullptr) && (CB_tmp->getCalledFunction()->getName() == "t_malloc"))
+          {
+            I.setOperand(0, RetVal);
+            continue;
+          }
+          else
+            continue;
         }
 
         auto DirectInvoc = CB->getCalledFunction();
@@ -85,14 +105,14 @@ static bool Instrument_tainted_malloc(Module& M)
         }
 
         if (CB->getCalledFunction()->getName() == "t_malloc") {
-          I.eraseFromParent();
-          addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(1));
+          RetVal =
+              addCall(M, reinterpret_cast<Instruction &>(I), CB->getArgOperand(0));
           modified = true;
         }
       }
     }
   }
-  return modified;*/
+  return modified;
 }
 
 PreservedAnalyses TaintedMallocPass::run(Function& F,
@@ -114,6 +134,7 @@ struct TaintedMallocLegacyPass : public ModulePass {
   bool runOnModule(Module &M) override {
   //  errs() << "inside runOnFunction;\n";
     return Instrument_tainted_malloc(M);
+
   }
 };
 }//namespace

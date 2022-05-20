@@ -722,9 +722,9 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addBoundsCheckingPass);
   }
 
-  PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                          addTaintedMallocPass);
-  PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                            addTaintedMallocPass);
 
   if (CodeGenOpts.SanitizeCoverageType ||
