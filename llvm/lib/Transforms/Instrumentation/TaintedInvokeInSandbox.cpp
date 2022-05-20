@@ -64,6 +64,7 @@ static bool Instrument_tainted_func_call(Module& M) {
   static IRBuilder<> Builder(M.getContext());
   bool modified = false;
   Instruction *inst_to_delete = nullptr;
+  Value* new_val;
   for (auto &F : M) {
     for (auto &BB : F) {
       for (auto &I : BB) {
@@ -83,18 +84,21 @@ static bool Instrument_tainted_func_call(Module& M) {
             CB->getCalledFunction()->getFnAttribute(Attribute::Tainted);
         if (isCalledFnTainted.isValid()) {
 
-          // Create a vector of operands -->
           std::vector<Value *> args;
           std::vector<Type *> ParamTys;
+
+          ParamTys.push_back(CB->getCalledFunction()->getValueName()->getValue()->getType());
+          args.push_back(CB->getCalledFunction()->getValueName()->getValue());
 
           int number_of_args = CB->getNumArgOperands();
           for (int i = 0; i < number_of_args; i++) {
             args.push_back(CB->getArgOperand(i));
             ParamTys.push_back(CB->getArgOperand(i)->getType());
           }
+
           Type *retValType = CB->getCalledFunction()->getReturnType();
 
-          addSbxInvkCall(M, reinterpret_cast<Instruction &>(I), args, ParamTys,
+          new_val = addSbxInvkCall(M, reinterpret_cast<Instruction &>(I), args, ParamTys,
                          retValType);
           inst_to_delete = &I;
           modified = true;
@@ -102,8 +106,10 @@ static bool Instrument_tainted_func_call(Module& M) {
       }
     }
   }
-    if(inst_to_delete !=nullptr)
-      inst_to_delete->eraseFromParent();
+    if(inst_to_delete !=nullptr) {
+        inst_to_delete->replaceAllUsesWith(new_val);
+        inst_to_delete->eraseFromParent();
+    }
     return modified;
   }
 
