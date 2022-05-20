@@ -47,6 +47,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
+#include "llvm/Transforms/Instrumentation/TaintedFree.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -81,6 +82,7 @@ namespace {
       (void) llvm::createScopedNoAliasAAWrapperPass();
       (void) llvm::createBoundsCheckingLegacyPass();
       (void) llvm::createTaintedMallocLegacyPass();
+      (void) llvm::createTaintedFreeLegacyPass();
       (void) llvm::createBreakCriticalEdgesPass();
       (void) llvm::createCallGraphDOTPrinterPass();
       (void) llvm::createCallGraphViewerPass();

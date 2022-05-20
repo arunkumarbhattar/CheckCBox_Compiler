@@ -5,8 +5,8 @@
 /// TaintedMalloc.cpp
 
 /// DESCRIPTION:
-/// For every call to t_malloc function in the input IR module, TaintedMalloc
-/// inserts a call to malloc_in_sandbox with the appropriate size_t parameter,
+/// For every call to t_malloc function in the input IR module, TaintedMallocPass
+/// inserts a call to malloc_in_sandbox with the appropriate operand parameter,
 /// following which the original t_malloc function call gets removed.
 
 /// USAGE:
@@ -14,7 +14,7 @@
 ///     $opt -load <BUILD_DIR>/lib/libTaintedMalloc.so '\'
 ///         --legacy-tmalloc <bitcode-file>
 /// 2.) New Pass Manager:
-///      $opt -laod-pass-plugin <BUILD_DIR>/lib/libTaintedMalloc.so '\'
+///      $opt -load-pass-plugin <BUILD_DIR>/lib/libTaintedMalloc.so '\'
 ///       -passes=-"tmalloc" <bitcode-file>
 
 #include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
@@ -34,11 +34,9 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/sandbox_interface.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <vector>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 using namespace llvm;
 

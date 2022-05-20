@@ -67,6 +67,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/TaintedMalloc.h"
+#include "llvm/Transforms/Instrumentation/TaintedFree.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -218,6 +219,11 @@ static void addBoundsCheckingPass(const PassManagerBuilder &Builder,
 static void addTaintedMallocPass(const PassManagerBuilder &Builder,
                                  legacy::PassManagerBase &PM){
   PM.add(createTaintedMallocLegacyPass());
+}
+
+static void addTaintedFreePass(const PassManagerBuilder &Builder,
+                                 legacy::PassManagerBase &PM){
+  PM.add(createTaintedFreeLegacyPass());
 }
 
 static SanitizerCoverageOptions
@@ -726,6 +732,11 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                          addTaintedMallocPass);
   PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                            addTaintedMallocPass);
+
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                         addTaintedFreePass);
+  PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                         addTaintedFreePass);
 
   if (CodeGenOpts.SanitizeCoverageType ||
       CodeGenOpts.SanitizeCoverageIndirectCalls ||
@@ -1263,6 +1274,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     PB.registerPipelineStartEPCallback(
         [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
           MPM.addPass(createModuleToFunctionPassAdaptor(TaintedMallocPass()));
+        });
+
+    PB.registerPipelineStartEPCallback(
+        [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(TaintedFreePass()));
         });
 
     if (CodeGenOpts.SanitizeCoverageType ||
