@@ -449,8 +449,6 @@ void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeWriteThinLTOBitcodePass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
-void initializeTaintedMallocLegacyPassPass(PassRegistry&);
-void initializeTaintedFreeLegacyPassPass(PassRegistry&);
 void initializeTaintedInvokeInSandboxLegacyPassPass(PassRegistry&);
 
 } // end namespace llvm
