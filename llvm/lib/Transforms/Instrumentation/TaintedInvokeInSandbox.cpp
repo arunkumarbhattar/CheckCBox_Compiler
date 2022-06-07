@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <vector>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -40,11 +41,11 @@ using namespace llvm;
 //-----------------------------------------------------------------------------
 
 
-Function &create_sandbox_invoke_call(Module &M, Type* RetValType, std::vector<Type*> ParamTys)
+Function &create_sandbox_invoke_call(Module &M, Type* RetValType, std::vector<Type*> ParamTys, std::string &generated_function_name)
 {
   LLVMContext &Ctx = M.getContext();
 
-  auto Callee = M.getOrInsertFunction("execute_sandbox_function",
+  auto Callee = M.getOrInsertFunction(generated_function_name,
                                       FunctionType::get(RetValType,ParamTys, false));
 
   auto F = dyn_cast<Constant>(Callee.getCallee());
@@ -53,17 +54,81 @@ Function &create_sandbox_invoke_call(Module &M, Type* RetValType, std::vector<Ty
 }
 
 Value* addSbxInvkCall(Module &M, Instruction &I, std::vector<Value*> args,
-                      std::vector<Type*> ParamTys, Type* RetValType)
+                      std::vector<Type*> ParamTys, Type* RetValType, std::string &generated_function_name)
 {
   IRBuilder<>Bld(&I);
-  return Bld.CreateCall(&(create_sandbox_invoke_call(M, RetValType, ParamTys)), args);
+  return Bld.CreateCall(&(create_sandbox_invoke_call(M, RetValType, ParamTys, generated_function_name)), args);
 }
 
+Function& create_sandbox_fetch_offset(Module &M){
+  LLVMContext &Ctx = M.getContext();
+
+  Type* CharPtr = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
+  Type* offsetRetTyp = const_cast<IntegerType *>(IntegerType::getInt64Ty(M.getContext()));
+  auto Callee = M.getOrInsertFunction("c_fetch_pointer_offset",
+                                      offsetRetTyp, CharPtr);
+  auto F = dyn_cast<Constant>(Callee.getCallee());
+  auto *new_func = cast<Function>(F);
+  return *new_func;
+}
+
+Function& create_sandbox_address_fetch_call(Module& M)
+{
+  LLVMContext &Ctx = M.getContext();
+
+  Type* VOIDPTR = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
+  auto Callee = M.getOrInsertFunction("c_fetch_sandbox_address",
+                                      VOIDPTR);
+  auto F = dyn_cast<Constant>(Callee.getCallee());
+  auto *new_func = cast<Function>(F);
+  return *new_func;
+}
+
+Value* addPointerOffsetFetchCall(Module &M, Instruction &I, Value* pointer_name)
+{
+  IRBuilder<>Bld(&I);
+  return Bld.CreateCall(&(create_sandbox_fetch_offset(M)), pointer_name);
+}
+
+Function& create_sandbox_heap_fetch_call(Module &M)
+{
+  LLVMContext &Ctx = M.getContext();
+  Type* heap_address_return_type = const_cast<IntegerType*>(IntegerType::getInt64Ty(M.getContext()));
+  auto Callee = M.getOrInsertFunction("c_fetch_sandbox_heap_address", heap_address_return_type);
+  auto F = dyn_cast<Constant>(Callee.getCallee());
+  auto* new_func = cast<Function>(F);
+  return *new_func;
+}
+
+Value* addSandboxHeapFetchCall(Module &M, Instruction &I)
+{
+  IRBuilder<> Bld(&I);
+  return Bld.CreateCall(&(create_sandbox_heap_fetch_call(M)));
+}
+
+Value* addSandboxAddressFetchCall(Module &M, Instruction &I)
+{
+  IRBuilder<> Bld(&I);
+  return Bld.CreateCall(&(create_sandbox_address_fetch_call(M)));
+
+}
+
+Value* addSumCallForFinalAddrCall(Module &M, Instruction &I, Value* SbxBaseAddress, Value* Offset)
+{
+  IRBuilder<> Bld(&I);
+  return Bld.CreateAdd(SbxBaseAddress, Offset);
+}
+
+Value* AddBitCastOperation(Module &M, Instruction &I, Value* AddressInteger, Type* TrueRetValType)
+{
+  IRBuilder<>Bld(&I);
+  return Bld.CreateIntToPtr(AddressInteger, TrueRetValType);
+}
 static bool Instrument_tainted_func_call(Module& M) {
   static IRBuilder<> Builder(M.getContext());
   bool modified = false;
   Instruction *inst_to_delete = nullptr;
-  Value* new_val;
+  Value* Sandbox_return_val;
   for (auto &F : M) {
     for (auto &BB : F) {
       for (auto &I : BB) {
@@ -86,19 +151,142 @@ static bool Instrument_tainted_func_call(Module& M) {
           std::vector<Value *> args;
           std::vector<Type *> ParamTys;
 
-          ParamTys.push_back(CB->getCalledFunction()->getValueName()->getValue()->getType());
-          args.push_back(CB->getCalledFunction()->getValueName()->getValue());
+          /*
+           * The first argument would be the sandbox address which is technically a void*
+           *
+           */
+          Value* Sandbox_address;
+          Sandbox_address = addSandboxAddressFetchCall(M, reinterpret_cast<Instruction &>(I));
+          args.push_back(Sandbox_address);
+          ParamTys.push_back(Sandbox_address->getType());
+
+          std::string func_name = CB->getCalledFunction()->getName().str();
+          std::string generated_function_name = "w2c_"+func_name;
+          /*
+           * unordered hash map (1) -->
+           * key --> pointer_name /////  value --> argument index (To insert it back)
+           * unordered hash map (2) -->
+           * key --> pointer_name /////  value --> pointer offset
+           *
+           * In the future we shall have advanced name mangling to handle the scenario of same
+           * pointer name within two different lexical scopes (local variables vs global variables
+           * with same pointer names)
+          */
+
+          std::unordered_map<int, std::string> hash_map_1;
+          std::unordered_map<std::string, Value*> hash_map_2;
 
           int number_of_args = CB->getNumArgOperands();
-          for (int i = 0; i < number_of_args; i++) {
-            args.push_back(CB->getArgOperand(i));
-            ParamTys.push_back(CB->getArgOperand(i)->getType());
+
+          // Initialize the argument counter to the number of arguments
+          int arg_counter = number_of_args;
+          for (auto op = I.op_begin(); op != I.op_end();op++){
+            if((arg_counter > 0) && (op->get()->getType()->isPointerTy())) {
+              Value *v = op->get();
+              StringRef name = getLoadStorePointerOperand(v)->getName().data();
+              hash_map_1[op->getOperandNo()] = name.str();
+            }
+            arg_counter--;
           }
 
-          Type *retValType = CB->getCalledFunction()->getReturnType();
+          /*
+           * Now in a loop, retrieve all the pointer offsets for the arguments
+           */
+          for (auto itr = hash_map_1.begin(); itr != hash_map_1.end();  itr++)
+          {
+            /*
+             * Insert call Instructions to fetch the pointer offsets for these pointer names
+             *
+             */
+            Value* returned_pointer_offset;
+            Type* CHAR = PointerType::getUnqual(Type::getInt8Ty(M.getContext()));
+            // Create a variable that will hold the string
 
-          new_val = addSbxInvkCall(M, reinterpret_cast<Instruction &>(I), args, ParamTys,
-                         retValType);
+            //Fetch the value object pointer of the argument
+
+            llvm::Constant *Argument = llvm::ConstantDataArray::getString(
+                M.getContext(), itr->second.c_str()
+            );
+
+            Constant *PrintfFormatStrVar =
+                M.getOrInsertGlobal("PrintfFormatStr", Argument->getType());
+            dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(Argument);
+
+            llvm::Value *FormatArgument =
+                Builder.CreatePointerCast(PrintfFormatStrVar, CHAR, "formatStr");
+
+            Argument->setName("argument");
+            //Set the value to this from the constant we declared above
+            //Argument->setName("arg1");
+            //Argument->setValueName(StringFormat->getValueName());
+            //Issue call and start storing the return offset into the second hash_map
+            returned_pointer_offset = addPointerOffsetFetchCall(M, reinterpret_cast<Instruction &>(I), FormatArgument);
+            hash_map_2[itr->second.c_str()] = returned_pointer_offset;
+          }
+
+          /*
+           * Now loop through the arguments and create a argument list needed to issue the call to the sandbox
+           *
+           */
+          for (int i = 0; i < number_of_args; i++) {
+            /*
+             * If the argument type is a pointer offset,
+             * then fetch and push back the pointer offset value
+             */
+            if(hash_map_1.find(i) != hash_map_1.end())
+            {
+              //Generate a Value* from the value
+              Type* Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(M.getContext()));
+              args.push_back(hash_map_2[hash_map_1[i]]);
+              ParamTys.push_back(Int64);
+            }
+            else {
+              args.push_back(CB->getArgOperand(i));
+              ParamTys.push_back(CB->getArgOperand(i)->getType());
+            }
+          }
+
+          //Now you have the proper argument list ready --> pass it on and use it to invoke the sandbox call
+          // if function returns a pointer value, then the return type for the sandbox invoke function would be a int64
+          // pointer offset, hence accordingly change the return type
+          Type* retValType;
+          Type* TrueretValType = CB->getCalledFunction()->getReturnType();
+
+          if (CB->getCalledFunction()->getReturnType()->isPointerTy())
+          {
+            retValType = const_cast<IntegerType*>(IntegerType::getInt64Ty(M.getContext()));
+          }
+          else
+          {
+            retValType = CB->getCalledFunction()->getReturnType();
+          }
+
+          Sandbox_return_val = addSbxInvkCall(M, reinterpret_cast<Instruction &>(I), args, ParamTys,
+                         retValType, generated_function_name);
+
+          /*
+           * Check if retValType is a pointer or not, if it is a pointer, then you need to return appropriate type,
+           * else we are done here
+           */
+          if (TrueretValType->isPointerTy()){
+            /*
+             * Now you need to the following additional calls
+             * 1.) fetch a call to retrieve the sandbox heap address (which is of u46 type)
+             * 2.) Insert a call to add the return value of the above instruction to new_val pointer offset
+             * 3.) insert a call to bitcast the sum to a void pointer
+             */
+            // Adding support for call 1
+            Value* returned_sandbox_heap_address;
+            returned_sandbox_heap_address = addSandboxHeapFetchCall(M, reinterpret_cast<Instruction &>(I));
+            // Adding support for call 2
+            Value* returned_final_address_integer;
+            returned_final_address_integer = addSumCallForFinalAddrCall(M,
+                                                                        reinterpret_cast<Instruction &>(I),
+                                                                        returned_sandbox_heap_address
+                                                                        , Sandbox_return_val);
+            // Adding support for call 3
+            Sandbox_return_val = AddBitCastOperation(M, reinterpret_cast<Instruction&>(I), returned_final_address_integer, TrueretValType);
+          }
           inst_to_delete = &I;
           modified = true;
         }
@@ -106,7 +294,7 @@ static bool Instrument_tainted_func_call(Module& M) {
     }
   }
     if(inst_to_delete !=nullptr) {
-        inst_to_delete->replaceAllUsesWith(new_val);
+        inst_to_delete->replaceAllUsesWith(Sandbox_return_val);
         inst_to_delete->eraseFromParent();
     }
     return modified;
