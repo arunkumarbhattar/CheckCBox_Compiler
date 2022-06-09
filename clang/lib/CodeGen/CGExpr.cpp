@@ -2881,6 +2881,7 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
     EmitDynamicNonNullCheck(Addr, BaseTy);
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
                            nullptr);
     // We should not generate __weak write barrier on indirect reference
@@ -3741,7 +3742,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/false);
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     EmitDynamicNonNullCheck(LHS.getAddress(*this), BaseTy);
-
+    EmitTaintedPtrMemoryCheck(LHS.getAddress(*this), BaseTy);
     LValue LV = LValue::MakeVectorElt(LHS.getAddress(*this), Idx,
       E->getBase()->getType(), LHS.getBaseInfo(), TBAAAccessInfo());
 
@@ -3759,7 +3760,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     Address Addr = EmitExtVectorElementLValue(LV);
     EmitDynamicNonNullCheck(Addr, BaseTy);
-
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     QualType EltType = LV.getType()->castAs<VectorType>()->getElementType();
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, EltType, /*inbounds*/ true,
                                  SignedIndices, E->getExprLoc());
@@ -3782,7 +3783,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     EmitDynamicNonNullCheck(Addr, BaseTy);
-
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     // The element count here is the total number of non-VLA elements.
     llvm::Value *numElements = getVLASize(vla).NumElts;
 
@@ -3813,7 +3814,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     llvm::Value *ScaledIdx = Builder.CreateMul(Idx, InterfaceSizeVal);
     EmitDynamicNonNullCheck(Addr, BaseTy);
-
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     // We don't necessarily build correct LLVM struct types for ObjC
     // interfaces, so we can't rely on GEP to do this scaling
     // correctly, so we need to cast to i8*.  FIXME: is this actually
@@ -3848,7 +3849,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     EmitDynamicNonNullCheck(ArrayLV.getAddress(*this), BaseTy);
-
+    /*
+     * Ideally the below would make no sense because there are no tainted array types
+     */
+    //EmitTaintedPtrMemoryCheck(ArrayLV.getAddress(*this), BaseTy);
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
     Addr = emitArraySubscriptGEP(
@@ -3863,6 +3867,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
     EmitDynamicNonNullCheck(Addr, BaseTy);
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -4180,6 +4185,7 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
 
     EmitDynamicNonNullCheck(Addr, BaseTy);
+    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     // We only check the Base LValue, as we assume that any field is definitely
     // within the size of the struct. This may not be the case with a "flexible
     // array member" (6.7.2.1.18), but this member is an array, so is either

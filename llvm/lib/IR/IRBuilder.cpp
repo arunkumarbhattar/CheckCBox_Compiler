@@ -331,6 +331,13 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
   auto Decl = Intrinsic::getDeclaration(M, ID, Tys);
   return createCallHelper(Decl, Ops, Builder);
 }
+ static CallInst *CreateTaintedPtrMemCheckInternal(IRBuilderBase *Builder, Value *Src){
+ Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+ Value *Ops[] = {Src};
+ Type *Tys[] = {Src->getType()};
+ auto Decl = Intrinsic::SandboxTaintedMemCheckFunction(M);
+ return createCallHelper(Decl, Ops, Builder);
+}
 
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
@@ -374,6 +381,15 @@ CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
   return getReductionIntrinsic(this, ID, Src);
 }
 
+CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
+    //if the parsed Source Value is not a void pointer type, it must be casted to a void pointer -->
+    if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
+    {
+      //cast it to void pointer
+      Src = CreateBitCast(Src,Type::getInt8PtrTy(this->getContext()));
+    }
+    return CreateTaintedPtrMemCheckInternal(this, Src);
+}
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
   auto ID =
       IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;
