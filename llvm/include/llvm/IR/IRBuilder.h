@@ -2579,6 +2579,11 @@ public:
                         Name);
   }
 
+  Value *CreateIsTaintedPtr(Value *Arg, const Twine &Name = "") {
+    Type* ArgType = Arg->getType();
+    //Create a Call to "c_isTaintedPointerToTaintedMem" by Passing the pointer reference
+    return CreateTaintedPtrMemCheck(Arg);
+  }
   /// Return the i64 difference between two pointer values, dividing out
   /// the size of the pointed-to objects.
   ///
@@ -2652,6 +2657,8 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
+  CallInst *CreateTaintedPtrMemCheck(IRBuilderBase *Builder, Value *Src);
+  CallInst *CreateTaintedPtrMemCheck(Value *Src);
 };
 
 /// This provides a uniform API for creating instructions and inserting

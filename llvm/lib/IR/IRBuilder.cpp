@@ -331,6 +331,13 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
   auto Decl = Intrinsic::getDeclaration(M, ID, Tys);
   return createCallHelper(Decl, Ops, Builder);
 }
+ static CallInst *CreateTaintedPtrMemCheckInternal(IRBuilderBase *Builder, Value *Src){
+ Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+ Value *Ops[] = {Src};
+ Type *Tys[] = {Src->getType()};
+ auto Decl = Intrinsic::SandboxTaintedMemCheckFunction(M);
+ return createCallHelper(Decl, Ops, Builder);
+}
 
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
@@ -374,6 +381,9 @@ CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
   return getReductionIntrinsic(this, ID, Src);
 }
 
+CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
+    return CreateTaintedPtrMemCheckInternal(this, Src);
+}
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
   auto ID =
       IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;

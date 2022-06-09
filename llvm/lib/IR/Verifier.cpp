@@ -3034,7 +3034,8 @@ void Verifier::visitCallBase(CallBase &Call) {
 
   // Verify that all arguments to the call match the function type.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
-    Assert(Call.getArgOperand(i)->getType() == FTy->getParamType(i),
+    Assert(Call.getArgOperand(i)->getType() == FTy->getParamType(i) ||
+               Call.getArgOperand(i)->getType()->getTypeID() == FTy->getParamType(i)->getTypeID(),
            "Call parameter type does not match function signature!",
            Call.getArgOperand(i), FTy->getParamType(i), Call);
 

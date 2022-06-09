@@ -1258,6 +1258,14 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
           .getCallee());
 }
 
+Function* Intrinsic::SandboxTaintedMemCheckFunction(Module *M){
+  Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
+  Type* RetTyp = (Type::getInt1Ty(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("c_isTaintedPointerToTaintedMem",
+                                               RetTyp, VOIDPtr)
+      .getCallee());
+}
+
 // This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"

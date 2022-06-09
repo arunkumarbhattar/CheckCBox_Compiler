@@ -30,6 +30,9 @@ namespace {
               "The # of dynamic _Dynamic_check(cond) checks found");
   STATISTIC(NumDynamicChecksNonNull,
               "The # of dynamic non-null checks found");
+
+  STATISTIC(NumDynamicChecksTainted, "The # of dynamic tainted ptr memory checks found");
+
   STATISTIC(NumDynamicChecksOverflow,
               "The # of dynamic overflow checks found");
   STATISTIC(NumDynamicChecksRange,
@@ -68,6 +71,19 @@ static bool shouldEmitNonNullCheck(const CodeGenModule &CGM,
   return true;
 }
 
+static bool shouldEmitTaintedPtrMemoryCheck(const CodeGenModule &CGM,
+                                            const QualType BaseTy) {
+  if(!CGM.getLangOpts().CheckedC)
+    return false;
+  //if(!CGM.getLangOpts().TaintedC)
+  //return false;
+
+  if(!(BaseTy->isTaintedPointerType()))
+    return false;
+
+  return true;
+
+}
 void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
                                               const QualType BaseTy) {
   if (!shouldEmitNonNullCheck(CGM, BaseTy))
@@ -78,6 +94,18 @@ void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
   Value *ConditionVal = Builder.CreateIsNotNull(BaseAddr.getPointer(),
                                                 "_Dynamic_check.non_null");
   EmitDynamicCheckBlocks(ConditionVal);
+}
+
+void CodeGenFunction::EmitTaintedPtrMemoryCheck(const Address BaseAddr,
+                                                const QualType BaseTy){
+  if(!shouldEmitTaintedPtrMemoryCheck(CGM, BaseTy))
+    return;
+
+  ++NumDynamicChecksTainted;
+  Value *ConditionVal = Builder.CreateIsTaintedPtr(BaseAddr.getPointer(),
+                                                   "_Dynamic_check.tainted_pointer");
+
+    EmitDynamicCheckBlocks(ConditionVal);
 }
 
 void CodeGenFunction::EmitDynamicNonNullCheck(Value *Val,

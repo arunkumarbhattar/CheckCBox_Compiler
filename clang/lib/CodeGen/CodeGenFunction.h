@@ -3197,6 +3197,8 @@ public:
 
   void EmitExplicitDynamicCheck(const Expr *Condition);
   void EmitDynamicNonNullCheck(const Address BaseAddr, const QualType BaseTy);
+  void EmitTaintedPtrMemoryCheck(const Address BaseAddr,
+                                 const QualType BaseTy);
   void EmitDynamicNonNullCheck(llvm::Value *Val, const QualType BaseTy);
   void EmitDynamicOverflowCheck(const Address BaseAddr, const QualType BaseTy,
                                 const Address PtrAddr);
