@@ -63,10 +63,10 @@ Value* addSbxInvkCall(Module &M, Instruction &I, std::vector<Value*> args,
 Function& create_sandbox_fetch_offset(Module &M){
   LLVMContext &Ctx = M.getContext();
 
-  Type* CharPtr = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
+  Type* VOIDPtr = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
   Type* offsetRetTyp = const_cast<IntegerType *>(IntegerType::getInt64Ty(M.getContext()));
   auto Callee = M.getOrInsertFunction("c_fetch_pointer_offset",
-                                      offsetRetTyp, CharPtr);
+                                      offsetRetTyp, VOIDPtr);
   auto F = dyn_cast<Constant>(Callee.getCallee());
   auto *new_func = cast<Function>(F);
   return *new_func;
@@ -96,10 +96,10 @@ Function& create_sandbox_address_fetch_call(Module& M)
   return *new_func;
 }
 
-Value* addPointerOffsetFetchCall(Module &M, Instruction &I, Value* pointer_name)
+Value* addPointerOffsetFetchCall(Module &M, Instruction &I, Value* pointer)
 {
   IRBuilder<>Bld(&I);
-  return Bld.CreateCall(&(create_sandbox_fetch_offset(M)), pointer_name);
+  return Bld.CreateCall(&(create_sandbox_fetch_offset(M)), pointer);
 }
 
 Function& create_sandbox_heap_fetch_call(Module &M)
@@ -170,17 +170,14 @@ static bool Instrument_tainted_func_call(Module& M) {
           std::string generated_function_name = "w2c_"+func_name;
           /*
            * unordered hash map (1) -->
-           * key --> pointer_name /////  value --> argument index (To insert it back)
+           * key --> argument_index and value --> pointer
            * unordered hash map (2) -->
-           * key --> pointer_name /////  value --> pointer offset
+           * key --> argument_index and value --> pointer_offset
            *
-           * In the future we shall have advanced name mangling to handle the scenario of same
-           * pointer name within two different lexical scopes (local variables vs global variables
-           * with same pointer names)
           */
 
-          std::unordered_map<int, std::string> hash_map_1;
-          std::unordered_map<std::string, Value*> hash_map_2;
+          std::unordered_map<int, Value*> hash_map_1;
+          std::unordered_map<int, Value*> hash_map_2;
 
           int number_of_args = CB->getNumArgOperands();
 
@@ -188,9 +185,11 @@ static bool Instrument_tainted_func_call(Module& M) {
           int arg_counter = number_of_args;
           for (auto op = I.op_begin(); op != I.op_end();op++){
             if((arg_counter > 0) && (op->get()->getType()->isPointerTy())) {
-              Value *v = op->get();
-              StringRef name = getLoadStorePointerOperand(v)->getName().data();
-              hash_map_1[op->getOperandNo()] = name.str();
+              Value *argument = op->get();
+              Type* VOIDPTR = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
+              //BitCast this pointer to a void pointer
+              Value* voidptr_typecasted_arg = AddBitCastOperation(M, reinterpret_cast<Instruction&>(I), argument, VOIDPTR);
+              hash_map_1[op->getOperandNo()] = voidptr_typecasted_arg;
             }
             arg_counter--;
           }
@@ -201,35 +200,18 @@ static bool Instrument_tainted_func_call(Module& M) {
           for (auto itr = hash_map_1.begin(); itr != hash_map_1.end();  itr++)
           {
             /*
-             * Insert call Instructions to fetch the pointer offsets for these pointer names
+             * Insert call Instructions to fetch the pointer offsets for these pointers
              *
              */
             Value* returned_pointer_offset;
-            Type* CHAR = PointerType::getUnqual(Type::getInt8Ty(M.getContext()));
+
             // Create a variable that will hold the string
-
-            //Fetch the value object pointer of the argument
-
-            llvm::Constant *Argument = llvm::ConstantDataArray::getString(
-                M.getContext(), itr->second.c_str()
-            );
-
-            Constant *PrintfFormatStrVar =
-                M.getOrInsertGlobal("GlobalSbxOffsetVar", Argument->getType());
-            dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(Argument);
-
-            llvm::Value *FormatArgument =
-                Builder.CreatePointerCast(PrintfFormatStrVar, CHAR, "OffsetVar");
-
-            Argument->setName("argument");
-            //Set the value to this from the constant we declared above
-            //Issue call and start storing the return offset into the second hash_map
-            returned_pointer_offset = addPointerOffsetFetchCall(M, reinterpret_cast<Instruction &>(I), FormatArgument);
-            hash_map_2[itr->second.c_str()] = returned_pointer_offset;
+            returned_pointer_offset = addPointerOffsetFetchCall(M, reinterpret_cast<Instruction &>(I), itr->second);
+            hash_map_2[itr->first] = returned_pointer_offset;
           }
 
           /*
-           * Now loop through the arguments and create a argument list needed to issue the call to the sandbox
+           * Now loop through the arguments and create an argument list needed to issue the call to the sandbox
            *
            */
           for (int i = 0; i < number_of_args; i++) {
@@ -241,7 +223,7 @@ static bool Instrument_tainted_func_call(Module& M) {
             {
               //Generate a Value* from the value
               Type* Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(M.getContext()));
-              args.push_back(hash_map_2[hash_map_1[i]]);
+              args.push_back(hash_map_2[i]);
               ParamTys.push_back(Int64);
             }
             else {
@@ -269,7 +251,7 @@ static bool Instrument_tainted_func_call(Module& M) {
                          retValType, generated_function_name);
 
           /*
-           * Check if retValType is a pointer or not, if it is a pointer, then you need to return appropriate type,
+           * Check if retValType is a pointer or not, if it is a pointer, then you need to pointer-cast it to the appropriate type,
            * else we are done here
            */
           if (TrueretValType->isPointerTy()){
