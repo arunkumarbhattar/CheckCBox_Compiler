@@ -2580,7 +2580,6 @@ public:
   }
 
   Value *CreateIsTaintedPtr(Value *Arg, const Twine &Name = "") {
-    Type* ArgType = Arg->getType();
     //Create a Call to "c_isTaintedPointerToTaintedMem" by Passing the pointer reference
     return CreateTaintedPtrMemCheck(Arg);
   }

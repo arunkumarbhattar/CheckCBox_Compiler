@@ -72,6 +72,18 @@ Function& create_sandbox_fetch_offset(Module &M){
   return *new_func;
 }
 
+Function& create_fetch_pointer_from_offset_call(Module &M){
+  LLVMContext &Ctx = M.getContext();
+
+  Type* VOIDPtr = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
+  Type* OffsetTyp = const_cast<IntegerType *>(IntegerType::getInt64Ty(M.getContext()));
+  auto Callee = M.getOrInsertFunction("c_fetch_pointer_from_offset",
+                                      VOIDPtr, OffsetTyp);
+  auto F = dyn_cast<Constant>(Callee.getCallee());
+  auto *new_func = cast<Function>(F);
+  return *new_func;
+}
+
 Function& create_sandbox_address_fetch_call(Module& M)
 {
   LLVMContext &Ctx = M.getContext();
@@ -100,12 +112,6 @@ Function& create_sandbox_heap_fetch_call(Module &M)
   return *new_func;
 }
 
-Value* addSandboxHeapFetchCall(Module &M, Instruction &I)
-{
-  IRBuilder<> Bld(&I);
-  return Bld.CreateCall(&(create_sandbox_heap_fetch_call(M)));
-}
-
 Value* addSandboxAddressFetchCall(Module &M, Instruction &I)
 {
   IRBuilder<> Bld(&I);
@@ -113,16 +119,16 @@ Value* addSandboxAddressFetchCall(Module &M, Instruction &I)
 
 }
 
-Value* addSumCallForFinalAddrCall(Module &M, Instruction &I, Value* SbxBaseAddress, Value* Offset)
+Value* AddPointerFetchFromOffsetCall(Module &M, Instruction &I, Value* Offset)
 {
   IRBuilder<> Bld(&I);
-  return Bld.CreateAdd(SbxBaseAddress, Offset);
+  return Bld.CreateCall(&(create_fetch_pointer_from_offset_call(M)), Offset);
 }
 
-Value* AddBitCastOperation(Module &M, Instruction &I, Value* AddressInteger, Type* TrueRetValType)
+Value* AddBitCastOperation(Module &M, Instruction &I, Value* voidPointer, Type* TrueRetValType)
 {
   IRBuilder<>Bld(&I);
-  return Bld.CreateIntToPtr(AddressInteger, TrueRetValType);
+  return Bld.CreateCast(llvm::Instruction::BitCast ,voidPointer, TrueRetValType);
 }
 static bool Instrument_tainted_func_call(Module& M) {
   static IRBuilder<> Builder(M.getContext());
@@ -209,16 +215,14 @@ static bool Instrument_tainted_func_call(Module& M) {
             );
 
             Constant *PrintfFormatStrVar =
-                M.getOrInsertGlobal("PrintfFormatStr", Argument->getType());
+                M.getOrInsertGlobal("GlobalSbxOffsetVar", Argument->getType());
             dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(Argument);
 
             llvm::Value *FormatArgument =
-                Builder.CreatePointerCast(PrintfFormatStrVar, CHAR, "formatStr");
+                Builder.CreatePointerCast(PrintfFormatStrVar, CHAR, "OffsetVar");
 
             Argument->setName("argument");
             //Set the value to this from the constant we declared above
-            //Argument->setName("arg1");
-            //Argument->setValueName(StringFormat->getValueName());
             //Issue call and start storing the return offset into the second hash_map
             returned_pointer_offset = addPointerOffsetFetchCall(M, reinterpret_cast<Instruction &>(I), FormatArgument);
             hash_map_2[itr->second.c_str()] = returned_pointer_offset;
@@ -271,21 +275,16 @@ static bool Instrument_tainted_func_call(Module& M) {
           if (TrueretValType->isPointerTy()){
             /*
              * Now you need to the following additional calls
-             * 1.) fetch a call to retrieve the sandbox heap address (which is of u46 type)
-             * 2.) Insert a call to add the return value of the above instruction to new_val pointer offset
-             * 3.) insert a call to bitcast the sum to a void pointer
+             * 1.) fetch a call to retrieve the pointer value(void*) from pointer offset (u32)
+             * 2.) insert a call to bitcast the returned void* to funciton return pointer type
              */
             // Adding support for call 1
-            Value* returned_sandbox_heap_address;
-            returned_sandbox_heap_address = addSandboxHeapFetchCall(M, reinterpret_cast<Instruction &>(I));
-            // Adding support for call 2
-            Value* returned_final_address_integer;
-            returned_final_address_integer = addSumCallForFinalAddrCall(M,
-                                                                        reinterpret_cast<Instruction &>(I),
-                                                                        returned_sandbox_heap_address
+            Value* returned_void_pointer;
+            returned_void_pointer = AddPointerFetchFromOffsetCall(M,
+                                                                        reinterpret_cast<Instruction &>(I)
                                                                         , Sandbox_return_val);
-            // Adding support for call 3
-            Sandbox_return_val = AddBitCastOperation(M, reinterpret_cast<Instruction&>(I), returned_final_address_integer, TrueretValType);
+            // Adding support for call 2
+            Sandbox_return_val = AddBitCastOperation(M, reinterpret_cast<Instruction&>(I), returned_void_pointer, TrueretValType);
           }
           inst_to_delete = &I;
           modified = true;

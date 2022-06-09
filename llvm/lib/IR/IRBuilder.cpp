@@ -334,7 +334,6 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
  static CallInst *CreateTaintedPtrMemCheckInternal(IRBuilderBase *Builder, Value *Src){
  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
  Value *Ops[] = {Src};
- Type *Tys[] = {Src->getType()};
  auto Decl = Intrinsic::SandboxTaintedMemCheckFunction(M);
  return createCallHelper(Decl, Ops, Builder);
 }
