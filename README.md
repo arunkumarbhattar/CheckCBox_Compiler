@@ -12,7 +12,7 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 <p align="center">
-  <img src="./images/CheckBox(1).mp4" alt="animated" />
+  <img src="./images/CheckBox.gif" alt="animated" />
 </p>
 
   <h3 align="center">One Stop Shop To "C" Spatial Safety</h3>
@@ -197,7 +197,7 @@ After the file has been changed, you can directory compile the target "check-che
 [issues-shield]: https://img.shields.io/bitbucket/issues/arunkumarbhattar/CheckCBox_Compiler
 [issues-url]: https://github.com/arunkumarbhattar/CheckCBox_Compiler/issues
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://www.linkedin.com/in/arun-kumar-bhattar-093693148/
+[linkedin-url]: https://www.linkedin.com/in/arun-b-093693148
 [product-screenshot]: images/screenshot.png
 
 # The CheckCBox clang repo
