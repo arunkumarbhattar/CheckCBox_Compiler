@@ -31,6 +31,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <vector>
 #include <unordered_map>
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 
