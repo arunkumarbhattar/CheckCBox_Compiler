@@ -12,7 +12,7 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 <p align="center">
-  <img src="./images/CheckBox.gif" alt="animated" />
+  <img src="./images/CheckBox(1).mp4" alt="animated" />
 </p>
 
   <h3 align="center">One Stop Shop To "C" Spatial Safety</h3>
