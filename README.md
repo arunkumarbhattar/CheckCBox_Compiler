@@ -8,7 +8,6 @@
 -->
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
@@ -192,7 +191,7 @@ After the file has been changed, you can directory compile the target "check-che
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/arunkumarbhattar/CheckCBox_Compiler
-[Pulse-url]: https://github.com/arunkumarbhattar/CheckCBox_Compiler/pulse
+[contributors-url]: https://github.com/arunkumarbhattar/CheckCBox_Compiler/pulse
 [forks-shield]: https://img.shields.io/github/forks/arunkumarbhattar/CheckCBox_Compiler?style=social
 [forks-url]: https://github.com/arunkumarbhattar/CheckCBox_Compiler/network/members
 [issues-shield]: https://img.shields.io/bitbucket/issues/arunkumarbhattar/CheckCBox_Compiler
