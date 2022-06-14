@@ -1539,6 +1539,9 @@ def err_invalid_tainted_ptr_checked : Error<
 def err_invalid_tainted_ptr_unchecked : Error<
   "Tainted Pointer cannot point to Un-Checked pointers">;
 
+def err_tainted_struct_member_ptr : Error<
+  "Tainted Structs can only have member pointers of Tainted Type">;
+
 // generic function declaration parsing error.
 def err_forany_type_variable_declaration_expected : Error<
   "expected list of type variables">;

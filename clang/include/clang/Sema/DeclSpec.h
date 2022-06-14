@@ -282,6 +282,7 @@ public:
   static const TST TST_enum = clang::TST_enum;
   static const TST TST_union = clang::TST_union;
   static const TST TST_struct = clang::TST_struct;
+  static const TST TST_Tstruct = clang::TST_Tstruct;
   static const TST TST_interface = clang::TST_interface;
   static const TST TST_class = clang::TST_class;
   static const TST TST_typename = clang::TST_typename;
@@ -316,6 +317,16 @@ public:
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
     TQ_atomic      = 16
+  };
+
+  bool isTaintedStruct;
+
+  // Note: Introduced for Tainted Struct to enforce rules on its pointer members
+  enum PointerTypes {
+    PT_None = 0, // this declSpec has no pointer members involved
+    PT_Generic_C = 1, // This declSpec has generic pointer members
+    PT_Checked_C = 2, // This DeclSpec has checkedc pointers  as members
+    PT_Tainted_C = 4 // This declSpec has tainted pointers as members
   };
 
   /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
@@ -357,6 +368,8 @@ private:
 
   // type-qualifiers
   unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
+
+  unsigned PointerTypeQualifiers : 3;
 
   // function-specifier
   unsigned FS_inline_specified : 1;
@@ -419,6 +432,7 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
+  SourceLocation PT_Generic_C_Loc, PT_Checked_C_Loc , PT_Tainted_C_Loc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
       FS_taintedLoc;
   SourceLocation FS_explicitCloseParenLoc;
@@ -456,7 +470,7 @@ public:
   static bool isDeclRep(TST T) {
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
-            T == TST_class || T == TST_exists);
+            T == TST_class || T == TST_exists || T == TST_Tstruct);
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -464,12 +478,13 @@ public:
         ThreadStorageClassSpec(TSCS_unspecified),
         SCS_extern_in_linkage_spec(false),
         TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
-        TypeSpecComplex(TSC_unspecified),
+        TypeSpecComplex(TSC_unspecified), isTaintedStruct(false),
         TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
+        PointerTypeQualifiers(PT_None),
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
         FS_tainted_specified(false),
@@ -576,6 +591,8 @@ public:
   SourceRange getTypeofParensRange() const { return TypeofParensRange; }
   void setTypeofParensRange(SourceRange range) { TypeofParensRange = range; }
 
+  void setTaintedStruct(bool value) {isTaintedStruct = value;}
+
   bool hasAutoTypeSpec() const {
     return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
             TypeSpecType == TST_decltype_auto);
@@ -587,6 +604,7 @@ public:
   static const char *getSpecifierName(DeclSpec::TST T,
                                       const PrintingPolicy &Policy);
   static const char *getSpecifierName(DeclSpec::TQ Q);
+  static const char *getMemberPointerType(DeclSpec::PointerTypes PT);
   static const char *getSpecifierName(TypeSpecifierSign S);
   static const char *getSpecifierName(DeclSpec::TSC C);
   static const char *getSpecifierName(TypeSpecifierWidth W);
@@ -605,6 +623,12 @@ public:
   SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
 
+  /// get Member Pointer Type Presence
+  unsigned getPointerPresence() const {return PointerTypeQualifiers; }
+  SourceLocation getLastLocOfGenericCPtrMember() const { return PT_Generic_C_Loc; }
+  SourceLocation getLastLocOfCheckedCPtrMember() const { return PT_Checked_C_Loc; }
+  SourceLocation getLastLocOfTaintedCPtrMember() const { return PT_Tainted_C_Loc; }
+
   /// Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {
     TypeQualifiers = 0;
@@ -614,6 +638,14 @@ public:
     TQ_atomicLoc = SourceLocation();
     TQ_unalignedLoc = SourceLocation();
     TQ_pipeLoc = SourceLocation();
+  }
+
+  /// Clear out all the pointer type qualifiers
+  void ClearPointerTypeQualifiers() {
+    PointerTypeQualifiers |= 0;
+    PT_Checked_C_Loc = SourceLocation();
+    PT_Checked_C_Loc = SourceLocation();
+    PT_Tainted_C_Loc = SourceLocation();
   }
 
   // function-specifier
@@ -627,6 +659,8 @@ public:
   ExplicitSpecifier getExplicitSpecifier() const {
     return FS_explicit_specifier;
   }
+
+  bool isDSTaintedStruct() const {return isTaintedStruct ;}
 
   bool isVirtualSpecified() const { return FS_virtual_specified; }
   SourceLocation getVirtualSpecLoc() const { return FS_virtualLoc; }
@@ -645,6 +679,9 @@ public:
   bool isTaintedSpecified() const {return FS_tainted_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
   SourceLocation getTaintedSpecLoc() const { return FS_taintedLoc; }
+  SourceLocation getPointerTypeChecked() const {return PT_Checked_C_Loc; }
+  SourceLocation getPointerTypeTainted() const {return PT_Tainted_C_Loc; }
+  SourceLocation getPointerTypeGeneric() const {return PT_Generic_C_Loc; }
 
   CheckedScopeSpecifier getCheckedScopeSpecifier() const {
     return (CheckedScopeSpecifier) FS_checked_specified;
@@ -827,8 +864,13 @@ public:
 
   bool SetTypeQual(TQ T, SourceLocation Loc);
 
+  bool SetPointerTypeQual (PointerTypes T, SourceLocation Loc);
+
   bool SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
                    unsigned &DiagID, const LangOptions &Lang);
+
+  bool SetPointerTypeQual (enum PointerTypes PT, SourceLocation Loc, const char *&PrevSpec,
+                          unsigned &DiagID, const LangOptions &Lang);
 
   bool setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID);
@@ -845,8 +887,6 @@ public:
                               unsigned &DiagID);
   bool setFunctionSpecChecked(SourceLocation Loc, CheckedScopeSpecifier CSS,
                               const char *&PrevSpec, unsigned &DiagID);
-  bool setFunctionSpecUnchecked(SourceLocation Loc, const char *&PrevSpec,
-                                unsigned &DiagID);
   bool setSpecForany(SourceLocation Loc, const char *&PrevSpec,
                                 unsigned &DiagID);
   bool setSpecItypeforany(SourceLocation Loc, const char *&PrevSpec,

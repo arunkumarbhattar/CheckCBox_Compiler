@@ -66,6 +66,7 @@ namespace clang {
     TST_enum,
     TST_union,
     TST_struct,
+    TST_Tstruct,
     TST_class,        // C++ class type
     TST_interface,    // C++ (Microsoft-specific) __interface type
     TST_typename,     // Typedef, C++ class-name or enum name, etc.
@@ -82,9 +83,9 @@ namespace clang {
     TST_arrayPtr,     // Checked C _Array_ptr type
     TST_ntarrayPtr ,  // Checked C _Nt_array_ptr type
     TST_exists,       // Checked C _Exists type
-    TST_t_plainPtr,   //Checked C Tainted _Ptr type
-    TST_t_arrayPtr,   //Checked C Tainted _Array_ptr type
-    TST_t_ntarray_Ptr, // Checked C _Nt_array_ptr type
+    TST_t_plainPtr,   //CheckCBox Tainted _Ptr type
+    TST_t_arrayPtr,   //CheckCBox Tainted _Array_ptr type
+    TST_t_ntarray_Ptr, // CheckCBox _Nt_array_ptr type
 #define GENERIC_IMAGE_TYPE(ImgType, Id) TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
     TST_error // erroneous type

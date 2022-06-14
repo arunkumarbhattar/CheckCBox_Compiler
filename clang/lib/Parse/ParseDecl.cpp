@@ -2647,6 +2647,8 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS, DeclS
     DS.ClearStorageClassSpecs();
   }
 
+
+
   // Issue diagnostic and remove function specifier if present.
   if (Specs & DeclSpec::PQ_FunctionSpecifier) {
     if (DS.isInlineSpecified())
@@ -2784,6 +2786,8 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         TagName="union" ; FixitTagName = "union " ;TagKind=tok::kw_union ;break;
       case DeclSpec::TST_struct:
         TagName="struct"; FixitTagName = "struct ";TagKind=tok::kw_struct;break;
+      case DeclSpec::TST_Tstruct:
+        TagName="Tstruct"; FixitTagName = "Tstruct "; TagKind=tok::kw_Tstruct;break;
       case DeclSpec::TST_interface:
         TagName="__interface"; FixitTagName = "__interface ";
         TagKind=tok::kw___interface;break;
@@ -4166,6 +4170,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw__Ptr:
     case tok::kw__Array_ptr:
     case tok::kw__Nt_array_ptr: {
+      isInvalid = DS.SetPointerTypeQual(DeclSpec::PT_Checked_C, Loc, PrevSpec, DiagID,
+                                        getLangOpts());
       ParseCheckedPointerSpecifiers(DS);
       // continue to keep the current token from being consumed.
       continue; 
@@ -4175,6 +4181,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw__TNt_array_ptr:
     case tok::kw__TPtr:
     {
+      isInvalid = DS.SetPointerTypeQual(DeclSpec::PT_Tainted_C, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
       ParseTaintedPointerSpecifiers(DS);
       // Continue to keep the current token from being consumed.
       continue;
@@ -4191,6 +4199,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // class-specifier:
     case tok::kw_class:
     case tok::kw_struct:
+    case tok::kw_Tstruct:
     case tok::kw___interface:
     case tok::kw_union: {
       tok::TokenKind Kind = Tok.getKind();
@@ -4488,6 +4497,21 @@ void Parser::ParseStructDeclaration(
     // If attributes exist after the declarator, parse them.
     MaybeParseGNUAttributes(DeclaratorInfo.D);
 
+    // Now since all the member attributes of the struct has been parsed
+    // Check if the tainted Struct (if) is valid or not -->
+    if(DS.isTaintedStruct)
+    {
+      if(DS.getPointerTypeChecked().isValid()) {
+        Diag((DS.getPointerTypeChecked()), diag::err_tainted_struct_member_ptr);
+        DS.SetTypeSpecError();
+      }
+
+      if(DS.getPointerTypeGeneric().isValid()) {
+        Diag((DS.getPointerTypeGeneric()), diag::err_tainted_struct_member_ptr);
+        DS.SetTypeSpecError();
+      }
+    }
+
     // We're done with this declarator;  invoke the callback.
 
     FieldsCallback(DeclaratorInfo);
@@ -4620,6 +4644,9 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
       // Parse all the comma separated declarators.
       ParsingDeclSpec DS(*this);
+      if(TagType == TST_Tstruct)
+        DS.setTaintedStruct(true);
+
       ParseStructDeclaration(DS, CFieldCallback);
     } else { // Handle @defs
       ConsumeToken();
@@ -5334,6 +5361,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_Tstruct:
   case tok::kw___interface:
   case tok::kw_union:
     // enum-specifier
@@ -5429,6 +5457,7 @@ bool Parser::isTypeSpecifierQualifier() {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_Tstruct:
   case tok::kw___interface:
   case tok::kw_union:
     // enum-specifier
@@ -5605,6 +5634,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_Tstruct:
   case tok::kw_union:
   case tok::kw___interface:
     // enum-specifier
@@ -6187,6 +6217,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     return;
   }
 
+
   // Otherwise, '*' -> pointer, '^' -> block, '&' -> lvalue reference,
   // '&&' -> rvalue reference
   SourceLocation Loc = ConsumeToken();  // Eat the *, ^, & or &&.
@@ -6195,6 +6226,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   if (Kind == tok::star || Kind == tok::caret) {
     // Is a pointer.
     DeclSpec DS(AttrFactory);
+    const_cast<DeclSpec*>(&D.getDeclSpec())->SetPointerTypeQual(DeclSpec::PT_Generic_C, Loc);
 
     // GNU attributes are not allowed here in a new-type-id, but Declspec and
     // C++11 attributes are allowed.
