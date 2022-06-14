@@ -1091,6 +1091,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
       case DeclSpec::TST_class:
         return 5;
       case DeclSpec::TST_struct:
+      case DeclSpec::TST_Tstruct:
         return 6;
       case DeclSpec::TST_union:
         return 5;

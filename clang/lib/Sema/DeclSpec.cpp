@@ -372,6 +372,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_int128:
     case TST_extint:
     case TST_struct:
+    case TST_Tstruct:
     case TST_interface:
     case TST_union:
     case TST_unknown_anytype:
@@ -590,6 +591,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_class:       return "class";
   case DeclSpec::TST_union:       return "union";
   case DeclSpec::TST_struct:      return "struct";
+  case DeclSpec::TST_Tstruct:     return "Tstruct";
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
   case DeclSpec::TST_typeofType:
@@ -998,6 +1000,12 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
   return SetTypeQual(T, Loc);
 }
 
+bool DeclSpec::SetPointerTypeQual (PointerTypes T, SourceLocation Loc, const char *&PrevSpec,
+                                  unsigned &DiagID, const LangOptions &Lang) {
+  return SetPointerTypeQual(T, Loc);
+}
+
+
 bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   TypeQualifiers |= T;
 
@@ -1008,6 +1016,26 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
   case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
   case TQ_atomic:   TQ_atomicLoc = Loc; return false;
+  }
+
+  llvm_unreachable("Unknown type qualifier!");
+}
+
+bool DeclSpec::SetPointerTypeQual (PointerTypes PT, SourceLocation Loc) {
+  PointerTypeQualifiers |= PT;
+
+  switch(PT) {
+  case PT_None:
+    break;
+  case PT_Checked_C:
+    PT_Checked_C_Loc = Loc;
+    return false;
+  case PT_Generic_C:
+    PT_Generic_C_Loc = Loc;
+    return false;
+  case PT_Tainted_C:
+    PT_Tainted_C_Loc = Loc;
+    return false;
   }
 
   llvm_unreachable("Unknown type qualifier!");

@@ -5701,7 +5701,10 @@ enum TagTypeKind {
   TTK_Class,
 
   /// The "enum" keyword.
-  TTK_Enum
+  TTK_Enum,
+
+  /// The "Tstruct" keyword.
+  TTK_Tstruct
 };
 
 /// The elaboration keyword that precedes a qualified type name or
@@ -5725,6 +5728,9 @@ enum ElaboratedTypeKeyword {
   /// The "typename" keyword precedes the qualified type name, e.g.,
   /// \c typename T::type.
   ETK_Typename,
+
+  /// The "struct" keyword introduces the elaborated-type-specifier.
+  ETK_TStruct,
 
   /// No keyword precedes the qualified type name.
   ETK_None

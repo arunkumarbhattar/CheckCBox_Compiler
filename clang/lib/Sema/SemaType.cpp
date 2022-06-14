@@ -1576,6 +1576,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:
+  case DeclSpec::TST_Tstruct:
   case DeclSpec::TST_interface: {
     TagDecl *D = dyn_cast_or_null<TagDecl>(DS.getRepAsDecl());
     if (!D) {
@@ -9006,6 +9007,7 @@ static unsigned getLiteralDiagFromTagKind(TagTypeKind Tag) {
   case TTK_Struct: return 0;
   case TTK_Interface: return 1;
   case TTK_Class:  return 2;
+  case TTK_Tstruct: return 3;
   default: llvm_unreachable("Invalid tag kind for literal type diagnostic!");
   }
 }
