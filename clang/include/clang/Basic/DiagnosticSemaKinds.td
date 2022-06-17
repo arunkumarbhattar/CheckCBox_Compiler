@@ -9497,6 +9497,10 @@ def err_incompatible_tainted_pointer_2_checked_assignment : Error<
   "Tainted-pointers cannot point to Checked-pointers">;
 def err_incompatible_tainted_pointer_2_unchecked_assignment : Error<
   "Tainted-pointers cannot point to Unchecked-pointers">;
+def err_tainted_specified_functions_should_have_tainted_pointers : Error<
+  "Functions marked as Tainted can only accept/return pointers of Tainted Type">;
+ def err_tainted_specified_functions_should_have_tainted_structs : Error<
+   "Functions marked as Tainted can only accept/return structs of Tainted Type">;
 
 // Checked C specific error messages about returns
 def err_return_missing_expr : Error<

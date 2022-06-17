@@ -7261,6 +7261,13 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLo
                                         "Marshall this pointer data to tainted memory allocated by t_malloc ");
       break;
     }
+
+    if(GetLookAheadToken(curr_token).is(tok::kw_struct)) {
+      Diag(EllipsisLoc,
+           diag::err_tainted_specified_functions_must_have_tainted_structs)
+    << FixItHint::CreateInsertion(EllipsisLoc.getLocWithOffset(1),
+                                  "Create a TStruct and reflect this structs data to it ");
+    }
     curr_token++;
   }
 }
@@ -7281,6 +7288,13 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator
                "Marshall this pointer data to tainted memory allocated by t_malloc ");
   }
 
+  if(Current_indentifier_type == TST_struct){
+    Diag(ParmDeclarator.getIdentifierLoc(),
+         diag::err_tainted_specified_functions_must_have_tainted_structs)
+    << FixItHint::CreateInsertion(Current_indentifier_type_loc,
+                             "Create a TStruct and reflect this structs data to it ");
+  }
+
   // Currently the Token points to a comma,
   // keep hopping tokens until you see a r_paren or a comma
   unsigned int token_hop = 1;
@@ -7296,6 +7310,14 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator
                  "Marshall this pointer data to tainted memory allocated by t_malloc ");
       break;
     }
+
+    if(GetLookAheadToken(token_hop).is(tok::kw_struct)) {
+      Diag(ParmDeclarator.getIdentifierLoc().getLocWithOffset(2),
+           diag::err_tainted_specified_functions_must_have_tainted_structs)
+    << FixItHint::CreateInsertion(Current_indentifier_type_loc.getLocWithOffset(2),
+                                  "Create a TStruct and reflect this structs data to it ");
+    }
+
     token_hop++;
   }
 }

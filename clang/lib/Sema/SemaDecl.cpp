@@ -815,6 +815,10 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
       case TTK_Union:
         FixItTagName = "union ";
         break;
+
+      case TTK_Tstruct:
+        FixItTagName = "Tstruct  ";
+        break;
     }
 
     StringRef TagName = FixItTagName.drop_back();
@@ -6074,6 +6078,24 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Declaration);
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
+
+  // The Below condition is to prevent tainted functions from having pointer
+  // return types that are not tainted
+
+  if ((D.getDeclSpec().isTaintedSpecified()) &&
+      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
+       D.getDeclSpec().getPointerTypeChecked().isValid()))
+  {
+      Diag(D.getDeclSpec().getBeginLoc(),
+         diag::err_tainted_specified_functions_should_have_tainted_pointers);
+  }
+  // The below condition is to prevent tainted functions from have struct
+  //return types that are not tainted
+  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+  {
+    Diag(D.getDeclSpec().getBeginLoc(),
+         diag::err_tainted_specified_functions_should_have_tainted_structs);
+  }
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer() &&
       Dcl && Dcl->getDeclContext()->isFileContext())
