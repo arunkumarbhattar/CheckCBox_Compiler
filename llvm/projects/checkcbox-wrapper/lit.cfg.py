@@ -1,7 +1,7 @@
 # -*- Python -*-
 #
 # This is a slightly modified version of lit.cfg.py from clang\test.
-# - Set config.name to 'checked'
+# - Set config.name to 'checkcbox'
 # - Set checkcbox_obj_root
 # - Set the test_exec_root to be the checkcbox_obj_root.
 
@@ -201,11 +201,11 @@ if os.path.exists('/etc/gentoo-release'):
 # These variables are needed to enable running lit tests on non-native targets
 # like ARM, etc.
 # checkcbox_arm_sysroot is the path to the top of the ARM sysroot. This is
-# specified by the user with the CMake flag CHECKEDC_ARM_SYSROOT.
+# specified by the user with the CMake flag CHECKCBOX_ARM_SYSROOT.
 config.substitutions.append(
     ('%checkcbox_arm_sysroot', config.checkcbox_arm_sysroot))
 # checkcbox_arm_rununder is the device on which ARM lit tests would be run. This
-# is specified by the user with the CMake flag CHECKEDC_ARM_RUNUNDER.
+# is specified by the user with the CMake flag CHECKCBOX_ARM_RUNUNDER.
 config.substitutions.append(
     ('%checkcbox_arm_rununder', config.checkcbox_arm_rununder))
 # checkcbox_target_flags are the target-specific flags appended to each
