@@ -1976,6 +1976,7 @@ public:
     TK_DependentFunctionTemplateSpecialization
   };
 
+  bool Tainted = false;
   /// Stashed information about a defaulted function definition whose body has
   /// not yet been lazily generated.
   class DefaultedFunctionInfo final
@@ -2196,7 +2197,8 @@ public:
   }
 
   void setGenericFunctionFlag(bool f) { FunctionDeclBits.IsGenericFunction = f; }
-  void setTaintedFunctionFlag(bool f) { FunctionDeclBits.IsTaintedFunction = f; }
+  void setTaintedFunctionFlag(bool f = false) {
+    this->Tainted = f; }
   bool isGenericFunction() const { return FunctionDeclBits.IsGenericFunction; }
 
   void setItypeGenericFunctionFlag(bool f) { FunctionDeclBits.IsItypeGenericFunction = f; }
@@ -2547,7 +2549,7 @@ public:
 
   /// Determines whether this function is known to be 'tainted', through
   /// an attribute on its declaration or its type.
-  bool isTainted() const {return FunctionDeclBits.IsTaintedFunction;};
+  bool isTainted() const {return this->Tainted;};
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }

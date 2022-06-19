@@ -723,6 +723,10 @@ public:
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(NoReturn);
     ID.AddBoolean(Tainted);
+    if(Tainted)
+    {
+      printf("YAY");
+    }
     ID.AddBoolean(ReturnsRetained);
     ID.AddBoolean(NoCallerSavedRegs);
     ID.AddBoolean(HasRegParm);
@@ -752,6 +756,11 @@ public:
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(info.getNoReturn());
     ID.AddBoolean(info.getTainted());
+    if(info.getTainted())
+    {
+      printf("YAY");
+    }
+
     ID.AddBoolean(info.getProducesResult());
     ID.AddBoolean(info.getNoCallerSavedRegs());
     ID.AddBoolean(info.getHasRegParm());

@@ -1566,7 +1566,7 @@ class DeclContext {
     // End of Checked C extensions
 
     // Tainted C Extension to Checked-C
-    uint64_t IsTaintedFunction : 1;
+    //uint64_t IsTaintedFunction : 1 = false;
 
     /// Indicates that this function is a multiversioned
     /// function using attribute 'target'.
@@ -1757,7 +1757,7 @@ protected:
   /// This anonymous union stores the bits belonging to DeclContext and classes
   /// deriving from it. The goal is to use otherwise wasted
   /// space in DeclContext to store data belonging to derived classes.
-  /// The space saved is especially significient when pointers are aligned
+  /// The space saved is especially significant when pointers are aligned
   /// to 8 bytes. In this case due to alignment requirements we have a
   /// little less than 8 bytes free in DeclContext which we can use.
   /// We check that none of the classes in this union is larger than

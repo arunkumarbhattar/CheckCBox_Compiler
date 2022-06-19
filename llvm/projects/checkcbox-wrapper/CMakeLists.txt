@@ -10,8 +10,8 @@
 if(CHECKCBOX_IN_TREE)
   add_subdirectory(checkcbox/include)
 
-  set(CHECKEDC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-  set(CHECKEDC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+  set(CHECKCBOX_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  set(CHECKCBOX_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 
   if (CMAKE_CFG_INTDIR STREQUAL ".")
@@ -29,7 +29,7 @@ if(CHECKCBOX_IN_TREE)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
     )
 
-  list(APPEND CHECKEDC_TEST_DEPS
+  list(APPEND CHECKCBOX_TEST_DEPS
     clang clang-resource-headers checkcbox-headers
     )
 
@@ -39,40 +39,40 @@ if(CHECKCBOX_IN_TREE)
       )
   endif()
 
-  set(CHECKEDC_TEST_PARAMS
+  set(CHECKCBOX_TEST_PARAMS
     checkcbox_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
     )
 
 if( NOT CLANG_BUILT_STANDALONE )
-  list(APPEND CHECKEDC_TEST_DEPS
+  list(APPEND CHECKCBOX_TEST_DEPS
     llvm-config
     FileCheck count not
     opt
     )
 endif()
 
-  add_custom_target(checkcbox-test-depends DEPENDS ${CHECKEDC_TEST_DEPS})
+  add_custom_target(checkcbox-test-depends DEPENDS ${CHECKCBOX_TEST_DEPS})
 
   add_lit_testsuite(check-checkcbox "Running the Checked C regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     #LIT ${LLVM_LIT}
-    PARAMS ${CHECKEDC_TEST_PARAMS}
-    DEPENDS ${CHECKEDC_TEST_DEPS}
-    ARGS ${CHECKEDC_TEST_EXTRA_ARGS}
+    PARAMS ${CHECKCBOX_TEST_PARAMS}
+    DEPENDS ${CHECKCBOX_TEST_DEPS}
+    ARGS ${CHECKCBOX_TEST_EXTRA_ARGS}
     )
 
   set_target_properties(check-checkcbox PROPERTIES FOLDER "Checked C tests")
 
 # Add a lit target to run the checkcbox tests for ARM.
-if (CHECKEDC_ARM_SYSROOT AND CHECKEDC_ARM_RUNUNDER)
-  set(CHECKEDC_TEST_EXTRA_ARGS "-DCHECKEDC_TARGET=ARM")
+if (CHECKCBOX_ARM_SYSROOT AND CHECKCBOX_ARM_RUNUNDER)
+  set(CHECKCBOX_TEST_EXTRA_ARGS "-DCHECKCBOX_TARGET=ARM")
 
-  add_lit_testsuite(check-checkcbox-arm "Running the Checked C regression tests for ARM"
+  add_lit_testsuite(check-checkcbox-arm "Running the CheckCbox regression tests for ARM"
     ${CMAKE_CURRENT_BINARY_DIR}
     #LIT ${LLVM_LIT}
-    PARAMS ${CHECKEDC_TEST_PARAMS}
-    DEPENDS ${CHECKEDC_TEST_DEPS}
-    ARGS ${CHECKEDC_TEST_EXTRA_ARGS}
+    PARAMS ${CHECKCBOX_TEST_PARAMS}
+    DEPENDS ${CHECKCBOX_TEST_DEPS}
+    ARGS ${CHECKCBOX_TEST_EXTRA_ARGS}
     )
 
   set_target_properties(check-checkcbox-arm PROPERTIES FOLDER "Checked C tests for ARM")

@@ -9528,6 +9528,11 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
   einfo = lbaseInfo.setTainted(Tainted);
 
+  if(Tainted)
+  {
+    printf("UAU");
+  }
+
   unsigned NumTypeVars = 0;
   bool IsITypeGenericFunction = false;
 
@@ -11210,7 +11215,9 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   if (BuiltinInfo.isNoReturn(Id)) {
     EI = EI.withNoReturn(true);
   }
-  if (BuiltinInfo.isTainted(Id)) EI = EI.setTainted(true);
+  if (BuiltinInfo.isTainted(Id)) {
+    EI = EI.setTainted(true);
+  }
 
 
   // We really shouldn't be making a no-proto type here.

@@ -458,7 +458,6 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   // non-variadic type.
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
     FunctionType::ExtInfo noProto_ExtInfo = noProto->getExtInfo();
-    noProto_ExtInfo.setTainted(true);
     return arrangeLLVMFunctionInfo(
         noProto->getReturnType(), /*instanceMethod=*/false,
         /*chainCall=*/false, None, noProto_ExtInfo, {},RequiredArgs::All);

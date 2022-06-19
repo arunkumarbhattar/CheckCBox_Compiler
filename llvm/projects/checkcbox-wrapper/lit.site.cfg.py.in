@@ -16,7 +16,7 @@ config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.checkcbox_obj_root = "@CHECKEDC_BINARY_DIR@"
+config.checkcbox_obj_root = "@CHECKCBOX_BINARY_DIR@"
 config.clang_obj_root = "@CLANG_BINARY_DIR@"
 config.clang_src_dir = "@CLANG_SOURCE_DIR@"
 config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
@@ -35,21 +35,21 @@ config.enable_backtrace = @ENABLE_BACKTRACES@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
-config.checkcbox_arm_sysroot = "@CHECKEDC_ARM_SYSROOT@"
-config.checkcbox_arm_rununder = "@CHECKEDC_ARM_RUNUNDER@"
+config.checkcbox_arm_sysroot = "@CHECKCBOX_ARM_SYSROOT@"
+config.checkcbox_arm_rununder = "@CHECKCBOX_ARM_RUNUNDER@"
 config.checkcbox_target_flags = ""
 config.checkcbox_rununder = ""
 
 # Various targets can be enabled in lit by setting the lit flag
-# -DCHECKEDC_TARGET=<target>.
-checkcbox_target = lit_config.params.get("CHECKEDC_TARGET")
+# -DCHECKCBOX_TARGET=<target>.
+checkcbox_target = lit_config.params.get("CHECKCBOX_TARGET")
 
 # Set the target-specific flags and run device for ARM.
 if checkcbox_target == "ARM":
   if not config.checkcbox_arm_sysroot:
-    lit_config.fatal("ARM sysroot not set. Set it using llvm configure option CHECKEDC_ARM_SYSROOT")
+    lit_config.fatal("ARM sysroot not set. Set it using llvm configure option CHECKCBOX_ARM_SYSROOT")
   if not config.checkcbox_arm_rununder:
-    lit_config.fatal("ARM run device not set. Set it using llvm configure option CHECKEDC_ARM_RUNUNDER")
+    lit_config.fatal("ARM run device not set. Set it using llvm configure option CHECKCBOX_ARM_RUNUNDER")
 
   config.checkcbox_target_flags = \
     "-target arm-linux-gnueabihf -march=armv7-a -static \
@@ -73,5 +73,5 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@CHECKEDC_SOURCE_DIR@/lit.cfg.py")
+lit_config.load_config(config, "@CHECKCBOX_SOURCE_DIR@/lit.cfg.py")
 

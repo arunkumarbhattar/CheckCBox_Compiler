@@ -16505,8 +16505,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     FunctionType::ExtInfo Ext = FTy->getExtInfo();
     if (NoReturn && !Ext.getNoReturn()) Ext = Ext.withNoReturn(true);
 
-    if (Tainted && !Ext.getTainted()) Ext = Ext.setTainted(true);
-
+    if (Tainted && !Ext.getTainted()) {
+      Ext = Ext.setTainted(true);
+    }
     // Turn protoless block types into nullary block types.
     if (isa<FunctionNoProtoType>(FTy)) {
       FunctionProtoType::ExtProtoInfo EPI;
