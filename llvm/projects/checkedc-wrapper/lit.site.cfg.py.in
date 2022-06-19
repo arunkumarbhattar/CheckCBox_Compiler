@@ -74,4 +74,3 @@ lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CHECKEDC_SOURCE_DIR@/lit.cfg.py")
-
