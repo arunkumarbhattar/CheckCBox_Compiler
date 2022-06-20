@@ -8074,6 +8074,14 @@ bool Parser::CheckCurrentTaintedPointerSanity()
         return false;
       }
 
+      //any available '[' or ']' means there is an C style array (stack array) currently
+      if((GetLookAheadToken(curr_tok).is(tok::l_square)) ||
+          (GetLookAheadToken(curr_tok).is(tok::r_square)))
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return false;
+      }
       if(GetLookAheadToken(curr_tok).is(tok::star))
       {
         Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);

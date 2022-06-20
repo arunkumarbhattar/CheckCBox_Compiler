@@ -15505,6 +15505,7 @@ bool Sema::AllowedInCheckedScope(QualType Ty,
       ProblemTy = Ty;
       return false;
     }
+    //https://cseweb.ucsd.edu/~ricko/rt_lt.rule.html
 
     // Any interop type annotation must be "at least as checked" as the
     // original type, so use that instead.
