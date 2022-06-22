@@ -76,7 +76,7 @@ What about "Unchecked" regions?, How can we guarantee spatial safety for uncheck
 Thats where we intend to use RLBOX Sandboxing. 
 With a fusion of the above two, we intend to enforce spatial safety to a Legacy C's codebase. 
 
-Specifically, our plan is to **encapsulate unchecked regions of code into a RLBOX sandbox and allow transparent communication between checked and unchecked regions**.
+Specifically, our plan is to **encapsulate unchecked regions of code into a RLBOX sandbox and allow policed communication between checked and unchecked regions with minimal overhead**.
 
 ## Background
 ### What is RLBOX?
