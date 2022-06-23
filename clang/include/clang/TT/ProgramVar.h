@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_PROGRAMVAR_H
-#define LLVM_CLANG_3C_PROGRAMVAR_H
+#ifndef LLVM_CLANG_TT_PROGRAMVAR_H
+#define LLVM_CLANG_TT_PROGRAMVAR_H
 
-#include "clang/3C/PersistentSourceLoc.h"
+#include "clang/TT/PersistentSourceLoc.h"
 #include "clang/AST/ASTContext.h"
 #include <stdint.h>
 #include <string>

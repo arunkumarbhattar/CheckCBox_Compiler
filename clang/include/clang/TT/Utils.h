@@ -8,10 +8,10 @@
 // Type declarations for map data structures and other general helper methods.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_UTILS_H
-#define LLVM_CLANG_3C_UTILS_H
+#ifndef LLVM_CLANG_TT_UTILS_H
+#define LLVM_CLANG_TT_UTILS_H
 
-#include "clang/3C/PersistentSourceLoc.h"
+#include "clang/TT/PersistentSourceLoc.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -145,6 +145,7 @@ bool isVarArgType(const std::string &TypeName);
 // Check if the variable is of a structure or union type.
 bool isStructOrUnionType(clang::DeclaratorDecl *VD);
 
+bool isTaintedStruct(clang::DeclaratorDecl *VD);
 // Helper method to print a Type in a way that can be represented in the source.
 // If Name is given, it is included as the variable name (which otherwise isn't
 // trivial to do with function pointers, etc.).
@@ -250,7 +251,7 @@ clang::SourceRange getDeclSourceRangeWithAnnotations(const clang::Decl *D,
                                                      bool IncludeInitializer);
 
 // Shortcut for the getCustomDiagID + Report sequence to report a custom
-// diagnostic as we currently do in 3C.
+// diagnostic as we currently do in TT.
 //
 // Unlike DiagnosticEngine::Report, to make it harder to forget to provide a
 // source location when we intend to, we don't provide a version that doesn't

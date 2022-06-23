@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_3CGLOBALOPTIONS_H
-#define LLVM_CLANG_3C_3CGLOBALOPTIONS_H
+#ifndef LLVM_CLANG_TT_TTGLOBALOPTIONS_H
+#define LLVM_CLANG_TT_TTGLOBALOPTIONS_H
 
 #include "llvm/Support/CommandLine.h"
 
-// Options used to initialize 3C tool.
+// Options used to initialize TT tool.
 //
-// See clang/docs/checkedc/3C/clang-tidy.md#_3c-name-prefix
+// See clang/docs/checkedc/TT/clang-tidy.md#_3c-name-prefix
 // NOLINTNEXTLINE(readability-identifier-naming)
-struct _3COptions {
+struct _TTOptions {
   bool DumpIntermediate;
   bool Verbose;
   std::string OutputPostfix;
@@ -58,6 +58,6 @@ struct _3COptions {
 };
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern struct _3COptions _3COpts;
+extern struct _TTOptions _TTOpts;
 
-#endif // LLVM_CLANG_3C_3CGLOBALOPTIONS_H
+#endif // LLVM_CLANG_TT_TTGLOBALOPTIONS_H

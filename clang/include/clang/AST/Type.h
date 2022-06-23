@@ -2167,6 +2167,7 @@ public:
   bool isExistentialType() const; // Checked C existential type
   bool isClassType() const;
   bool isStructureType() const;
+  bool isTaintedStructureType() const;
   bool isObjCBoxableRecordType() const;
   bool isInterfaceType() const;
   bool isStructureOrClassType() const;

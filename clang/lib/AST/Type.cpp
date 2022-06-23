@@ -584,6 +584,12 @@ bool Type::isStructureType() const {
   return false;
 }
 
+bool Type::isTaintedStructureType() const {
+  if (const auto *RT = getAs<RecordType>())
+    return RT->getDecl()->isTaintedStruct();
+  return false;
+}
+
 bool Type::isObjCBoxableRecordType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->hasAttr<ObjCBoxableAttr>();

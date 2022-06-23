@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 // This class contains functions and classes that deal with
-// rewriting the source file after converting to CheckedC format.
+// rewriting the source file After Appropriate CheckCBox Conversion .
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_REWRITEUTILS_H
-#define LLVM_CLANG_3C_REWRITEUTILS_H
+#ifndef LLVM_CLANG_TT_REWRITEUTILS_H
+#define LLVM_CLANG_TT_REWRITEUTILS_H
 
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -32,6 +32,7 @@ public:
   enum DRKind {
     DRK_MultiDeclMember,
     DRK_FunctionDecl,
+    DRK_FunctionBody,
   };
 
   DRKind getKind() const { return Kind; }
@@ -51,7 +52,7 @@ protected:
   std::string Replacement;
 
   // A declaration might need to be replaced with more than a single new
-  // declaration. These extra declarations can be stored in this vector to be
+  // declaration. These extra operations(malloc/assignment) can be stored in this vector to be
   // emitted after the original declaration.
   std::vector<std::string> SupplementaryDecls;
 private:
@@ -66,6 +67,21 @@ public:
     : DeclReplacement(R, SDecls, K), Decl(D) {}
 
   DeclT *getDecl() const override { return Decl; }
+
+  static bool classof(const DeclReplacement *S) { return S->getKind() == K; }
+
+protected:
+  DeclT *Decl;
+};
+
+template <typename DeclT, DeclReplacement::DRKind K>
+class BodyReplacementTempl : public FunctionScope {
+public:
+  explicit BodyReplacementTempl(DeclT *D, std::string R,
+                                std::vector<std::string> SDecls)
+      : FunctionScope(R, K), Decl(D) {}
+
+  DeclT *getDecl() const { return Decl; }
 
   static bool classof(const DeclReplacement *S) { return S->getKind() == K; }
 
@@ -104,42 +120,120 @@ private:
   SourceLocation getDeclEnd(SourceManager &SM) const;
 };
 
+//We need a new class here called FunctionBodyReplacement --> here is where we perform
+// all the required operations
+// 1.) Comment out the entire body of the function (WASM)
+// 2.) Perform all the Struct related operations if there are any Structs (non-pointer)
+// being passed
+// 3.) Insert calls to fetch the pointer offsets (WASM)
+// 4.) Insert call to the wasm function (w2c_func_name) whilst passing the generated types
+// 5.) Insert call to convert the return type (offset) to pointer (WASM) if return type is a pointer
+class FunctionBodyReplacement : public BodyReplacementTempl<FunctionScope,
+                                                            DeclReplacement::DRK_FunctionBody> {
+public:
+  explicit FunctionBodyReplacement(FunctionScope *FS, std::string R,
+                                   std::vector<std::string> SInsts // these are basically the instructions to be inserted
+                                   , bool Return,
+                                   bool Params, bool Generic = false)
+      : BodyReplacementTempl(FS, R, SInsts), RewriteGeneric(Generic),
+        RewriteReturn(Return), RewriteParams(Params) {
+    assert("Doesn't make sense to rewrite nothing!" &&
+           (RewriteGeneric || RewriteReturn || RewriteParams));
+  }
+
+  SourceRange getSourceRange(SourceManager &SM) const;
+
+private:
+  // This determines if the full declaration or the return will be replaced.
+  bool RewriteGeneric;
+  bool RewriteReturn;
+  bool RewriteParams;
+
+  SourceLocation getDeclBegin(SourceManager &SM) const;
+  SourceLocation getReturnBegin(SourceManager &SM) const;
+  SourceLocation getParamBegin(SourceManager &SM) const;
+  SourceLocation getReturnEnd(SourceManager &SM) const;
+  SourceLocation getDeclEnd(SourceManager &SM) const;
+};
+
 typedef std::map<Decl *, DeclReplacement *> RSet;
+
 
 // Represent a rewritten declaration split into three components. For a
 // parameter or local variable declaration, concatenating Type and IType will
 // give the full declaration. For a function return, Type should appear before
 // the identifier and parameter list and itype should appear after.
-struct RewrittenDecl {
-  explicit RewrittenDecl() : Type(), IType(), SupplementaryDecl() {}
-  explicit RewrittenDecl(std::string Type, std::string IType,
-                         std::string SupplementaryDecl)
-    : Type(Type), IType(IType), SupplementaryDecl(SupplementaryDecl) {}
+//struct RewrittenDecl {
+//  explicit RewrittenDecl() : Type(), IType(), SupplementaryDecl() {}
+//  explicit RewrittenDecl(std::string Type, std::string IType,
+//                         std::string SupplementaryDecl)
+//    : Type(Type), IType(IType), SupplementaryDecl(SupplementaryDecl) {}
+//
+//  // For function returns, the component of the declaration that appears before
+//  // the identifier. For parameter and local variables, a prefix of the full
+//  // declaration up to at least the identifier, but possibly omitting any itype
+//  // or array bounds, which may be stored in the Itype field below. The
+//  // identifier in this string is not always the same as the original identifier.
+//  // If 3C generates a fresh lower bound (stored in the SupplementrayDecl
+//  // string), then the identifier is changed to a temporary name.
+//  std::string Type;
+//
+//  // For function returns, the component of the rewritten declaration that
+//  // appears after the parameter list. For parameter and local variables, some
+//  // suffix of the full declaration, often any itype or bounds declaration,
+//  // but also possibly empty.
+//  std::string IType;
+//
+//  // An additional declaration required as a result of the rewriting done to the
+//  // original declaration. The additional declaration may refer to the original,
+//  // so it must be emitted after the original declaration.
+//  // This is currently only used to automatically fatten pointers to use fresh
+//  // lower bound pointers. e.g.,
+//  //     _Array_ptr<int> a : bounds(__TT_lower_bound_a, __3c_lower_bound_a + n)
+//  // If the declaration does not need a fresh lower bound, then this string is
+//  // empty.
+//  std::string SupplementaryDecl;
+//};
 
-  // For function returns, the component of the declaration that appears before
-  // the identifier. For parameter and local variables, a prefix of the full
-  // declaration up to at least the identifier, but possibly omitting any itype
-  // or array bounds, which may be stored in the Itype field below. The
-  // identifier in this string is not always the same as the original identifier.
-  // If 3C generates a fresh lower bound (stored in the SupplementrayDecl
-  // string), then the identifier is changed to a temporary name.
-  std::string Type;
+// Represent a rewritten Body split into three components.
+/*
+ * 1.) PreCallInitialization
+ * 2.) CallSiteInstrumentation --> This would involve passing appropriate offsets
+ * to the actually tainted function call
+ * 3.) PostCallInstrumentation --> This would involve appropriate handling of the
+ * returned value from the tainted function.
+ * if TStruct is returned, it will be in pointer form and hence it must be dereferenced
+ * to an appropriate TStruct before being returned.
+ * If pointers are returned from the tainted function, then there must be appropriate
+ * offset conversion before being returned.
+ */
+struct RewrittenBody {
+  explicit RewrittenBody() : PreCallInitialization(), CallSiteInstrumentation(),
+                             PostCallInstrumentation() {}
+  explicit RewrittenBody(std::vector<std::string> PreCallInitialization, std::string CallSiteInstrumentation,
+                         std::vector<std::string>  PostCallInstrumentation)
+      : PreCallInitialization(PreCallInitialization),
+        CallSiteInstrumentation(CallSiteInstrumentation),
+        PostCallInstrumentation(PostCallInstrumentation) {}
 
-  // For function returns, the component of the rewritten declaration that
-  // appears after the parameter list. For parameter and local variables, some
-  // suffix of the full declaration, often any itype or bounds declaration,
-  // but also possibly empty.
-  std::string IType;
+// PreCallInitialization --> a vector of strings that represent the temporary TStruct
+// variables created/initialized. This would generally be the _TPtr<TStruct> type variable that
+// require extra instrumentation before they are deemed ready to be passed on/returned
+// from the _Tainted Function
+  std::vector<std::string> PreCallInitialization;
 
-  // An additional declaration required as a result of the rewriting done to the
-  // original declaration. The additional declaration may refer to the original,
-  // so it must be emitted after the original declaration.
-  // This is currently only used to automatically fatten pointers to use fresh
-  // lower bound pointers. e.g.,
-  //     _Array_ptr<int> a : bounds(__3c_lower_bound_a, __3c_lower_bound_a + n)
-  // If the declaration does not need a fresh lower bound, then this string is
-  // empty.
-  std::string SupplementaryDecl;
+//  CallSiteInstrumentation --> This would involve passing appropriate offsets
+//                                  * to the actually tainted function call
+  std::string CallSiteInstrumentation;
+
+//* 3.) PostCallInstrumentation --> This would involve appropriate handling of the
+//* returned value from the tainted function.
+//* if TStruct is returned, it will be in pointer form and hence it must be dereferenced
+//* to an appropriate TStruct before being returned.
+//* If pointers are returned from the tainted function, then there must be appropriate
+//* offset conversion before being returned.
+
+  std::vector<std::string>  PostCallInstrumentation;
 };
 
 // Generate a string for the declaration based on the given PVConstraint.
@@ -148,8 +242,8 @@ struct RewrittenDecl {
 // ItypesForExtern. Does not include a trailing semicolon or an initializer, so
 // it can be used in combination with getDeclSourceRangeWithAnnotations with
 // IncludeInitializer = false to preserve an existing initializer.
-RewrittenDecl mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
-                              ProgramInfo &Info);
+//RewrittenDecl mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
+//                              ProgramInfo &Info);
 
 // Generate a string like mkStringForPVDecl, but for a declaration whose type is
 // known not to have changed (except possibly for a base type rename) and that
@@ -162,26 +256,29 @@ RewrittenDecl mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
 // the original source for the rest of the declaration, but that may run into
 // problems with macros and the like, so we might still need some fallback. For
 // now, we don't implement this "original source" approach.
-std::string mkStringForDeclWithUnchangedType(MultiDeclMemberDecl *D,
-                                             ProgramInfo &Info);
+//std::string mkStringForDeclWithUnchangedType(MultiDeclMemberDecl *D,
+//                                             ProgramInfo &Info);
 
+/*
+ * TT Does not bounds re-writing, so yeah!!
+ */
 // Class that handles rewriting bounds information for all the
 // detected array variables.
-class ArrayBoundsRewriter {
-public:
-  ArrayBoundsRewriter(ProgramInfo &I) : Info(I) {}
-  // Get the string representation of the bounds for the given variable.
-  std::string getBoundsString(const PVConstraint *PV, Decl *D,
-                              bool Isitype = false,
-                              bool OmitLowerBound = false);
-
-  // Check if the constraint variable has newly created bounds string.
-  bool hasNewBoundsString(const PVConstraint *PV, Decl *D,
-                          bool Isitype = false);
-
-private:
-  ProgramInfo &Info;
-};
+//class ArrayBoundsRewriter {
+//public:
+//  ArrayBoundsRewriter(ProgramInfo &I) : Info(I) {}
+//  // Get the string representation of the bounds for the given variable.
+//  std::string getBoundsString(const PVConstraint *PV, Decl *D,
+//                              bool Isitype = false,
+//                              bool OmitLowerBound = false);
+//
+//  // Check if the constraint variable has newly created bounds string.
+//  bool hasNewBoundsString(const PVConstraint *PV, Decl *D,
+//                          bool Isitype = false);
+//
+//private:
+//  ProgramInfo &Info;
+//};
 
 class RewriteConsumer : public ASTConsumer {
 public:
@@ -224,4 +321,4 @@ void rewriteSourceRange(Rewriter &R, const CharSourceRange &Range,
 void rewriteSourceRange(Rewriter &R, const SourceRange &Range,
                         const std::string &NewText, bool ErrFail = true);
 
-#endif // LLVM_CLANG_3C_REWRITEUTILS_H
+#endif // LLVM_CLANG_TT_REWRITEUTILS_H

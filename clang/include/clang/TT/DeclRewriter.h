@@ -10,11 +10,11 @@
 // the conversion tool.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_DECLREWRITER_H
-#define LLVM_CLANG_3C_DECLREWRITER_H
+#ifndef LLVM_CLANG_TT_DECLREWRITER_H
+#define LLVM_CLANG_TT_DECLREWRITER_H
 
-#include "clang/3C/ConstraintBuilder.h"
-#include "clang/3C/RewriteUtils.h"
+#include "clang/TT/ConstraintBuilder.h"
+#include "clang/TT/RewriteUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -33,16 +33,13 @@ public:
   // All declarations for variables with checked types in the variable map of
   // Info parameter are rewritten.
   static void rewriteDecls(ASTContext &Context, ProgramInfo &Info, Rewriter &R);
-
-  static RewrittenDecl buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
-                                      std::string UseName, ProgramInfo &Info,
-                                      ArrayBoundsRewriter &ABR,
-                                      bool GenerateSDecls, bool SDeclChecked);
-
-  static RewrittenDecl
-  buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
-                   std::string UseName, ProgramInfo &Info,
-                   ArrayBoundsRewriter &ABR, bool GenerateSDecls);
+  static void rewriteBody(ASTContext &Context, ProgramInfo &Info, Rewriter &R);
+  // The publicly accessible interface for performing function body rewriting
+  // The actual Body of the function will be commented out
+  // The passed argument types will be instrumented as per the current Sandbox
+  // option chosen. And a call with be issued to the tainted implementation of the
+  // actual function
+  static void rewriteFunctionBody(ASTContext &Context, ProgramInfo &Info, Rewriter &R);
 
 private:
   Rewriter &R;
@@ -58,9 +55,10 @@ private:
   // to that Decl. ToRewrite is the set of all declarations to rewrite.
   void rewrite(RSet &ToRewrite);
 
-  void rewriteMultiDecl(MultiDeclInfo &MDI, RSet &ToRewrite);
-  void doDeclRewrite(SourceRange &SR, DeclReplacement *N);
-  void rewriteFunctionDecl(FunctionDeclReplacement *N);
+  //void rewriteMultiDecl(MultiDeclInfo &MDI, RSet &ToRewrite);
+  //void doDeclRewrite(SourceRange &SR, DeclReplacement *N);
+  void doBodyRewrite(SourceRange &SR, DeclReplacement *N);
+  void rewriteFunctionBody(FunctionDeclReplacement *N);
   // Emit supplementary declarations _after_ the token that begins at Loc.
   // Inserts a newline before the first supplementary declaration but not after
   // the last supplementary declaration. This is suitable if Loc is expected to
@@ -70,15 +68,17 @@ private:
                                      SourceLocation Loc);
   SourceLocation getNextCommaOrSemicolon(SourceLocation L);
   void denestTagDecls();
+  void rewriteFunctionBody(FunctionBodyReplacement *N);
+  void emitTaintedFunctionInstrumentation(const std::vector<string> &TInsts,
+                                          SourceLocation Loc);
 };
 
 // Visits function declarations and adds entries with their new rewritten
 // declaration to the RSet RewriteThese.
-class FunctionDeclBuilder : public RecursiveASTVisitor<FunctionDeclBuilder> {
+class FunctionBodyBuilder : public RecursiveASTVisitor<FunctionBodyBuilder> {
 public:
-  explicit FunctionDeclBuilder(ASTContext *C, ProgramInfo &I, RSet &DR,
-                               ArrayBoundsRewriter &ArrRewriter)
-      : Context(C), Info(I), RewriteThese(DR), ABRewriter(ArrRewriter),
+  explicit FunctionBodyBuilder(ASTContext *C, ProgramInfo &I, RSet &DR)
+      : Context(C), Info(I), RewriteThese(DR),
         VisitedSet() {}
 
   bool VisitFunctionDecl(FunctionDecl *);
@@ -88,30 +88,18 @@ protected:
   ASTContext *Context;
   ProgramInfo &Info;
   RSet &RewriteThese;
-  ArrayBoundsRewriter &ABRewriter;
 
   // Set containing the names of all functions visited in the AST traversal.
   // Used to ensure the new signature is only computed once for each function.
   std::set<std::string> VisitedSet;
 
   // Get existing itype string from constraint variables.
-  std::string getExistingIType(ConstraintVariable *DeclC);
+  //std::string getExistingIType(ConstraintVariable *DeclC);
 
-  virtual RewrittenDecl
-  buildDeclVar(const FVComponentVariable *CV, DeclaratorDecl *Decl,
-               std::string UseName, bool &RewriteGen, bool &RewriteParm,
-               bool &RewriteRet, bool StaticFunc, bool GenerateSDecls);
-
-  RewrittenDecl
-  buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
+  RewrittenBody
+  buildTaintedBody(PVConstraint *Defn, DeclaratorDecl *Decl,
                    std::string UseName, bool &RewriteParm, bool &RewriteRet,
                    bool GenerateSDecls);
 
-  RewrittenDecl buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
-                               std::string UseName, bool &RewriteParm,
-                               bool &RewriteRet, bool GenerateSDecls,
-                               bool SDeclChecked);
-
-  bool inParamMultiDecl(const ParmVarDecl *PVD);
 };
 #endif // LLVM_CLANG_3C_DECLREWRITER_H

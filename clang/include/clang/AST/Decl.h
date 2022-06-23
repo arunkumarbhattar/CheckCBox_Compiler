@@ -3644,6 +3644,7 @@ public:
   void setTagKind(TagKind TK) { TagDeclBits.TagDeclKind = TK; }
 
   bool isStruct() const { return (getTagKind() == TTK_Struct) || (getTagKind() == TTK_Tstruct); }
+  bool isTaintedStruct() const { return (getTagKind() == TTK_Tstruct);}
   bool isInterface() const { return getTagKind() == TTK_Interface; }
   bool isClass()  const { return getTagKind() == TTK_Class; }
   bool isUnion()  const { return getTagKind() == TTK_Union; }
