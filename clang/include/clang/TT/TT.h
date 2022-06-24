@@ -55,12 +55,12 @@ public:
 
   // Create ConstraintVariables to hold constraints
   bool addVariables();
-//
-//  // Build initial constraints.
-//  bool buildInitialConstraints();
-//
-//  // Constraint Solving.
-//  bool solveConstraints();
+
+  // Build initial constraints.
+  bool buildInitialConstraints();
+
+  // Constraint Solving.
+  bool solveConstraints();
 
   // Interactivity.
 

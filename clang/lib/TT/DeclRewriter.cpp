@@ -188,6 +188,8 @@ void DeclRewriter::rewriteBody(ASTContext &Context, ProgramInfo &Info,
   // Collect function and record declarations that need to be rewritten in a set
   // as well as their rewriten types in a map.
   RSet RewriteThese;
+  Rewriter TheRewriter;
+  TheRewriter.setSourceMgr(Context.getSourceManager(), Context.getLangOpts());
 
   FunctionBodyBuilder *TRV = nullptr;
   auto TRVTT = FunctionBodyBuilder(&Context, Info, RewriteThese);
@@ -279,6 +281,80 @@ void DeclRewriter::rewriteBody(ASTContext &Context, ProgramInfo &Info,
 //    delete Pair.second;
 //
 //  DeclR.denestTagDecls();
+
+  //So Basically you gotta create a new declaration copy and insert that into this -->
+  for(auto tainted_function_decls : Info.Tainted_Decls){
+    // Instrument and rewrite -->
+      // Do the declaration rewriting
+//      R.InsertText(clang::Lexer::findLocationAfterToken(tainted_function_decls->getBody()->getBeginLoc(), tok::l_brace, Context.getSourceManager(), Context.getLangOpts(), false), "/*",
+//                           true, true);
+
+    R.InsertTextAfterToken(tainted_function_decls->getBody()->getBeginLoc()
+                                                                , "/*");
+      R.InsertText(tainted_function_decls->getBody()->getEndLoc(), "*/",
+                   false, true);
+      std::map<VarDecl*, std::string> map_of_params;
+      for(int i = 0 ; i < tainted_function_decls->getAsFunction()->getNumParams(); i++)
+      {
+        map_of_params.insert(std::pair<VarDecl*, std::string>(tainted_function_decls->getAsFunction()->getParamDecl(i),
+                                                            tainted_function_decls->getAsFunction()->getNameAsString()));
+      }
+      //fetch the function name -->
+      std::string function_name = tainted_function_decls->getAsFunction()->getNameAsString();
+      //for wasm -->
+      // append this with the w2c_ extension
+      std::string wasm_function_name = "w2c_"+function_name;
+      //now generate the return type -->
+      std::string returnArg = "";
+      bool isTaintedPointerReturn = false;
+      if(tainted_function_decls->getAsFunction()->getReturnType()->isTaintedPointerType()){
+        returnArg = "c_fetch_pointer_from_offset(";
+        isTaintedPointerReturn = true;
+        //now we generate appropriate cast because returned pointer is of tainted type -->
+        std::string cast_operation = "("+tainted_function_decls->getAsFunction()->getReturnType().getAsString()+")";
+        returnArg = cast_operation + returnArg;
+      }
+
+      //now generate the parameter list in form of a string -->
+      std::string final_param_string = "";
+      std::vector<std::string> set_of_params;
+      for(auto params: map_of_params)
+      {
+        std::string sbx_instrumented_param;
+        if(params.first->getType()->isTaintedPointerType())
+        {
+          sbx_instrumented_param = "c_fetch_pointer_offset(" +
+                                  params.first->getNameAsString()+")";
+        }
+        else if(isTaintedStruct(params.first))
+        {
+          //special instrumentation needed here that would accept a Tstruct and return a Tainted struct pointer
+        }
+        else{
+          sbx_instrumented_param = params.first->getNameAsString();
+        }
+        set_of_params.push_back(sbx_instrumented_param);
+      }
+
+      //now keep iterating and entering commas
+      for(int i = 0; i < set_of_params.size(); i ++)
+      {
+        final_param_string = final_param_string + set_of_params[i];
+        if(i < (set_of_params.size()-1)){
+          final_param_string = final_param_string + ",";
+        }
+      }
+
+      //by here you must have a proper final_param_string -->
+
+      // Now append it to required items and form the final call -->
+      std::string FinalBoardingCall = "";
+      FinalBoardingCall = "return " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
+
+      R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
+  }
+
+
 }
 
 void DeclRewriter::rewrite(RSet &ToRewrite) {

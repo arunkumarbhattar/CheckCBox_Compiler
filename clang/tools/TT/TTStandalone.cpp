@@ -428,18 +428,18 @@ int main(int argc, const char **argv) {
     errs() << "Calling Library to build Constraints.\n";
   }
 
-//  // Build constraints.
-//  if (!_TTInterface.buildInitialConstraints()) {
-//    errs() << "Failure occurred while trying to build constraints. Exiting.\n";
-//    return _TTInterface.determineExitCode();
-//  }
+  // Build constraints.
+  if (!_TTInterface.buildInitialConstraints()) {
+    errs() << "Failure occurred while trying to build constraints. Exiting.\n";
+    //return _TTInterface.determineExitCode();
+  }
 
   if (OptVerbose) {
     errs() << "Finished Building Constraints.\n";
     errs() << "Trying to solve Constraints.\n";
   }
 
-//  // Solve the constraints.
+  // Solve the constraints.
 //  if (!_TTInterface.solveConstraints()) {
 //    errs() << "Failure occurred while trying to solve constraints. Exiting.\n";
 //    return _TTInterface.determineExitCode();

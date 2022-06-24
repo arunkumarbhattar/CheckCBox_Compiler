@@ -317,9 +317,8 @@ void dumpConstraintOutputJson(const std::string &PostfixStr,
 
 //Note: There is no real logic or contraints that we are looking to solve for TT,
 // Hence this definition can be safely commented out
-/*
 void runSolver(ProgramInfo &Info, std::set<std::string> &SourceFiles) {
-  Constraints &CS = Info.getConstraints();
+  Constraints &CS = Info.getConstraints();//The Constraints Object Must contain all the _Tainted Functions that we look for Instrumenting
 
   if (_TTOpts.Verbose) {
     errs() << "Trying to capture Constraint Variables for all functions\n";
@@ -336,7 +335,7 @@ void runSolver(ProgramInfo &Info, std::set<std::string> &SourceFiles) {
     errs() << "Solver time:" << getTimeSpentInSeconds(StartTime) << "\n";
   }
 }
-*/
+
 
 std::unique_ptr<_TTInterface>
 _TTInterface::create(const struct _TTOptions &CCopt,
@@ -541,31 +540,31 @@ bool _TTInterface::addVariables() {
   return isSuccessfulSoFar();
 }
 
-//bool _TTInterface::buildInitialConstraints() {
-//
-//  std::lock_guard<std::mutex> Lock(InterfaceMutex);
-//
-//  if (!GlobalProgramInfo.link()) {
-//    errs() << "Linking failed!\n";
-//    HadNonDiagnosticError = true;
-//    return isSuccessfulSoFar(); // False, of course, but follow the pattern.
-//  }
-//
-//  // 2. Gather constraints.
-//  ConstraintBuilderConsumer CB =
-//      ConstraintBuilderConsumer(GlobalProgramInfo, nullptr);
-//  for (auto &TU : ASTs)
-//    CB.HandleTranslationUnit(TU->getASTContext());
-//  if (!isSuccessfulSoFar())
-//    return false;
-//
-//  ConstraintsBuilt = true;
-//
-//  return isSuccessfulSoFar();
-//}
+bool _TTInterface::buildInitialConstraints() {
+
+  std::lock_guard<std::mutex> Lock(InterfaceMutex);
+
+  if (!GlobalProgramInfo.link()) {
+    errs() << "Linking failed!\n";
+    HadNonDiagnosticError = true;
+    return isSuccessfulSoFar(); // False, of course, but follow the pattern.
+  }
+
+  // 2. Gather constraints.
+  ConstraintBuilderConsumer CB =
+      ConstraintBuilderConsumer(GlobalProgramInfo, nullptr);
+  for (auto &TU : ASTs)
+    CB.HandleTranslationUnit(TU->getASTContext());
+  if (!isSuccessfulSoFar())
+    return false;
+
+  ConstraintsBuilt = true;
+
+  return isSuccessfulSoFar();
+}
 
 
-/* There is no solving constraints involved
+
 bool _TTInterface::solveConstraints() {
   std::lock_guard<std::mutex> Lock(InterfaceMutex);
   assert(ConstraintsBuilt && "Constraints not yet built. We need to call "
@@ -597,7 +596,7 @@ bool _TTInterface::solveConstraints() {
     // after constraint solving because the bound added depends on whether the
     // array is NTARR or ARR.
     GlobalProgramInfo.getABoundsInfo().addConstantArrayBounds(
-      GlobalProgramInfo);
+        GlobalProgramInfo);
 
     if (_TTOpts.DebugArrSolver)
       GlobalProgramInfo.getABoundsInfo().dumpAVarGraph(
@@ -639,9 +638,9 @@ bool _TTInterface::solveConstraints() {
     /*if (DebugArrSolver)
       GlobalProgramInfo.getABoundsInfo().dumpAVarGraph(
           "arr_bounds_final.dot");*/
-  //}
+    //}
 
-  /*if (DumpStats) {
+    /*if (DumpStats) {
     GlobalProgramInfo.printStats(FilePaths, llvm::errs(), true);
     GlobalProgramInfo.computeInterimConstraintState(FilePaths);
     std::error_code Ec;
@@ -670,13 +669,15 @@ bool _TTInterface::solveConstraints() {
       PerWildPtrInfo.close();
     }
   }*/
-/*
-  return isSuccessfulSoFar();
-}
+    /*
+
 
  */
 
-bool _TTInterface::writeAllConvertedFilesToDisk() {
+    return isSuccessfulSoFar();
+  }
+}
+  bool _TTInterface::writeAllConvertedFilesToDisk() {
   std::lock_guard<std::mutex> Lock(InterfaceMutex);
 
   // 6. Rewrite the input files.

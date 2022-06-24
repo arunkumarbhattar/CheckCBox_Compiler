@@ -82,6 +82,8 @@ public:
   typedef std::map<std::string, FVConstraint *> ExternalFunctionMapType;
   typedef std::map<std::string, ExternalFunctionMapType> StaticFunctionMapType;
 
+  std::vector<Decl*>Tainted_Decls;
+
   ProgramInfo();
   void print(llvm::raw_ostream &O) const;
   void dump() const { print(llvm::errs()); }
@@ -105,6 +107,7 @@ public:
   // should all be empty.
   void exitCompilationUnit();
 
+  void storeTaintedDecl(FunctionDecl* Declaration);
   bool hasPersistentConstraints(clang::Expr *E, ASTContext *C) const;
   const CSetBkeyPair &getPersistentConstraints(clang::Expr *E,
                                                ASTContext *C) const;

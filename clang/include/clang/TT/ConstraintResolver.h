@@ -29,6 +29,7 @@ public:
                                 Expr *AtExpr = nullptr);
   void constraintCVarToWild(CVarOption CVar, const std::string &Rsn,
                             Expr *AtExpr = nullptr);
+  void storeTaintedFunctionDecl(FunctionDecl* FD);
 
   // Returns a pair of set of ConstraintVariables and set of BoundsKey
   // (for context sensitive array bounds inference) which represent the
@@ -63,6 +64,7 @@ public:
 
   static bool canFunctionBeSkipped(const std::string &FN);
 
+
 private:
   ProgramInfo &Info;
   ASTContext *Context;
@@ -80,6 +82,7 @@ private:
 
   PVConstraint *getRewritablePVConstraint(Expr *E);
 
+  static bool snapshotTaintedFunction(Decl* declaration);
 
   bool isNonPtrType(QualType &TE);
 

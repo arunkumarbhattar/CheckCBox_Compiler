@@ -48,6 +48,10 @@ void ConstraintResolver::constraintCVarToWild(CVarOption CVar,
   }
 }
 
+void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
+  Info.storeTaintedDecl(FD);
+}
+
 // Return a set of PVConstraints equivalent to the set given,
 // but dereferenced one level down
 CVarSet ConstraintResolver::handleDeref(CVarSet T) {
@@ -791,6 +795,10 @@ CVarSet ConstraintResolver::getBaseVarPVConstraint(DeclRefExpr *Decl) {
   return Ret;
 }
 
+bool ConstraintResolver::snapshotTaintedFunction(Decl* FunctionDecl){
+  //if the the ProgramInfo already has this Decl, then no point
+
+}
 CVarSet ConstraintResolver::getCalleeConstraintVars(CallExpr *CE) {
   CVarSet FVCons;
   Decl *D = CE->getCalleeDecl();
