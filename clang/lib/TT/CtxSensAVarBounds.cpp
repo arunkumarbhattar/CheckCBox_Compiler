@@ -10,10 +10,10 @@
 // CtxSensAVarBounds.h
 //
 //===----------------------------------------------------------------------===//
-#include "clang/3C/CtxSensAVarBounds.h"
-#include "clang/3C/AVarBoundsInfo.h"
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/CtxSensAVarBounds.h"
+#include "clang/TT/AVarBoundsInfo.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/ProgramInfo.h"
 #include <sstream>
 
 // This visitor computes a string representation of a structure member access

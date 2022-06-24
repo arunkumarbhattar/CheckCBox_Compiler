@@ -12,10 +12,10 @@
 
 #include "clang/TT/TT.h"
 #include "clang/TT/TTGlobalOptions.h"
-#include "clang/3C/ArrayBoundsInferenceConsumer.h"
-#include "clang/3C/ConstraintBuilder.h"
-#include "clang/3C/IntermediateToolHook.h"
-#include "clang/3C/RewriteUtils.h"
+#include "clang/TT/ArrayBoundsInferenceConsumer.h"
+#include "clang/TT/ConstraintBuilder.h"
+#include "clang/TT/IntermediateToolHook.h"
+#include "clang/TT/RewriteUtils.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -146,7 +146,7 @@ public:
 // Based on LibTooling's ASTBuilderAction but does several custom things that we
 // need.
 //
-// See clang/docs/checkedc/3C/clang-tidy.md#_TT-name-prefix
+// See clang/docs/checkedc/TT/clang-tidy.md#_TT-name-prefix
 // NOLINTNEXTLINE(readability-identifier-naming)
 class _TTASTBuilderAction : public ToolAction {
   std::vector<std::unique_ptr<ASTUnit>> &ASTs;
@@ -260,7 +260,7 @@ private:
     // select a FrontendAction (see CreateFrontendBaseAction in
     // ExecuteCompilerInvocation.cpp) and is ignored by LibTooling tools, which
     // perform a custom FrontendAction. But we want to support at least AST
-    // dumping (as an addition to 3C's normal workflow) since it's useful for
+    // dumping (as an addition to TT's normal workflow) since it's useful for
     // debugging TT, and we prefer to honor the standard `-Xclang -ast-dump`
     // option rather than define our own tool-level option like clang-check
     // does. We could add support for more `-ast-*` options here if desired.
@@ -332,7 +332,7 @@ void runSolver(ProgramInfo &Info, std::set<std::string> &SourceFiles) {
 
   clock_t StartTime = clock();
   CS.solve();
-  if (_3COpts.Verbose) {
+  if (_TTOpts.Verbose) {
     errs() << "Solver time:" << getTimeSpentInSeconds(StartTime) << "\n";
   }
 }
@@ -375,7 +375,7 @@ _TTInterface::_TTInterface(const struct _TTOptions &CCopt,
   }
   if (_TTOpts.OutputPostfix == "-" && _TTOpts.OutputDir.empty() &&
       SourceFileList.size() > 1) {
-    errs() << "3C initialization error: Cannot specify more than one input "
+    errs() << "TT initialization error: Cannot specify more than one input "
               "file when output is to stdout\n";
     ConstructionFailed = true;
     return;
@@ -392,7 +392,7 @@ _TTInterface::_TTInterface(const struct _TTOptions &CCopt,
   TmpPath = _TTOpts.BaseDir;
   EC = tryGetCanonicalFilePath(_TTOpts.BaseDir, TmpPath);
   if (EC) {
-    errs() << "3C initialization error: Failed to canonicalize base directory "
+    errs() << "TT initialization error: Failed to canonicalize base directory "
            << "\"" << _TTOpts.BaseDir << "\": " << EC.message() << "\n";
     ConstructionFailed = true;
     return;
@@ -412,7 +412,7 @@ _TTInterface::_TTInterface(const struct _TTOptions &CCopt,
     TmpPath = _TTOpts.OutputDir;
     EC = tryGetCanonicalFilePath(_TTOpts.OutputDir, TmpPath);
     if (EC) {
-      errs() << "3C initialization error: Failed to canonicalize output "
+      errs() << "TT initialization error: Failed to canonicalize output "
              << "directory \"" << _TTOpts.OutputDir << "\": " << EC.message()
              << "\n";
       ConstructionFailed = true;
@@ -583,23 +583,23 @@ bool _TTInterface::solveConstraints() {
   runSolver(GlobalProgramInfo, FilePaths);
   PStats.endConstraintSolverTime();
 
-  if (_3COpts.Verbose)
+  if (_TTOpts.Verbose)
     errs() << "Constraints solved\n";
 
-  if (_3COpts.WarnRootCause)
+  if (_TTOpts.WarnRootCause)
     GlobalProgramInfo.computeInterimConstraintState(FilePaths);
 
-  if (_3COpts.DumpIntermediate)
+  if (_TTOpts.DumpIntermediate)
     dumpConstraintOutputJson(FINAL_OUTPUT_SUFFIX, GlobalProgramInfo);
 
-  if (_3COpts.AllTypes) {
+  if (_TTOpts.AllTypes) {
     // Add declared bounds for all constant sized arrays. This needs to happen
     // after constraint solving because the bound added depends on whether the
     // array is NTARR or ARR.
     GlobalProgramInfo.getABoundsInfo().addConstantArrayBounds(
       GlobalProgramInfo);
 
-    if (_3COpts.DebugArrSolver)
+    if (_TTOpts.DebugArrSolver)
       GlobalProgramInfo.getABoundsInfo().dumpAVarGraph(
           "arr_bounds_initial.dot");
 
@@ -632,7 +632,7 @@ bool _TTInterface::solveConstraints() {
   if (!isSuccessfulSoFar())
     return false;
 
-  if (_3COpts.AllTypes) {
+  if (_TTOpts.AllTypes) {
     // Propagate data-flow information for Array pointers.
     GlobalProgramInfo.getABoundsInfo().performFlowAnalysis(&GlobalProgramInfo);
 

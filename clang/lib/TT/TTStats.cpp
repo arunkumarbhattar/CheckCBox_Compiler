@@ -1,16 +1,16 @@
-//=--3CStats.cpp--------------------------------------------------*- C++-*-===//
+//=--TTStats.cpp--------------------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Implementation of all the methods in 3CStats.h
+// Implementation of all the methods in TTStats.h
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/3CStats.h"
-#include "clang/3C/ProgramInfo.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/TTStats.h"
+#include "clang/TT/ProgramInfo.h"
+#include "clang/TT/Utils.h"
 #include <time.h>
 
 void PerformanceStats::startCompileTime() { CompileTimeSt = clock(); }

@@ -9,10 +9,10 @@
 // classes of CastPlacement.h
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/CastPlacement.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/CastPlacement.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/Utils.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 
 using namespace clang;
@@ -214,14 +214,14 @@ void CastPlacementVisitor::surroundByCast(ConstraintVariable *Dst,
                                           CastNeeded CastKind, Expr *E) {
   PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(E, *Context);
   if (!canWrite(PSL.getFileName())) {
-    // 3C has known bugs that can cause attempted cast insertion in
+    // TT has known bugs that can cause attempted cast insertion in
     // unwritable files in common use cases. Until they are fixed, report a
     // warning rather than letting the main "unwritable change" error trigger
     // later.
     reportCustomDiagnostic(
         Writer.getSourceMgr().getDiagnostics(),
         DiagnosticsEngine::Warning,
-        "3C internal error: tried to insert a cast into an unwritable file "
+        "TT internal error: tried to insert a cast into an unwritable file "
         "(https://github.com/correctcomputation/checkedc-clang/issues/454)",
         E->getBeginLoc());
     return;

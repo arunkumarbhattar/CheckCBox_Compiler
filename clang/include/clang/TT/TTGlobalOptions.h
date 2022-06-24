@@ -35,6 +35,7 @@ struct _TTOptions {
   bool AllowSourcesOutsideBaseDir;
   bool AllTypes;
   bool AddCheckedRegions;
+  bool AddSandboxType;
   bool EnableCCTypeChecker;
   bool WarnRootCause;
   bool WarnAllRootCause;

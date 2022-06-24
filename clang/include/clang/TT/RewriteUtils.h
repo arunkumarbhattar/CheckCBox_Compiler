@@ -32,7 +32,6 @@ public:
   enum DRKind {
     DRK_MultiDeclMember,
     DRK_FunctionDecl,
-    DRK_FunctionBody,
   };
 
   DRKind getKind() const { return Kind; }
@@ -48,6 +47,7 @@ protected:
                            DRKind K) : Replacement(R),
                                        SupplementaryDecls(SDecls), Kind(K) {}
 
+
   // The string to replace the declaration with.
   std::string Replacement;
 
@@ -58,6 +58,49 @@ protected:
 private:
   const DRKind Kind;
 };
+
+class BodyReplacement {
+public:
+  virtual Decl *getDecl() const = 0;
+
+  std::string getReplacement() const { return Replacement; }
+
+  virtual SourceRange getSourceRange(SourceManager &SM) const;
+
+  // Discriminator for LLVM-style RTTI (dyn_cast<> et al.).
+  enum DRKind {
+    DRK_MultiDeclMember,
+    DRK_FunctionDecl,
+    DRK_FunctionBody,
+  };
+
+  DRKind getKind() const { return Kind; }
+
+  virtual ~BodyReplacement() {
+
+  };
+
+  const std::vector<std::string> &getTaintedInstrumentation() const {
+    return TaintedInstrumentation;
+  }
+
+protected:
+  explicit BodyReplacement(std::vector<std::string> TaintedInstrumentation,
+                           DRKind K) : TaintedInstrumentation(TaintedInstrumentation), Kind(K) {
+
+  };
+
+  // The string to replace the declaration with.
+  std::string Replacement;
+
+  // A declaration might need to be replaced with more than a single new
+  // declaration. These extra operations(malloc/assignment) can be stored in this vector to be
+  // emitted after the original declaration.
+  std::vector<std::string> TaintedInstrumentation;
+private:
+  const DRKind Kind;
+};
+
 
 template <typename DeclT, DeclReplacement::DRKind K>
 class DeclReplacementTempl : public DeclReplacement {
@@ -74,16 +117,16 @@ protected:
   DeclT *Decl;
 };
 
-template <typename DeclT, DeclReplacement::DRKind K>
-class BodyReplacementTempl : public FunctionScope {
+template <typename DeclT, BodyReplacement::DRKind K>
+class BodyReplacementTempl : public BodyReplacement {
 public:
-  explicit BodyReplacementTempl(DeclT *D, std::string R,
+  explicit BodyReplacementTempl(DeclT *D,
                                 std::vector<std::string> SDecls)
-      : FunctionScope(R, K), Decl(D) {}
+      : BodyReplacement(SDecls, K), Decl(D) {}
 
   DeclT *getDecl() const { return Decl; }
 
-  static bool classof(const DeclReplacement *S) { return S->getKind() == K; }
+  static bool classof(const BodyReplacement *S) { return S->getKind() == K; }
 
 protected:
   DeclT *Decl;
@@ -128,18 +171,13 @@ private:
 // 3.) Insert calls to fetch the pointer offsets (WASM)
 // 4.) Insert call to the wasm function (w2c_func_name) whilst passing the generated types
 // 5.) Insert call to convert the return type (offset) to pointer (WASM) if return type is a pointer
-class FunctionBodyReplacement : public BodyReplacementTempl<FunctionScope,
-                                                            DeclReplacement::DRK_FunctionBody> {
+class FunctionBodyReplacement : public BodyReplacementTempl<FunctionDecl,
+                                                            BodyReplacement::DRK_FunctionBody> {
 public:
-  explicit FunctionBodyReplacement(FunctionScope *FS, std::string R,
+  explicit FunctionBodyReplacement(FunctionDecl *FD,
                                    std::vector<std::string> SInsts // these are basically the instructions to be inserted
-                                   , bool Return,
-                                   bool Params, bool Generic = false)
-      : BodyReplacementTempl(FS, R, SInsts), RewriteGeneric(Generic),
-        RewriteReturn(Return), RewriteParams(Params) {
-    assert("Doesn't make sense to rewrite nothing!" &&
-           (RewriteGeneric || RewriteReturn || RewriteParams));
-  }
+                                   )
+      : BodyReplacementTempl(FD, SInsts){  };
 
   SourceRange getSourceRange(SourceManager &SM) const;
 

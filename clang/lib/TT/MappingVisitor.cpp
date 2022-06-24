@@ -8,8 +8,8 @@
 // Implementations of the MappingVisitor functions for VisitStmt and VisitDecl.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/MappingVisitor.h"
-#include "clang/3C/3CGlobalOptions.h"
+#include "clang/TT/MappingVisitor.h"
+#include "clang/TT/TTGlobalOptions.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -20,7 +20,7 @@ bool MappingVisitor::VisitDecl(Decl *D) {
     std::set<PersistentSourceLoc>::iterator I = SourceLocs.find(PSL);
     if (I != SourceLocs.end()) {
       Decl *Do = PSLtoSDT[PSL];
-      if (Do != nullptr && _3COpts.Verbose) {
+      if (Do != nullptr && _TTOpts.Verbose) {
         llvm::errs() << "Overriding ";
         Do->dump();
         llvm::errs() << " with ";

@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_ABOUNDS_H
-#define LLVM_CLANG_3C_ABOUNDS_H
+#ifndef LLVM_CLANG_TT_ABOUNDS_H
+#define LLVM_CLANG_TT_ABOUNDS_H
 
-#include "clang/3C/ProgramVar.h"
+#include "clang/TT/ProgramVar.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 
@@ -148,4 +148,4 @@ public:
   }
 };
 
-#endif // LLVM_CLANG_3C_ABOUNDS_H
+#endif // LLVM_CLANG_TT_ABOUNDS_H

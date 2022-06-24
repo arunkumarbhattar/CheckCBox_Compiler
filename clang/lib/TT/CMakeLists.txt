@@ -4,9 +4,9 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-# We expect users to build either 5C (with all 5C-specific files present) or 3C
+# We expect users to build either 5C (with all 5C-specific files present) or TT
 # (with none present), so we can check existence of an arbitrary 5C-specific
-# file to tell whether this is 3C or 5C.
+# file to tell whether this is TT or 5C.
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/DeclRewriter_5C.cpp)
   set(FIVE_C ON)
 endif()
@@ -32,8 +32,8 @@ add_clang_library(clangTT
   ArrayBoundsInferenceConsumer.cpp
   CastPlacement.cpp
         TT.cpp
-  3CInteractiveData.cpp
-  3CStats.cpp
+        TTInteractiveData.cpp
+  TTStats.cpp
   CheckedRegions.cpp
   ConstraintBuilder.cpp
   ConstraintResolver.cpp

@@ -9,15 +9,15 @@
 // This implements a simple constraint solver for expressions of the form:
 //  a >= b
 //
-// The 3C tool performs type inference to identify locations
+// The TT tool performs type inference to identify locations
 // where a C type might be replaced with a Checked C type. This interface
 // does the solving to figure out where those substitions might happen.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CONSTRAINTS_H
-#define LLVM_CLANG_3C_CONSTRAINTS_H
+#ifndef LLVM_CLANG_TT_CONSTRAINTS_H
+#define LLVM_CLANG_TT_CONSTRAINTS_H
 
-#include "clang/3C/Utils.h"
+#include "clang/TT/Utils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"

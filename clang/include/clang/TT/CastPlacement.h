@@ -9,11 +9,11 @@
 // placing casts into the text as needing during the rewrite phase
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CASTPLACEMENT_H
-#define LLVM_CLANG_3C_CASTPLACEMENT_H
+#ifndef LLVM_CLANG_TT_CASTPLACEMENT_H
+#define LLVM_CLANG_TT_CASTPLACEMENT_H
 
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/RewriteUtils.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/RewriteUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
 // Locates expressions which are children of explicit cast expressions after
@@ -35,7 +35,7 @@ class CastPlacementVisitor : public RecursiveASTVisitor<CastPlacementVisitor> {
 public:
   explicit CastPlacementVisitor(ASTContext *C, ProgramInfo &I, Rewriter &R,
                                 std::set<Expr *> &EWC)
-      : Context(C), Info(I), Writer(R), CR(Info, Context), ABRewriter(I),
+      : Context(C), Info(I), Writer(R), CR(Info, Context), //ABRewriter(I),
         ExprsWithCast(EWC) {}
 
   bool VisitCallExpr(CallExpr *C);
@@ -45,7 +45,7 @@ private:
   ProgramInfo &Info;
   Rewriter &Writer;
   ConstraintResolver CR;
-  ArrayBoundsRewriter ABRewriter;
+//  ArrayBoundsRewriter ABRewriter;
   std::set<Expr *> &ExprsWithCast;
 
   // Enumeration indicating what type of cast is required at a call site.
@@ -71,4 +71,4 @@ private:
   void reportCastInsertionFailure(Expr *E, const std::string &CastStr);
   void updateRewriteStats(CastNeeded CastKind);
 };
-#endif // LLVM_CLANG_3C_CASTPLACEMENT_H
+#endif // LLVM_CLANG_TT_CASTPLACEMENT_H

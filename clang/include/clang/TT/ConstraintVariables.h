@@ -22,13 +22,13 @@
 // is the lowest numbered constraint variable for a given declaration.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CONSTRAINTVARIABLES_H
-#define LLVM_CLANG_3C_CONSTRAINTVARIABLES_H
+#ifndef LLVM_CLANG_TT_CONSTRAINTVARIABLES_H
+#define LLVM_CLANG_TT_CONSTRAINTVARIABLES_H
 
-#include "clang/3C/Constraints.h"
-#include "clang/3C/MultiDecls.h"
-#include "clang/3C/OptionalParams.h"
-#include "clang/3C/ProgramVar.h"
+#include "clang/TT/Constraints.h"
+#include "clang/TT/MultiDecls.h"
+#include "clang/TT/OptionalParams.h"
+#include "clang/TT/ProgramVar.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -44,7 +44,7 @@ typedef std::set<ConstraintKey> CVars;
 typedef std::vector<Atom *> CAtoms;
 
 // Options for ConstraintVariable::mkString, using the code pattern described in
-// clang/include/clang/3C/OptionalParams.h. Use the MKSTRING_OPTS macro to
+// clang/include/clang/TT/OptionalParams.h. Use the MKSTRING_OPTS macro to
 // generate a MkStringOpts instance at a call site.
 struct MkStringOpts {
   // True when the generated string should include
@@ -123,7 +123,7 @@ protected:
 public:
   // Generate source code for the type and (in certain cases) the name of the
   // variable or function represented by this ConstraintVariable that reflects
-  // any changes made by 3C and is suitable to insert during rewriting.
+  // any changes made by TT and is suitable to insert during rewriting.
   //
   // This method is used in several contexts with special requirements, which
   // are addressed by the options in MkStringOpts; see the comments there.
@@ -201,9 +201,9 @@ public:
   void setValidDecl() { IsForDecl = true; }
   bool isForValidDecl() const { return IsForDecl; }
 
-  // By default, 3C allows itypes to be re-solved arbitrarily. But in several
+  // By default, TT allows itypes to be re-solved arbitrarily. But in several
   // cases, we need to restrict itype re-solving; this function applies those
-  // restrictions. (It isn't needed for fully checked types because 3C doesn't
+  // restrictions. (It isn't needed for fully checked types because TT doesn't
   // allow checked types to be re-solved yet.)
   //
   // In some cases, we don't want the checked portion of the type to change, but
@@ -500,7 +500,7 @@ public:
   // TSI: TypeSourceInfo object gives access to information about the source
   //      code representation of the type. Allows for more precise rewriting by
   //      preserving the exact syntax used to write types that aren't rewritten
-  //      by 3C. If this is null, then the type will be reconstructed from QT.
+  //      by TT. If this is null, then the type will be reconstructed from QT.
   PointerVariableConstraint(const clang::QualType &QT, clang::DeclaratorDecl *D,
                             std::string N, ProgramInfo &I,
                             const clang::ASTContext &C,
@@ -632,6 +632,7 @@ public:
 
 // Constraints on a function type. Also contains a 'name' parameter for
 // when a re-write of a function pointer is needed.
+// Here we shall make sure to add additional constraitns for a tainted function
 class FunctionVariableConstraint : public ConstraintVariable {
 private:
   FunctionVariableConstraint(FunctionVariableConstraint *Ot);
@@ -760,4 +761,4 @@ public:
 
 typedef FunctionVariableConstraint FVConstraint;
 
-#endif // LLVM_CLANG_3C_CONSTRAINTVARIABLES_H
+#endif // LLVM_CLANG_TT_CONSTRAINTVARIABLES_H

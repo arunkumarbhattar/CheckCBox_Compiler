@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ArrayBoundsInferenceConsumer.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ConstraintResolver.h"
+#include "clang/TT/ArrayBoundsInferenceConsumer.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ConstraintResolver.h"
 #include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/CFG.h"
 #include <cctype>
@@ -870,7 +870,7 @@ void handleArrayVariablesBoundsDetection(ASTContext *C, ProgramInfo &I,
   // This is adding function names provided to --use-malloc to the set of
   // allocator functions. It assumes that the first argument is always the size,
   // which should be correct if the function have the same interface as malloc.
-  for (auto FuncName : _3COpts.AllocatorFunctions)
+  for (auto FuncName : _TTOpts.AllocatorFunctions)
     AllocatorSizeAssoc[FuncName] = {0};
 
   GlobalABVisitor GlobABV(C, I);

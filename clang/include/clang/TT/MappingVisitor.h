@@ -13,11 +13,11 @@
 // constructed AST.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_MAPPINGVISITOR_H
-#define LLVM_CLANG_3C_MAPPINGVISITOR_H
+#ifndef LLVM_CLANG_TT_MAPPINGVISITOR_H
+#define LLVM_CLANG_TT_MAPPINGVISITOR_H
 
-#include "clang/3C/PersistentSourceLoc.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/PersistentSourceLoc.h"
+#include "clang/TT/Utils.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 

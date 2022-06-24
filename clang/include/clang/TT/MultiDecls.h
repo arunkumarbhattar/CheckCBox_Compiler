@@ -12,10 +12,10 @@
 // struct my_struct x, *p;
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_MULTIDECLS_H
-#define LLVM_CLANG_3C_MULTIDECLS_H
+#ifndef LLVM_CLANG_TT_MULTIDECLS_H
+#define LLVM_CLANG_TT_MULTIDECLS_H
 
-#include "clang/3C/PersistentSourceLoc.h"
+#include "clang/TT/PersistentSourceLoc.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -23,7 +23,7 @@
 
 using namespace clang;
 
-// Some more information about multi-decls in the context of 3C:
+// Some more information about multi-decls in the context of TT:
 //
 // The "members" of a given multi-decl may be ordinary variables (VarDecls),
 // struct/union fields (FieldDecls), or typedefs (TypedefDecls), but all members
@@ -36,14 +36,14 @@ using namespace clang;
 // struct { int *y; } x, *p;
 //
 // Multi-decls (especially those with inline TagDecls) have historically been
-// tricky for 3C to rewrite. If the type of one member becomes a _Ptr (or
+// tricky for TT to rewrite. If the type of one member becomes a _Ptr (or
 // similar), then the left type of the members is no longer the same, so the
 // multi-decl must be broken up, for example:
 //
 // struct my_struct x;
 // _Ptr<struct my_struct> p;
 //
-// To keep the logic simpler, if 3C needs to change the type of at least one
+// To keep the logic simpler, if TT needs to change the type of at least one
 // member of a multi-decl, it breaks up all members of the multi-decl into
 // separate declarations. To preserve SourceLocations as much as possible and
 // avoid interfering with rewrites to any other constructs in the multi-decl
@@ -66,7 +66,7 @@ using namespace clang;
 // static _Ptr<struct x_struct_1> p;
 //
 // Exception: In a typedef multi-decl, if the _first_ member refers to the
-// TagDecl itself (not a pointer to it, etc.), then 3C uses that name for the
+// TagDecl itself (not a pointer to it, etc.), then TT uses that name for the
 // TagDecl rather than generating a new one. This produces nicer output for the
 // idiom:
 //
@@ -90,8 +90,8 @@ using namespace clang;
 // the name into the definition if the multi-decl gets rewritten for some other
 // reason. This solves the common case of allowing the types of all the
 // multi-decl members to refer to the TagDecl, but it doesn't address cases in
-// which 3C might need to insert a reference to the unnamed TagDecl elsewhere
-// even if the multi-decl isn't being rewritten. In these cases, 3C typically
+// which TT might need to insert a reference to the unnamed TagDecl elsewhere
+// even if the multi-decl isn't being rewritten. In these cases, TT typically
 // uses the generated name even though it is not defined, causing a compile
 // error that the user has to correct manually. The problematic cases include:
 //
@@ -192,7 +192,7 @@ private:
   };
 
   // Map from PSL of a TagDecl to its RenamedTagDefInfo, to ensure that we
-  // handle the TagDecl consistently when 3C naively rewrites the same header
+  // handle the TagDecl consistently when TT naively rewrites the same header
   // file multiple times as part of different translation units (see
   // https://github.com/correctcomputation/checkedc-clang/issues/374#issuecomment-804283984).
   std::map<PersistentSourceLoc, RenamedTagDefInfo> RenamedTagDefs;
@@ -213,4 +213,4 @@ public:
   bool wasBaseTypeRenamed(Decl *D);
 };
 
-#endif // LLVM_CLANG_3C_MULTIDECLS_H
+#endif // LLVM_CLANG_TT_MULTIDECLS_H

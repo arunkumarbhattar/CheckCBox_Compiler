@@ -9,9 +9,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <sstream>
@@ -1679,7 +1679,7 @@ static void createAtomGeq(Constraints &CS, Atom *L, Atom *R,
   if (CAR != nullptr && CAL != nullptr) {
     // These checks were used to verify that the relationships between constant
     // atom were valid. While we do not generally intend to rewrite code in a
-    // way that violates these relationships, it is possible for a user of 3C
+    // way that violates these relationships, it is possible for a user of TT
     // to manually modify their code so that it does while still having valid
     // CheckedC code.
     //if (DoEqType) { // Check equality, no matter the atom.
@@ -1722,7 +1722,7 @@ static void createAtomGeq(Constraints &CS, Atom *L, Atom *R,
       }
       break;
     case Wild_to_Safe:
-      if (!_3COpts.DisableRDs) {
+      if (!_TTOpts.DisableRDs) {
         // Note: reversal.
         CS.addConstraint(CS.createGeq(R, L, Rsn, true));
       } else {
@@ -1751,7 +1751,7 @@ static void createAtomGeq(Constraints &CS, Atom *L, Atom *R,
           CS.addConstraint(CS.createGeq(R, L, Rsn, true));
         break;
       case Wild_to_Safe:
-        if (!_3COpts.DisableRDs) {
+        if (!_TTOpts.DisableRDs) {
           // Note: reversal.
           CS.addConstraint(CS.createGeq(R, L, Rsn, true));
         } else {
@@ -2249,7 +2249,7 @@ void FVComponentVariable::equateWithItype(ProgramInfo &I,
   const ReasonLoc &ReasonUnchangeable2 =
       (ReasonUnchangeable.isDefault() && ExternalConstraint->isGeneric())
           ? ReasonLoc("Internal constraint for generic function declaration, "
-                      "for which 3C currently does not support re-solving.",
+                      "for which TT currently does not support re-solving.",
                       // TODO: What PSL should we actually use here?
                       ReasonUnchangeable.Location)
           : ReasonUnchangeable;
@@ -2301,7 +2301,7 @@ void FVComponentVariable::linkInternalExternal(ProgramInfo &I,
         // level. This is because CheckedC does not allow assignment from e.g.
         // a function return of type `int ** : itype(_Ptr<_Ptr<int>>)` to a
         // variable with type `int **`.
-        if (_3COpts.DisableFunctionEdges || _3COpts.DisableRDs ||
+        if (_TTOpts.DisableFunctionEdges || _TTOpts.DisableRDs ||
             EquateChecked || (ExternalConstraint->getName() == RETVAR && J > 0))
           CS.addConstraint(CS.createGeq(ExternalA, InternalA,
                                         LinkReason, true));

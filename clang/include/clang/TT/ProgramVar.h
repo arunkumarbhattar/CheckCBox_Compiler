@@ -349,8 +349,8 @@ private:
 
 class FunctionScope : public ProgramVarScope {
 public:
-  FunctionScope(std::string FN, bool IsSt)
-      : ProgramVarScope(FunctionScopeKind), FName(FN), IsStatic(IsSt) {}
+  FunctionScope(bool IsSt)
+      : ProgramVarScope(FunctionScopeKind), IsStatic(IsSt) {}
 
   ~FunctionScope() override {}
 
@@ -454,4 +454,4 @@ private:
                  CVal) {}
 };
 
-#endif // LLVM_CLANG_3C_PROGRAMVAR_H
+#endif // LLVM_CLANG_TT_PROGRAMVAR_H

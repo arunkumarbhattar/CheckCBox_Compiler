@@ -20,7 +20,7 @@ using namespace clang::driver;
 using namespace clang::tooling;
 using namespace clang;
 using namespace llvm;
-// See clang/docs/checkedc/TT/clang-tidy.md#_3c-name-prefix
+// See clang/docs/checkedc/TT/clang-tidy.md#_TT-name-prefix
 // NOLINTNEXTLINE(readability-identifier-naming)
 static cl::OptionCategory _TTCategory("TT options");
 static const char *HelpOverview =
@@ -36,7 +36,7 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // XXX: The first two paragraphs are common to all Clang LibTooling-based
 // tools and would ideally go in CommonOptionsParser::HelpMessage or
 // somewhere else that users will find. But unless/until we pursue that, we
-// document that information here for 3c.
+// document that information here for TT.
 static const char MoreHelpStr[] = R"(
 
 By default, TT (like any Clang LibTooling-based tool) automatically searches for
@@ -54,8 +54,8 @@ source file that is not in the database, TT will use the compiler options from
 the most "similar looking" file in the database according to a set of
 heuristics.
 
-If you _do not_ want to use a compilation database, pass "--" after all other 3c
-arguments. This is important to ensure that 3c doesn't automatically detect a
+If you _do not_ want to use a compilation database, pass "--" after all other TT
+arguments. This is important to ensure that TT doesn't automatically detect a
 compilation database and use compiler options you do not want from a "similar
 looking" file in the database. The "--" may be followed by compiler options that
 you want to use for all source files (this is equivalent to specifying those
@@ -159,19 +159,19 @@ static cl::opt<bool> OptSandboxType(
 static cl::opt<bool> OptEnableCCTypeChecker(
     "enccty",
     cl::desc(
-      "Enable the Checked C type checker. 3c normally disables it (via the "
-      "equivalent of `clang -f3c-tool`) so that 3c can operate on partially "
+      "Enable the Checked C type checker. TT normally disables it (via the "
+      "equivalent of `clang -fTT-tool`) so that TT can operate on partially "
       "converted programs that may have Checked C type errors."),
     cl::init(false), cl::cat(_TTCategory));
 
 static cl::opt<std::string> OptBaseDir(
     "base-dir",
     cl::desc(
-      "Ancestor directory defining the set of files that 3c "
+      "Ancestor directory defining the set of files that TT "
       "is allowed to modify (default: the working "
       "directory). All source files specified on the command line must be "
       "under this directory. You can use "
-      "this option to let 3c modify your project's own header files but not "
+      "this option to let TT modify your project's own header files but not "
       "those of libraries outside your control."),
     cl::init(""), cl::cat(_TTCategory));
 
@@ -198,29 +198,29 @@ static cl::opt<bool> OptWarnAllRootCause(
 // For now, the user has to copy and paste the correct portions of stderr.
 static cl::opt<bool> OptDumpUnwritableChanges(
     "dump-unwritable-changes",
-    cl::desc("When 3c generates changes to a file it cannot write (due to "
+    cl::desc("When TT generates changes to a file it cannot write (due to "
              "stdout mode or implementation limitations), dump the new version "
              "of the file to stderr for troubleshooting."),
     cl::init(false), cl::cat(_TTCategory));
 
 static cl::opt<bool> OptAllowUnwritableChanges(
     "allow-unwritable-changes",
-    // "3C" for the software in general, "3c" for this frontend. :/
-    cl::desc("When 3c generates changes to a file it cannot write (due to "
+    // "TT" for the software in general, "TT" for this frontend. :/
+    cl::desc("When TT generates changes to a file it cannot write (due to "
              "stdout mode or implementation limitations), issue a warning "
              "instead of an error. This option is intended to be used "
              "temporarily until you fix the root cause of the problem (by "
              "correcting your usage of stdout mode or reporting the "
-             "implementation limitation to the 3C team to get it fixed) and "
+             "implementation limitation to the TT team to get it fixed) and "
              "may be removed in the future."),
     cl::init(false), cl::cat(_TTCategory));
 
 static cl::opt<bool> OptAllowRewriteFailures(
     "allow-rewrite-failures",
-    cl::desc("When 3c fails to make a rewrite to a source file (typically "
+    cl::desc("When TT fails to make a rewrite to a source file (typically "
              "because of macros), issue a warning instead of an error. This "
              "option is intended to be used temporarily until you change your "
-             "code to allow 3c to work or you report the problem to the 3C "
+             "code to allow TT to work or you report the problem to the TT "
              "team to get it fixed; the option may be removed in the future. "
              "Note that some kinds of rewrite failures currently generate "
              "warnings regardless of this option, due to known bugs that "
@@ -241,7 +241,7 @@ static cl::opt<bool> OptInferTypesForUndef(
              "types for undefined functions are inferred according to the same "
              "rules as defined functions with the caveat that an undefined "
              "function will only solve to an itype and not a fully checked "
-             "type. Because 3c is not able to examine the body of the "
+             "type. Because TT is not able to examine the body of the "
              "function, the inferred pointer types (and array bounds) may not "
              "be consistent with the actual implementation. By default, the "
              "Checked C compiler trusts the declared itypes and will not "
@@ -297,12 +297,12 @@ static cl::opt<bool> OptDisableInfDecls(
 static cl::opt<bool> OptRemoveItypes(
     "remove-itypes",
     cl::desc("Remove unneeded interoperation type annotations."),
-    cl::init(false), cl::cat(_3CCategory));
+    cl::init(false), cl::cat(_TTCategory));
 
 static cl::opt<bool> OptForceItypes(
     "force-itypes",
     cl::desc("Use interoperation types instead of regular checked pointers. "),
-    cl::init(false), cl::cat(_3CCategory));
+    cl::init(false), cl::cat(_TTCategory));
 #endif
 
 // clang-format on
@@ -323,7 +323,7 @@ int main(int argc, const char **argv) {
       CommonOptionsParser::create(argc, (const char **)(argv), _TTCategory,
                                   cl::ZeroOrMore, HelpOverview);
   if (!ExpectedOptionsParser) {
-    llvm::errs() << "3c: Error(s) parsing command-line arguments:\n"
+    llvm::errs() << "TT: Error(s) parsing command-line arguments:\n"
                  << llvm::toString(ExpectedOptionsParser.takeError());
     return 1;
   }
@@ -332,13 +332,13 @@ int main(int argc, const char **argv) {
   // here lets us give a better error message than the default "Must specify at
   // least 1 positional argument".
   if (OptionsParser.getSourcePathList().empty()) {
-    llvm::errs() << "3c: Error: No source files specified.\n"
+    llvm::errs() << "TT: Error: No source files specified.\n"
                  << "See: " << argv[0] << " --help\n";
     return 1;
   }
 
   // Setup options.
-  struct _TTCategory CcOptions;
+  struct _TTOptions CcOptions;
   CcOptions.BaseDir = OptBaseDir.getValue();
   CcOptions.AllowSourcesOutsideBaseDir = OptAllowSourcesOutsideBaseDir;
   CcOptions.HandleVARARGS = OptHandleVARARGS;
@@ -390,7 +390,7 @@ int main(int argc, const char **argv) {
 
   // Create TT Interface.
   //
-  // See clang/docs/checkedc/TT/clang-tidy.md#_3c-name-prefix
+  // See clang/docs/checkedc/TT/clang-tidy.md#_TT-name-prefix
   // NOLINTNEXTLINE(readability-identifier-naming)
   std::unique_ptr<_TTInterface> _TTInterfacePtr(
       _TTInterface::create(CcOptions, OptionsParser.getSourcePathList(),

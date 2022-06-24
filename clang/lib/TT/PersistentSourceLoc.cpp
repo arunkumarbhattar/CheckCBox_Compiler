@@ -8,8 +8,8 @@
 // Implementation of the PersistentSourceLoc infrastructure.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/PersistentSourceLoc.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/PersistentSourceLoc.h"
+#include "clang/TT/Utils.h"
 
 using namespace clang;
 using namespace llvm;

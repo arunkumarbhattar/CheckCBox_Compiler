@@ -9,10 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/Constraints.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/ConstraintsGraph.h"
+#include "clang/TT/Constraints.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/ConstraintsGraph.h"
 #include <iostream>
 #include <set>
 
@@ -40,7 +40,7 @@ bool Constraints::removeConstraint(Constraint *C) {
 // Check if we can add this constraint. This provides a global switch to
 // control what constraints we can add to our system.
 void Constraints::editConstraintHook(Constraint *C) {
-  if (!_3COpts.AllTypes) {
+  if (!_TTOpts.AllTypes) {
     // Invalidate any pointer-type constraints.
     if (Geq *E = dyn_cast<Geq>(C)) {
       if (!E->constraintIsChecked()) {
@@ -107,7 +107,7 @@ bool Constraints::addConstraint(Constraint *C) {
   // propagate this reason to the existing constraint.
   // This way we always prioritize the unwritability as the reason
   // for wildness.
-  // This is needed as 3C will currently only report one cause of wildness
+  // This is needed as TT will currently only report one cause of wildness
   // (See https://github.com/correctcomputation/checkedc-clang/issues/664)
   if (C->isUnwritable()) {
     auto *StoredConstraint = *Search;
@@ -218,7 +218,7 @@ doSolve(ConstraintsGraph &CG,
           // new WILD-ness.
           Conflicts.insert(E);
           // Failure case.
-          if (_3COpts.Verbose) {
+          if (_TTOpts.Verbose) {
             errs() << "Unsolvable constraints: ";
             VA->print(errs());
             errs() << "=";
@@ -324,7 +324,7 @@ bool Constraints::graphBasedSolve() {
     }
   }
 
-  if (_3COpts.DebugSolver)
+  if (_TTOpts.DebugSolver)
     GraphVizOutputGraph::dumpConstraintGraphs("initial_constraints_graph.dot",
                                               SolChkCG, SolPtrTypCG);
 
@@ -334,11 +334,11 @@ bool Constraints::graphBasedSolve() {
   bool Res = doSolve(SolChkCG, Env, this, true, nullptr, Conflicts);
 
   // Now solve PtrType constraints
-  if (Res && _3COpts.AllTypes) {
+  if (Res && _TTOpts.AllTypes) {
     Env.doCheckedSolve(false);
-    bool RegularSolve = !(_3COpts.OnlyGreatestSol || _3COpts.OnlyLeastSol);
+    bool RegularSolve = !(_TTOpts.OnlyGreatestSol || _TTOpts.OnlyLeastSol);
 
-    if (_3COpts.OnlyLeastSol) {
+    if (_TTOpts.OnlyLeastSol) {
       // Do only least solution.
       // First reset ptr solution to NTArr.
       Env.resetSolution(
@@ -348,7 +348,7 @@ bool Constraints::graphBasedSolve() {
           },
           getNTArr());
       Res = doSolve(SolPtrTypCG, Env, this, true, nullptr, Conflicts);
-    } else if (_3COpts.OnlyGreatestSol) {
+    } else if (_TTOpts.OnlyGreatestSol) {
       // Do only greatest solution
       Res = doSolve(SolPtrTypCG, Env, this, false, nullptr, Conflicts);
     } else {
@@ -466,13 +466,13 @@ bool Constraints::graphBasedSolve() {
 // an empty. If the system could not be solved, the constraints in conflict
 // are returned in the first position.
 void Constraints::solve() {
-  if (_3COpts.DebugSolver) {
+  if (_TTOpts.DebugSolver) {
     errs() << "constraints beginning solve\n";
     dump();
   }
   graphBasedSolve();
 
-  if (_3COpts.DebugSolver) {
+  if (_TTOpts.DebugSolver) {
     errs() << "solution, when done solving\n";
     Environment.dump();
   }

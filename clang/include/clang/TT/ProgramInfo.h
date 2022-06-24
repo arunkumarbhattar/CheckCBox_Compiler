@@ -9,16 +9,16 @@
 // collected by the converter.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_PROGRAMINFO_H
-#define LLVM_CLANG_3C_PROGRAMINFO_H
+#ifndef LLVM_CLANG_TT_PROGRAMINFO_H
+#define LLVM_CLANG_TT_PROGRAMINFO_H
 
-#include "clang/3C/3CInteractiveData.h"
-#include "clang/3C/3CStats.h"
-#include "clang/3C/AVarBoundsInfo.h"
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/MultiDecls.h"
-#include "clang/3C/PersistentSourceLoc.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/TTInteractiveData.h"
+#include "clang/TT/TTStats.h"
+#include "clang/TT/AVarBoundsInfo.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/MultiDecls.h"
+#include "clang/TT/PersistentSourceLoc.h"
+#include "clang/TT/Utils.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"

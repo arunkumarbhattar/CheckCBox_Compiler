@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CTXSENSAVARBOUNDS_H
-#define LLVM_CLANG_3C_CTXSENSAVARBOUNDS_H
+#ifndef LLVM_CLANG_TT_CTXSENSAVARBOUNDS_H
+#define LLVM_CLANG_TT_CTXSENSAVARBOUNDS_H
 
-#include "clang/3C/ABounds.h"
-#include "clang/3C/AVarGraph.h"
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/PersistentSourceLoc.h"
-#include "clang/3C/ProgramVar.h"
+#include "clang/TT/ABounds.h"
+#include "clang/TT/AVarGraph.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/PersistentSourceLoc.h"
+#include "clang/TT/ProgramVar.h"
 #include "clang/AST/Decl.h"
 
 class ProgramInfo;
@@ -158,4 +158,4 @@ private:
   ConstraintResolver *CR;
 };
 
-#endif // LLVM_CLANG_3C_CTXSENSAVARBOUNDS_H
+#endif // LLVM_CLANG_TT_CTXSENSAVARBOUNDS_H

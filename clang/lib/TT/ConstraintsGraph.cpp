@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ConstraintsGraph.h"
+#include "clang/TT/ConstraintsGraph.h"
 #include <iostream>
 
 ConstraintsGraph::NodeType *ConstraintsGraph::findOrCreateNode(Atom *A) {

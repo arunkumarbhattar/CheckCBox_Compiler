@@ -29,9 +29,9 @@ using namespace clang;
 using namespace llvm;
 
 class TStructVariableInitializer
-    : public RecursiveASTVisitor<StructVariableInitializer> {
+    : public RecursiveASTVisitor<TStructVariableInitializer> {
 public:
-  explicit StructVariableInitializer(ASTContext *C, ProgramInfo &I, RSet &R)
+  explicit TStructVariableInitializer(ASTContext *C, ProgramInfo &I, RSet &R)
       : Context(C), I(I), RewriteThese(R), RecordsWithCPointers() {}
 
   bool VisitVarDecl(VarDecl *VD);

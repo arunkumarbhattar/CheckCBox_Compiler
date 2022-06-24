@@ -9,13 +9,13 @@
 // classes of CheckedRegions.h
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/CheckedRegions.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ArrayBoundsInferenceConsumer.h"
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/MappingVisitor.h"
-#include "clang/3C/RewriteUtils.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/CheckedRegions.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ArrayBoundsInferenceConsumer.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/MappingVisitor.h"
+#include "clang/TT/RewriteUtils.h"
+#include "clang/TT/Utils.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -175,7 +175,7 @@ bool CheckedRegionFinder::VisitCompoundStmt(CompoundStmt *S) {
       // low priority".
       //
       // Currently, it's OK to perform this check only at the function level
-      // because a function is normally in a single file and 3C doesn't add
+      // because a function is normally in a single file and TT doesn't add
       // checked annotations at higher levels (e.g., `#pragma CHECKED_SCOPE`).
       return false;
     }

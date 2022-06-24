@@ -10,10 +10,10 @@
 // when enabled with the -addcr flag
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CHECKEDREGIONS_H
-#define LLVM_CLANG_3C_CHECKEDREGIONS_H
+#ifndef LLVM_CLANG_TT_CHECKEDREGIONS_H
+#define LLVM_CLANG_TT_CHECKEDREGIONS_H
 
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -93,4 +93,4 @@ private:
   bool EmitWarnings;
 };
 
-#endif // LLVM_CLANG_3C_CHECKEDREGIONS_H
+#endif // LLVM_CLANG_TT_CHECKEDREGIONS_H

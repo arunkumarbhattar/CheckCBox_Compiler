@@ -9,8 +9,8 @@
 // constraints for a given expression.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/3CGlobalOptions.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/TTGlobalOptions.h"
 
 using namespace llvm;
 using namespace clang;
@@ -105,9 +105,9 @@ static ConstAtom *analyzeAllocExpr(CallExpr *CE, Constraints &CS,
 
   ConstAtom *Ret = CS.getPtr();
   Expr *E;
-  if (std::find(_3COpts.AllocatorFunctions.begin(),
-                _3COpts.AllocatorFunctions.end(),
-                FuncName) != _3COpts.AllocatorFunctions.end() ||
+  if (std::find(_TTOpts.AllocatorFunctions.begin(),
+                _TTOpts.AllocatorFunctions.end(),
+                FuncName) != _TTOpts.AllocatorFunctions.end() ||
       FuncName.compare("malloc") == 0)
     E = CE->getArg(0);
   else {
@@ -379,7 +379,7 @@ CSetBkeyPair ConstraintResolver::getExprConstraintVars(Expr *E) {
           // PTR. This prevents it from solving to either ARR or NTARR. CheckedC
           // does permit taking the address of an _Array_ptr when the array
           // pointer has no declared bounds. With this constraint added however,
-          // 3C will not generate such code.
+          // TT will not generate such code.
           for (auto *CV : T.first) {
             if (auto *PCV = dyn_cast<PVConstraint>(CV)) {
               // On the other hand, CheckedC does let you take the address of
@@ -678,7 +678,7 @@ CSetBkeyPair ConstraintResolver::getExprConstraintVars(Expr *E) {
       P->constrainToWild(Info.getConstraints(), ReasonLoc(Rsn, PL));
       Ret = pairWithEmptyBkey({P});
     } else {
-      if (_3COpts.Verbose) {
+      if (_TTOpts.Verbose) {
         llvm::errs() << "WARNING! Initialization expression ignored: ";
         E->dump(llvm::errs(), *Context);
         llvm::errs() << "\n";
@@ -726,7 +726,7 @@ void ConstraintResolver::constrainLocalAssign(Stmt *TSt, Expr *LHS, Expr *RHS,
 
   // Only if all types are enabled and these are not pointers, then track
   // the assignment.
-  if (_3COpts.AllTypes) {
+  if (_TTOpts.AllTypes) {
     if ((!containsValidCons(L.first) && !containsValidCons(R.first)) ||
         !HandleBoundsKey) {
       ABI.handleAssignment(LHS, L.first, L.second, RHS, R.first, R.second,
@@ -751,7 +751,7 @@ void ConstraintResolver::constrainLocalAssign(Stmt *TSt, DeclaratorDecl *D,
   if (V.hasValue())
     constrainConsVarGeq(&V.getValue(), RHSCons.first, Info.getConstraints(),
                         Rsn, CAction, false, &Info, HandleBoundsKey);
-  if (_3COpts.AllTypes && !IgnoreBnds) {
+  if (_TTOpts.AllTypes && !IgnoreBnds) {
     if (!HandleBoundsKey || (!(V.hasValue() && isValidCons(&V.getValue())) &&
                              !containsValidCons(RHSCons.first))) {
       auto &ABI = Info.getABoundsInfo();

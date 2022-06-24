@@ -8,19 +8,19 @@
 // Contains classes for detection and rewriting of assignment expression that
 // would invalidate the bounds of pointers rewritten to use range bounds.
 // For pointers fattend to use a fresh lower bound
-// (`bounds(__3c_lower_bound_p, __3c_lower_bound_p + n)`), an
+// (`bounds(__TT_lower_bound_p, __TT_lower_bound_p + n)`), an
 // assignment `p = q` effectively changes the lower bound of the range
 // bounds, so that the new bounds of `p` are `bounds(q, q + n)`
 // (assuming `q` has the same size as `p`). For this to not invalidate the
-// bound, `__3c_lower_bound_p` must also be updated to be equal to `q`.
+// bound, `__TT_lower_bound_p` must also be updated to be equal to `q`.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_LOWERBOUNDASSIGNMENT_H
-#define LLVM_CLANG_3C_LOWERBOUNDASSIGNMENT_H
+#ifndef LLVM_CLANG_TT_LOWERBOUNDASSIGNMENT_H
+#define LLVM_CLANG_TT_LOWERBOUNDASSIGNMENT_H
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
-#include "clang/3C/ConstraintResolver.h"
+#include "clang/TT/ConstraintResolver.h"
 
 // Return true if an assignment LHS=RHS is the value of RHS is not derived form
 // LHS. For example, an assignment `p = q` will return true (we assume `q`
@@ -48,7 +48,7 @@ public:
 // that it doesn't not invalidate the bounds. e.g.:
 //     q = p;
 // becomes
-//     __3c_lower_bound_q = p, q = __3c_lower_bound_q;
+//     __TT_lower_bound_q = p, q = __TT_lower_bound_q;
 class LowerBoundAssignmentUpdater : public LowerBoundAssignmentVisitor {
 public:
   explicit LowerBoundAssignmentUpdater(ASTContext *C, ProgramInfo &I,
@@ -80,4 +80,4 @@ private:
   ConstraintResolver CR;
   ASTContext *C;
 };
-#endif // LLVM_CLANG_3C_LOWERBOUNDASSIGNMENT_H
+#endif // LLVM_CLANG_TT_LOWERBOUNDASSIGNMENT_H

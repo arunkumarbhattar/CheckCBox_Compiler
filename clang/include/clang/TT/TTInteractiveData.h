@@ -1,4 +1,4 @@
-//=--3CInteractiveData.h------------------------------------------*- C++-*-===//
+//=--TTInteractiveData.h------------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Data structures used to communicate results of 3C interactive mode
+// Data structures used to communicate results of TT interactive mode
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_3CINTERACTIVEDATA_H
-#define LLVM_CLANG_3C_3CINTERACTIVEDATA_H
+#ifndef LLVM_CLANG_TT_TTINTERACTIVEDATA_H
+#define LLVM_CLANG_TT_TTINTERACTIVEDATA_H
 
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/PersistentSourceLoc.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/PersistentSourceLoc.h"
 
 // Source info and reason
 class RootCauseDiagnostic {
@@ -94,4 +94,4 @@ private:
                             ConstraintKey Cause);
 };
 
-#endif // LLVM_CLANG_3C_3CINTERACTIVEDATA_H
+#endif // LLVM_CLANG_TT_TTINTERACTIVEDATA_H

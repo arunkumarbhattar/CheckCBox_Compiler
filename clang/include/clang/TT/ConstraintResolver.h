@@ -8,10 +8,10 @@
 // Class that helps in resolving constraints for various expressions.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CONSTRAINTRESOLVER_H
-#define LLVM_CLANG_3C_CONSTRAINTRESOLVER_H
+#ifndef LLVM_CLANG_TT_CONSTRAINTRESOLVER_H
+#define LLVM_CLANG_TT_CONSTRAINTRESOLVER_H
 
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/AST/ASTConsumer.h"
 
 using namespace llvm;
@@ -85,4 +85,4 @@ private:
 
 };
 
-#endif // LLVM_CLANG_3C_CONSTRAINTRESOLVER_H
+#endif // LLVM_CLANG_TT_CONSTRAINTRESOLVER_H

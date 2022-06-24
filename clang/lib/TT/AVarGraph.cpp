@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/AVarGraph.h"
-#include "clang/3C/AVarBoundsInfo.h"
+#include "clang/TT/AVarGraph.h"
+#include "clang/TT/AVarBoundsInfo.h"
 #include <iostream>
 
 std::string llvm::DOTGraphTraits<AVarGraph>::getNodeAttributes(

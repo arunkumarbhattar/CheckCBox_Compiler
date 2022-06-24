@@ -8,12 +8,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_TYPEVARIABLEANALYSIS_H
-#define LLVM_CLANG_3C_TYPEVARIABLEANALYSIS_H
+#ifndef LLVM_CLANG_TT_TYPEVARIABLEANALYSIS_H
+#define LLVM_CLANG_TT_TYPEVARIABLEANALYSIS_H
 
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/ProgramInfo.h"
 #include <set>
 
 class TypeVariableEntry {

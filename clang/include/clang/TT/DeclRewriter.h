@@ -68,8 +68,7 @@ private:
                                      SourceLocation Loc);
   SourceLocation getNextCommaOrSemicolon(SourceLocation L);
   void denestTagDecls();
-  void rewriteFunctionBody(FunctionBodyReplacement *N);
-  void emitTaintedFunctionInstrumentation(const std::vector<string> &TInsts,
+  void emitTaintedFunctionInstrumentation(const std::vector<std::string> &TInsts,
                                           SourceLocation Loc);
 };
 
@@ -96,10 +95,8 @@ protected:
   // Get existing itype string from constraint variables.
   //std::string getExistingIType(ConstraintVariable *DeclC);
 
-  RewrittenBody
-  buildTaintedBody(PVConstraint *Defn, DeclaratorDecl *Decl,
-                   std::string UseName, bool &RewriteParm, bool &RewriteRet,
-                   bool GenerateSDecls);
-
+  RewrittenBody buildBodyVar(const FVComponentVariable *CV,
+                             DeclaratorDecl *Decl, std::string UseName,
+                             bool StaticFunc);
 };
-#endif // LLVM_CLANG_3C_DECLREWRITER_H
+#endif // LLVM_CLANG_TT_DECLREWRITER_H

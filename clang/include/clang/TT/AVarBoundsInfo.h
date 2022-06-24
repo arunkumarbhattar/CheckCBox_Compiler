@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_AVARBOUNDSINFO_H
-#define LLVM_CLANG_3C_AVARBOUNDSINFO_H
+#ifndef LLVM_CLANG_TT_AVARBOUNDSINFO_H
+#define LLVM_CLANG_TT_AVARBOUNDSINFO_H
 
-#include "clang/3C/ABounds.h"
-#include "clang/3C/AVarGraph.h"
-#include "clang/3C/ConstraintVariables.h"
-#include "clang/3C/CtxSensAVarBounds.h"
-#include "clang/3C/PersistentSourceLoc.h"
-#include "clang/3C/ProgramVar.h"
+#include "clang/TT/ABounds.h"
+#include "clang/TT/AVarGraph.h"
+#include "clang/TT/ConstraintVariables.h"
+#include "clang/TT/CtxSensAVarBounds.h"
+#include "clang/TT/PersistentSourceLoc.h"
+#include "clang/TT/ProgramVar.h"
 #include "clang/AST/Decl.h"
 
 class ProgramInfo;
@@ -266,7 +266,7 @@ public:
   bool hasLowerBound(BoundsKey BK);
 
   // Record that a pointer cannot be rewritten to use range bounds. This might
-  // be due to 3C rewriting limitations (assignments appearing inside macros),
+  // be due to TT rewriting limitations (assignments appearing inside macros),
   // or it might be a Checked C limitation (the current style of range bounds
   // can't properly initialized on global variables without error).
   void markIneligibleForFreshLowerBound(BoundsKey BK);
@@ -481,11 +481,11 @@ private:
   // bounds. The corresponding non-context-sensitive BoundsKey should instead.
   bool scopeCanHaveLowerBound(BoundsKey BK);
 
-  // Check if a fresh lower bound can be be inserted by 3C for the pointer
+  // Check if a fresh lower bound can be be inserted by TT for the pointer
   // corresponding to the bounds key. When a pointer needs a fresh lower bound,
-  // it is possible that 3C will not support inserting the new declaration.
+  // it is possible that TT will not support inserting the new declaration.
   // No array bounds can be inferred for such pointers.
   bool isEligibleForFreshLowerBound(BoundsKey BK);
 };
 
-#endif // LLVM_CLANG_3C_AVARBOUNDSINFO_H
+#endif // LLVM_CLANG_TT_AVARBOUNDSINFO_H

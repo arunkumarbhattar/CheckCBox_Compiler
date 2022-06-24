@@ -98,7 +98,8 @@ bool TStructVariableInitializer::VisitVarDecl(VarDecl *VD) {
   if (VD->hasLocalStorage() && !isa<ParmVarDecl>(VD) && !VD->hasInit() &&
       hasCheckedMembers(VD)) {
     // Create replacement declaration text with an initializer.
-    std::string ToReplace = mkStringForDeclWithUnchangedType(VD, I) + " = {}";
+//    std::string ToReplace = mkStringForDeclWithUnchangedType(VD, I) + " = {}";
+    std::string ToReplace = "int temp = 0;";
     RewriteThese.insert(
         std::make_pair(VD, new MultiDeclMemberReplacement(VD, ToReplace, {})));
   }

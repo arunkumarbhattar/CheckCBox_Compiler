@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ABounds.h"
-#include "clang/3C/AVarBoundsInfo.h"
+#include "clang/TT/ABounds.h"
+#include "clang/TT/AVarBoundsInfo.h"
 
 ABounds *ABounds::getBoundsInfo(AVarBoundsInfo *ABInfo, BoundsExpr *BExpr,
                                 const ASTContext &C) {

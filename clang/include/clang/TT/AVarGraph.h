@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_AVARGRAPH_H
-#define LLVM_CLANG_3C_AVARGRAPH_H
+#ifndef LLVM_CLANG_TT_AVARGRAPH_H
+#define LLVM_CLANG_TT_AVARGRAPH_H
 
-#include "clang/3C/ABounds.h"
-#include "clang/3C/ConstraintsGraph.h"
+#include "clang/TT/ABounds.h"
+#include "clang/TT/ConstraintsGraph.h"
 
 // Graph that keeps tracks of direct assignments between various variables.
 class AVarGraph : public DataGraph<BoundsKey> {
@@ -38,25 +38,25 @@ template <> struct GraphTraits<AVarGraph> {
       mapped_iterator<typename DataNode<BoundsKey>::iterator,
                       decltype(&getTargetNode)>;
 
-  // See clang/doc/checkedc/3C/clang-tidy.md#names-referenced-by-templates
+  // See clang/doc/checkedc/TT/clang-tidy.md#names-referenced-by-templates
   // NOLINTNEXTLINE(readability-identifier-naming)
   static nodes_iterator nodes_begin(const AVarGraph &G) {
     return const_cast<AVarGraph &>(G).Nodes.begin();
   }
 
-  // See clang/doc/checkedc/3C/clang-tidy.md#names-referenced-by-templates
+  // See clang/doc/checkedc/TT/clang-tidy.md#names-referenced-by-templates
   // NOLINTNEXTLINE(readability-identifier-naming)
   static nodes_iterator nodes_end(const AVarGraph &G) {
     return const_cast<AVarGraph &>(G).Nodes.end();
   }
 
-  // See clang/doc/checkedc/3C/clang-tidy.md#names-referenced-by-templates
+  // See clang/doc/checkedc/TT/clang-tidy.md#names-referenced-by-templates
   // NOLINTNEXTLINE(readability-identifier-naming)
   static ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &getTargetNode);
   }
 
-  // See clang/doc/checkedc/3C/clang-tidy.md#names-referenced-by-templates
+  // See clang/doc/checkedc/TT/clang-tidy.md#names-referenced-by-templates
   // NOLINTNEXTLINE(readability-identifier-naming)
   static ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &getTargetNode);
@@ -73,4 +73,4 @@ struct DOTGraphTraits<AVarGraph> : public llvm::DefaultDOTGraphTraits,
   std::string getNodeLabel(const DataNode<BoundsKey> *Node, const AVarGraph &G);
 };
 } // namespace llvm
-#endif // LLVM_CLANG_3C_AVARGRAPH_H
+#endif // LLVM_CLANG_TT_AVARGRAPH_H

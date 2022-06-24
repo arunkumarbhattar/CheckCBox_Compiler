@@ -8,11 +8,11 @@
 // Implementation of ProgramInfo methods.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ProgramInfo.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/ConstraintsGraph.h"
-#include "clang/3C/MappingVisitor.h"
-#include "clang/3C/Utils.h"
+#include "clang/TT/ProgramInfo.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/ConstraintsGraph.h"
+#include "clang/TT/MappingVisitor.h"
+#include "clang/TT/Utils.h"
 #include "llvm/Support/JSON.h"
 #include <sstream>
 
@@ -170,7 +170,7 @@ void ProgramInfo::printAggregateStats(const std::set<std::string> &F,
     ConstraintVariable *C = I.second;
     std::string FileName = I.first.getFileName();
     if (F.count(FileName) ||
-        FileName.find(_3COpts.BaseDir) != std::string::npos) {
+        FileName.find(_TTOpts.BaseDir) != std::string::npos) {
       if (C->isForValidDecl()) {
         FoundVars.clear();
         getVarsFromConstraint(C, FoundVars, Visited);
@@ -237,7 +237,7 @@ void ProgramInfo::printAggregateStats(const std::set<std::string> &F,
 void ProgramInfo::printStats(const std::set<std::string> &F, raw_ostream &O,
                              bool OnlySummary, bool JsonFormat) {
   if (!OnlySummary && !JsonFormat) {
-    O << "Sound handling of var args functions:" << _3COpts.HandleVARARGS
+    O << "Sound handling of var args functions:" << _TTOpts.HandleVARARGS
       << "\n";
   }
   std::map<std::string, std::tuple<int, int, int, int, int>> FilesToVars;
@@ -249,7 +249,7 @@ void ProgramInfo::printStats(const std::set<std::string> &F, raw_ostream &O,
   for (auto &I : Variables) {
     std::string FileName = I.first.getFileName();
     if (F.count(FileName) ||
-        FileName.find(_3COpts.BaseDir) != std::string::npos) {
+        FileName.find(_TTOpts.BaseDir) != std::string::npos) {
       int VarC = 0;
       int PC = 0;
       int NtaC = 0;
@@ -354,7 +354,7 @@ void ProgramInfo::printStats(const std::set<std::string> &F, raw_ostream &O,
     O << "}},\n";
   }
 
-  if (_3COpts.AllTypes) {
+  if (_TTOpts.AllTypes) {
     if (JsonFormat) {
       O << "\"BoundsStats\":";
     }
@@ -377,7 +377,7 @@ void ProgramInfo::printStats(const std::set<std::string> &F, raw_ostream &O,
 bool ProgramInfo::link() {
   // For every global symbol in all the global symbols that we have found
   // go through and apply rules for whether they are functions or variables.
-  if (_3COpts.Verbose)
+  if (_TTOpts.Verbose)
     llvm::errs() << "Linking!\n";
 
   auto Rsn = ReasonLoc("Linking global variables",
@@ -392,7 +392,7 @@ bool ProgramInfo::link() {
       std::set<PVConstraint *>::iterator I = C.begin();
       std::set<PVConstraint *>::iterator J = C.begin();
       ++J;
-      if (_3COpts.Verbose)
+      if (_TTOpts.Verbose)
         llvm::errs() << "Global variables:" << V.first << "\n";
       while (J != C.end()) {
         constrainConsVarGeq(*I, *J, CS, Rsn, Same_to_Same, true, this);
@@ -454,13 +454,13 @@ void ProgramInfo::linkFunction(FunctionVariableConstraint *FV) {
 
   // Used to apply constraints to parameters and returns for function without a
   // body. In the default configuration, the function is fully constrained so
-  // that parameters and returns are considered unchecked. When 3C is run with
+  // that parameters and returns are considered unchecked. When TT is run with
   // --infer-types-for-undefs, only internal variables are constrained, allowing
   // external variables to solve to checked types meaning the parameter will be
   // rewritten to an itype.
   auto LinkComponent = [this, Reason](const FVComponentVariable *FVC) {
     FVC->getInternal()->constrainToWild(CS, Reason);
-    if (!_3COpts.InferTypesForUndefs &&
+    if (!_TTOpts.InferTypesForUndefs &&
         !FVC->getExternal()->srcHasItype() && !FVC->getExternal()->isGeneric())
       FVC->getExternal()->constrainToWild(CS, Reason);
   };
@@ -649,7 +649,7 @@ void ProgramInfo::addVariable(clang::DeclaratorDecl *D,
       constrainWildIfMacro(PVExternal, PVD->getLocation(),
                            ReasonLoc(MACRO_REASON, PSL));
       // If this is "main", constrain its argv parameter to a nested arr
-      if (_3COpts.AllTypes && FuncName == "main" && FD->isGlobal() && I == 1) {
+      if (_TTOpts.AllTypes && FuncName == "main" && FD->isGlobal() && I == 1) {
         PVInternal->constrainOuterTo(CS, CS.getArr(),
                                      ReasonLoc(SPECIAL_REASON("main"), PSL));
         PVInternal->constrainIdxTo(CS, CS.getNTArr(), 1,
@@ -717,7 +717,7 @@ void ProgramInfo::addVariable(clang::DeclaratorDecl *D,
 void ProgramInfo::ensureNtCorrect(const QualType &QT,
                                   const PersistentSourceLoc &PSL,
                                   PointerVariableConstraint *PV) {
-  if (_3COpts.AllTypes && !canBeNtArray(QT)) {
+  if (_TTOpts.AllTypes && !canBeNtArray(QT)) {
     PV->constrainOuterTo(CS, CS.getArr(),
                          ReasonLoc(ARRAY_REASON, PSL), true, true);
   }

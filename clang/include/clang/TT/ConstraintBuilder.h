@@ -8,16 +8,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_CONSTRAINTBUILDER_H
-#define LLVM_CLANG_3C_CONSTRAINTBUILDER_H
+#ifndef LLVM_CLANG_TT_CONSTRAINTBUILDER_H
+#define LLVM_CLANG_TT_CONSTRAINTBUILDER_H
 
-#include "clang/3C/ProgramInfo.h"
-#include "clang/3C/TypeVariableAnalysis.h"
+#include "clang/TT/ProgramInfo.h"
+#include "clang/TT/TypeVariableAnalysis.h"
 #include "clang/AST/ASTConsumer.h"
 
 // First step in generating initial constraints is to collect functions
 // and variables the need to be analysed. This will also merge
 // function definitions together.
+// Atleast as of now, here we intend to collect functions that are marked as Tainted
 class VariableAdderConsumer : public clang::ASTConsumer {
 public:
   explicit VariableAdderConsumer(ProgramInfo &I, clang::ASTContext *C)

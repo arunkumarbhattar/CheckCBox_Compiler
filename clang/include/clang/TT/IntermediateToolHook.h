@@ -10,10 +10,10 @@
 // heuristics in the case of array bounds inference.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_INTERMEDIATETOOLHOOK_H
-#define LLVM_CLANG_3C_INTERMEDIATETOOLHOOK_H
+#ifndef LLVM_CLANG_TT_INTERMEDIATETOOLHOOK_H
+#define LLVM_CLANG_TT_INTERMEDIATETOOLHOOK_H
 
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -31,4 +31,4 @@ private:
   ProgramInfo &Info;
 };
 
-#endif // LLVM_CLANG_3C_INTERMEDIATETOOLHOOK_H
+#endif // LLVM_CLANG_TT_INTERMEDIATETOOLHOOK_H

@@ -9,15 +9,16 @@
 // visitors create constraints based on the AST of the program.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/ConstraintBuilder.h"
-#include "clang/3C/LowerBoundAssignment.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/3CStats.h"
-#include "clang/3C/ArrayBoundsInferenceConsumer.h"
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/TypeVariableAnalysis.h"
+#include "clang/TT/ConstraintBuilder.h"
+#include "clang/TT/LowerBoundAssignment.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/TTStats.h"
+#include "clang/TT/ArrayBoundsInferenceConsumer.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/TypeVariableAnalysis.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <algorithm>
+#include <iostream>
 
 using namespace llvm;
 using namespace clang;
@@ -40,8 +41,21 @@ public:
         Expr *InitE = VD->getInit();
         CB.constrainLocalAssign(S, VD, InitE, Same_to_Same);
       }
+      if(FunctionDecl *FD = dyn_cast<FunctionDecl>(D)){
+        std::cout<< FD->getName().str() << std::endl;
+        FD->getBody()->dump();
+        FD->getReturnType()->dump();
+        std::cout << "Is Tainted: " << getDeclaration(FD)->isTainted();
+        for(int i = 0 ; i < FD->getNumParams(); i++)
+        {
+          FD->getParamDecl(i)->dump();
+        }
+      }
     }
 
+    // try to extract the body from the DeclStmt "S"
+    S->getSingleDecl()->getAsFunction()->getBody()->dump(); // This should dump the body
+                                                            // of all the functions that are being traversed
     return true;
   }
 
@@ -156,7 +170,7 @@ public:
               constrainConsVarGeq(ParameterDC, ArgumentConstraints.first, CS,
                                   Rsn, CA, false, &Info, false);
 
-              if (_3COpts.AllTypes && TFD != nullptr &&
+              if (_TTOpts.AllTypes && TFD != nullptr &&
                   I < TFD->getNumParams()) {
                 auto *PVD = TFD->getParamDecl(I);
                 auto &CSBI = Info.getABoundsInfo().getCtxSensBoundsHandler();
@@ -167,7 +181,7 @@ public:
               }
             } else {
               // The argument passed to a function ith varargs; make it wild
-              if (_3COpts.HandleVARARGS) {
+              if (_TTOpts.HandleVARARGS) {
                 CB.constraintAllCVarsToWild(ArgumentConstraints.first,
                                             "Passing argument to a function "
                                             "accepting var args.",
@@ -181,7 +195,7 @@ public:
                   constrainVarsTo(ArgumentConstraints.first, CS.getNTArr(),
                                   ReasonLoc(NT_ARRAY_REASON,ArgPSL));
                 }
-                if (_3COpts.Verbose) {
+                if (_TTOpts.Verbose) {
                   std::string FuncName = TargetFV->getName();
                   errs() << "Ignoring function as it contains varargs:"
                          << FuncName << "\n";
@@ -365,7 +379,7 @@ public:
   bool VisitFunctionDecl(FunctionDecl *D) {
     FullSourceLoc FL = Context->getFullLoc(D->getBeginLoc());
 
-    if (_3COpts.Verbose)
+    if (_TTOpts.Verbose)
       errs() << "Analyzing function " << D->getName() << "\n";
 
     if (FL.isValid()) { // TODO: When would this ever be false?
@@ -373,7 +387,7 @@ public:
         Stmt *Body = D->getBody();
         FunctionVisitor FV = FunctionVisitor(Context, Info, D);
         FV.TraverseStmt(Body);
-        if (_3COpts.AllTypes) {
+        if (_TTOpts.AllTypes) {
           // Only do this, if all types is enabled.
           LengthVarInference LVI(Info, Context, D);
           LVI.Visit(Body);
@@ -381,7 +395,7 @@ public:
       }
     }
 
-    if (_3COpts.Verbose)
+    if (_TTOpts.Verbose)
       errs() << "Done analyzing function\n";
 
     return true;
@@ -461,7 +475,7 @@ private:
 
 void VariableAdderConsumer::HandleTranslationUnit(ASTContext &C) {
   Info.enterCompilationUnit(C);
-  if (_3COpts.Verbose) {
+  if (_TTOpts.Verbose) {
     SourceManager &SM = C.getSourceManager();
     FileID MainFileId = SM.getMainFileID();
     const FileEntry *FE = SM.getFileEntryForID(MainFileId);
@@ -480,7 +494,7 @@ void VariableAdderConsumer::HandleTranslationUnit(ASTContext &C) {
     LBF.TraverseDecl(D);
   }
 
-  if (_3COpts.Verbose)
+  if (_TTOpts.Verbose)
     errs() << "Done analyzing\n";
 
   Info.exitCompilationUnit();
@@ -489,7 +503,7 @@ void VariableAdderConsumer::HandleTranslationUnit(ASTContext &C) {
 
 void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
   Info.enterCompilationUnit(C);
-  if (_3COpts.Verbose) {
+  if (_TTOpts.Verbose) {
     SourceManager &SM = C.getSourceManager();
     FileID MainFileId = SM.getMainFileID();
     const FileEntry *FE = SM.getFileEntryForID(MainFileId);
@@ -529,7 +543,7 @@ void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
     SR.TraverseDecl(D);
   }
 
-  if (_3COpts.Verbose)
+  if (_TTOpts.Verbose)
     errs() << "Done analyzing\n";
 
   PStats.endConstraintBuilderTime();

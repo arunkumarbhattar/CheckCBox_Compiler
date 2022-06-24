@@ -9,10 +9,10 @@
 // for identified array variables.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_ARRAYBOUNDSINFERENCECONSUMER_H
-#define LLVM_CLANG_3C_ARRAYBOUNDSINFERENCECONSUMER_H
+#ifndef LLVM_CLANG_TT_ARRAYBOUNDSINFERENCECONSUMER_H
+#define LLVM_CLANG_TT_ARRAYBOUNDSINFERENCECONSUMER_H
 
-#include "clang/3C/ProgramInfo.h"
+#include "clang/TT/ProgramInfo.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/Dominators.h"
@@ -108,4 +108,4 @@ void handleArrayVariablesBoundsDetection(ASTContext *C, ProgramInfo &I,
 // provided function.
 void addMainFuncHeuristic(ASTContext *C, ProgramInfo &I, FunctionDecl *FD);
 
-#endif // LLVM_CLANG_3C_ARRAYBOUNDSINFERENCECONSUMER_H
+#endif // LLVM_CLANG_TT_ARRAYBOUNDSINFERENCECONSUMER_H

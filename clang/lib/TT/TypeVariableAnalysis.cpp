@@ -8,7 +8,7 @@
 // Classes dealing with the processing of type variables for generic functions.
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/TypeVariableAnalysis.h"
+#include "clang/TT/TypeVariableAnalysis.h"
 
 using namespace llvm;
 using namespace clang;

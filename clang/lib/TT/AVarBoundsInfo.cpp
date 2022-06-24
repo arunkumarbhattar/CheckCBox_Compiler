@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/AVarBoundsInfo.h"
-#include "clang/3C/ConstraintResolver.h"
-#include "clang/3C/ProgramInfo.h"
-#include "clang/3C/3CGlobalOptions.h"
+#include "clang/TT/AVarBoundsInfo.h"
+#include "clang/TT/ConstraintResolver.h"
+#include "clang/TT/ProgramInfo.h"
+#include "clang/TT/TTGlobalOptions.h"
 #include <sstream>
-#include <clang/3C/LowerBoundAssignment.h>
+#include <clang/TT/LowerBoundAssignment.h>
 
 std::vector<BoundsPriority> AVarBoundsInfo::PrioList{Declared, Allocator,
                                                      FlowInferred, Heuristics};
@@ -399,7 +399,7 @@ bool AvarBoundsInference::predictBounds(BoundsKey K,
         } else {
           bool IsDeclaredB = areDeclaredBounds(NBK, NKBChoice);
 
-          if (!IsDeclaredB || _3COpts.DisableInfDecls) {
+          if (!IsDeclaredB || _TTOpts.DisableInfDecls) {
             // Oh, there are bounds for neighbour NBK but no bounds
             // can be inferred for K from it.
             InferredNBnds.clear();
@@ -559,7 +559,7 @@ void AVarBoundsInfo::computeInvalidLowerBounds(ProgramInfo *PI) {
       // it is unlikely, and I've decided that the risk of unintentionally
       // changing other behavior is greater than the risk that this special
       // case will be needed in some other circumstance.
-      bool IsItypeParam = _3COpts.ItypesForExtern && PVC && PVC->srcHasItype();
+      bool IsItypeParam = _TTOpts.ItypesForExtern && PVC && PVC->srcHasItype();
 
       // The neighbors of an invalid lower bound are also invalid, with the
       // exception that if there is a bound in the source code, then we assume
@@ -613,7 +613,7 @@ AVarBoundsInfo::inferLowerBounds(ProgramInfo *PI) {
 
   // This set tracks the pointers for which we will need to generate a fresh
   // lower bound pointer. These pointers do not have a single consistent lower
-  // bound in the source code, but 3C is able to insert a duplicate declaration
+  // bound in the source code, but TT is able to insert a duplicate declaration
   // to act as the lower bound.
   std::set<BoundsKey> NeedFreshLB;
 
@@ -716,7 +716,7 @@ AVarBoundsInfo::inferLowerBounds(ProgramInfo *PI) {
 
   // This is an awful hack to work around a problem during conversion phase
   // two.
-  if (_3COpts.ItypesForExtern) {
+  if (_TTOpts.ItypesForExtern) {
     for (auto InferredLBPair : LowerBounds) {
       if (BInfo[InferredLBPair.first][Declared]) {
         BInfo[InferredLBPair.first][Declared]->setLowerBoundKey(
@@ -731,7 +731,7 @@ BoundsKey AVarBoundsInfo::getFreshLowerBound(BoundsKey Arr) {
   BoundsKey FreshLB = getRandomBKey();
   ProgramVar *FreshLBVar =
     ProgramVar::createNewProgramVar(FreshLB,
-                                    "__3c_lower_bound_" + ArrVar->getVarName(),
+                                    "__TT_lower_bound_" + ArrVar->getVarName(),
                                     ArrVar->getScope());
   insertProgramVar(FreshLB, FreshLBVar);
   return FreshLB;
@@ -1272,7 +1272,7 @@ bool AVarBoundsInfo::needsFreshLowerBound(ConstraintVariable *CV) {
   BoundsKey BK = CV->getBoundsKey();
   // A pointer should get range bounds if it is computed by pointer arithmetic
   // and would otherwise need bounds. Some pointers (global variables and struct
-  // fields) can't be rewritten to use range bounds (by 3C; Checked C does
+  // fields) can't be rewritten to use range bounds (by TT; Checked C does
   // permit it), so we return false on these.
   return needsFreshLowerBound(BK) && isEligibleForFreshLowerBound(BK) &&
          getBounds(BK) != nullptr;

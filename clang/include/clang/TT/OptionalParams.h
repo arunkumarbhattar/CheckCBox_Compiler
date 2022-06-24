@@ -1,4 +1,4 @@
-//=--3C.h---------------------------------------------------------*- C++-*-===//
+//=--TT.h---------------------------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_OPTIONALPARAMS_H
-#define LLVM_CLANG_3C_OPTIONALPARAMS_H
+#ifndef LLVM_CLANG_TT_OPTIONALPARAMS_H
+#define LLVM_CLANG_TT_OPTIONALPARAMS_H
 
 // The basic ideas of the code pattern, for a function `foo`:
 //
@@ -71,7 +71,7 @@
 // it's generally harmless to let M receive a single argument containing commas;
 // the argument will be correctly split up by _OP_MSVC_VA_ARGS_WORKAROUND later.
 //
-// We should be able to remove this workaround when the 3C Windows build moves
+// We should be able to remove this workaround when the TT Windows build moves
 // to the "new" MSVC preprocessor. See
 // https://developercommunity.visualstudio.com/t/-va-args-seems-to-be-trated-as-a-single-parameter/460154.
 #define _OP_MSVC_VA_ARGS_WORKAROUND(_x) _x
@@ -210,4 +210,4 @@ void test() {
 
 #endif // example
 
-#endif // LLVM_CLANG_3C_OPTIONALPARAMS_H
+#endif // LLVM_CLANG_TT_OPTIONALPARAMS_H

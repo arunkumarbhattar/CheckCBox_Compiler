@@ -9,53 +9,53 @@
 // classes of RewriteUtils.h
 //===----------------------------------------------------------------------===//
 
-#include "clang/3C/RewriteUtils.h"
-#include "clang/3C/3CGlobalOptions.h"
-#include "clang/3C/CastPlacement.h"
-#include "clang/3C/CheckedRegions.h"
-#include "clang/3C/DeclRewriter.h"
-#include "clang/3C/LowerBoundAssignment.h"
-#include "clang/3C/TypeVariableAnalysis.h"
+#include "clang/TT/RewriteUtils.h"
+#include "clang/TT/TTGlobalOptions.h"
+#include "clang/TT/CastPlacement.h"
+#include "clang/TT/CheckedRegions.h"
+#include "clang/TT/DeclRewriter.h"
+#include "clang/TT/LowerBoundAssignment.h"
+#include "clang/TT/TypeVariableAnalysis.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 
 using namespace llvm;
 using namespace clang;
 
-RewrittenDecl mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
-                                ProgramInfo &Info) {
-  // Currently, it's cheap to keep recreating the ArrayBoundsRewriter. If that
-  // ceases to be true, we should pass it along as another argument.
-  ArrayBoundsRewriter ABRewriter{Info};
-
-  RewrittenDecl RD;
-  bool IsExternGlobalVar =
-      isa<VarDecl>(MMD) &&
-      cast<VarDecl>(MMD)->getFormalLinkage() == Linkage::ExternalLinkage;
-  if (_3COpts.ItypesForExtern && (isa<FieldDecl>(MMD) || IsExternGlobalVar) &&
-      // isSolutionChecked can return false here when splitting out an unchanged
-      // multi-decl member.
-      PVC->isSolutionChecked(Info.getConstraints().getVariables())) {
-    // Give record fields and global variables itypes when using
-    // -itypes-for-extern. Note that we haven't properly implemented itypes for
-    // structures and globals
-    // (https://github.com/correctcomputation/checkedc-clang/issues/744). This
-    // just rewrites to an itype instead of a fully checked type when a checked
-    // type could have been used. This does provide most of the rewriting
-    // infrastructure that would be required to support these itypes if
-    // constraint generation is updated to handle structure/global itypes.
-    RD = DeclRewriter::buildItypeDecl(PVC, cast<DeclaratorDecl>(MMD),
-                                      PVC->getName(), Info, ABRewriter, true,
-                                      true);
-  } else {
-    RD = DeclRewriter::buildCheckedDecl(PVC, cast<DeclaratorDecl>(MMD),
-                                        PVC->getName(), Info, ABRewriter,
-                                        true);
-  }
-  RD.Type = getStorageQualifierString(MMD) + RD.Type;
-
-  return RD;
-}
+//RewrittenBody mkStringForPVDecl(MultiDeclMemberDecl *MMD, PVConstraint *PVC,
+//                                ProgramInfo &Info) {
+//  // Currently, it's cheap to keep recreating the ArrayBoundsRewriter. If that
+//  // ceases to be true, we should pass it along as another argument.
+////  ArrayBoundsRewriter ABRewriter{Info};
+//
+//  RewrittenDecl RD;
+//  bool IsExternGlobalVar =
+//      isa<VarDecl>(MMD) &&
+//      cast<VarDecl>(MMD)->getFormalLinkage() == Linkage::ExternalLinkage;
+//  if (_TTOpts.ItypesForExtern && (isa<FieldDecl>(MMD) || IsExternGlobalVar) &&
+//      // isSolutionChecked can return false here when splitting out an unchanged
+//      // multi-decl member.
+//      PVC->isSolutionChecked(Info.getConstraints().getVariables())) {
+//    // Give record fields and global variables itypes when using
+//    // -itypes-for-extern. Note that we haven't properly implemented itypes for
+//    // structures and globals
+//    // (https://github.com/correctcomputation/checkedc-clang/issues/744). This
+//    // just rewrites to an itype instead of a fully checked type when a checked
+//    // type could have been used. This does provide most of the rewriting
+//    // infrastructure that would be required to support these itypes if
+//    // constraint generation is updated to handle structure/global itypes.
+//    RD = DeclRewriter::buildItypeDecl(PVC, cast<DeclaratorDecl>(MMD),
+//                                      PVC->getName(), Info, ABRewriter, true,
+//                                      true);
+//  } else {
+//    RD = DeclRewriter::buildCheckedDecl(PVC, cast<DeclaratorDecl>(MMD),
+//                                        PVC->getName(), Info, ABRewriter,
+//                                        true);
+//  }
+//  RD.Type = getStorageQualifierString(MMD) + RD.Type;
+//
+//  return RD;
+//}
 
 std::string mkStringForDeclWithUnchangedType(MultiDeclMemberDecl *MMD,
                                              ProgramInfo &Info) {
@@ -93,13 +93,14 @@ std::string mkStringForDeclWithUnchangedType(MultiDeclMemberDecl *MMD,
     // rename and generate the unchecked side using mkString instead of
     // Decl::print in order to pick up the new name.
     //
-    // As long as 3C lacks real support for itypes on variables, this is
+    // As long as TT lacks real support for itypes on variables, this is
     // probably the behavior we want with -itypes-for-extern. If we don't care
     // about this case, we could alternatively inline the few lines of
     // mkStringForPVDecl that would still be relevant.
-    RewrittenDecl RD = mkStringForPVDecl(MMD, PVC, Info);
-    assert(RD.SupplementaryDecl.empty());
-    return RD.Type + RD.IType;
+//    RewrittenDecl RD = mkStringForPVDecl(MMD, PVC, Info);
+//    assert(RD.SupplementaryDecl.empty());
+    // return RD.Type + RD.IType;
+    return "";
   }
 
   // If the type is not a pointer or array, then it should just equal the base
@@ -172,12 +173,12 @@ void rewriteSourceRange(Rewriter &R, const CharSourceRange &Range,
   }
 
   // Emit an error if we were unable to rewrite the source range. This is more
-  // likely to be a bug in 3C than an issue with the input, but emitting a
+  // likely to be a bug in TT than an issue with the input, but emitting a
   // diagnostic here with the intended rewriting is much more useful than
   // crashing with an assert fail.
   if (!RewriteSuccess) {
     clang::DiagnosticsEngine &DE = R.getSourceMgr().getDiagnostics();
-    bool ReportError = ErrFail && !_3COpts.AllowRewriteFailures;
+    bool ReportError = ErrFail && !_TTOpts.AllowRewriteFailures;
     reportCustomDiagnostic(
         DE,
         ReportError ? DiagnosticsEngine::Error : DiagnosticsEngine::Warning,
@@ -198,10 +199,10 @@ void rewriteSourceRange(Rewriter &R, const CharSourceRange &Range,
 }
 
 static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
-  if (_3COpts.Verbose)
+  if (_TTOpts.Verbose)
     errs() << "Writing files out\n";
 
-  bool StdoutMode = (_3COpts.OutputPostfix == "-" && _3COpts.OutputDir.empty());
+  bool StdoutMode = (_TTOpts.OutputPostfix == "-" && _TTOpts.OutputDir.empty());
   SourceManager &SM = C.getSourceManager();
   // Iterate over each modified rewrite buffer.
   for (auto Buffer = R.buffer_begin(); Buffer != R.buffer_end(); ++Buffer) {
@@ -213,26 +214,26 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
 
       DiagnosticsEngine &DE = C.getDiagnostics();
       DiagnosticsEngine::Level UnwritableChangeDiagnosticLevel =
-        _3COpts.AllowUnwritableChanges ? DiagnosticsEngine::Warning
+        _TTOpts.AllowUnwritableChanges ? DiagnosticsEngine::Warning
                                        : DiagnosticsEngine::Error;
       auto PrintExtraUnwritableChangeInfo = [&]() {
         // With -dump-unwritable-changes and not -allow-unwritable-changes, we
         // want the -allow-unwritable-changes note before the dump.
-        if (!_3COpts.DumpUnwritableChanges) {
+        if (!_TTOpts.DumpUnwritableChanges) {
           reportCustomDiagnostic(
               DE, DiagnosticsEngine::Note,
               "use the -dump-unwritable-changes option to see the new version "
               "of the file",
               SourceLocation());
         }
-        if (!_3COpts.AllowUnwritableChanges) {
+        if (!_TTOpts.AllowUnwritableChanges) {
           reportCustomDiagnostic(
               DE, DiagnosticsEngine::Note,
               "you can use the -allow-unwritable-changes option to temporarily "
               "downgrade this error to a warning",
               SourceLocation());
         }
-        if (_3COpts.DumpUnwritableChanges) {
+        if (_TTOpts.DumpUnwritableChanges) {
           errs() << "=== Beginning of new version of " << FE->getName()
                  << " ===\n";
           Buffer->second.write(errs());
@@ -247,7 +248,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       // situations or possible future changes to Clang before we actually write
       // a file. We can't use FE->getName() because it seems it may be relative
       // to the `directory` field of the compilation database, which (now that
-      // we no longer use `ClangTool::run`) is not guaranteed to match 3C's
+      // we no longer use `ClangTool::run`) is not guaranteed to match TT's
       // working directory.
       std::string ToConv = FE->tryGetRealPathName().str();
       std::string FeAbsS = "";
@@ -255,7 +256,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       if (EC) {
         reportCustomDiagnostic(
             DE, UnwritableChangeDiagnosticLevel,
-            "3C internal error: not writing the new version of this file due "
+            "TT internal error: not writing the new version of this file due "
             "to failure to re-canonicalize the file path provided by Clang",
             BeginningOfFileSourceLoc);
         reportCustomDiagnostic(
@@ -269,7 +270,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       if (FeAbsS != ToConv) {
         reportCustomDiagnostic(
             DE, UnwritableChangeDiagnosticLevel,
-            "3C internal error: not writing the new version of this file "
+            "TT internal error: not writing the new version of this file "
             "because the file path provided by Clang was not canonical",
             BeginningOfFileSourceLoc);
         reportCustomDiagnostic(
@@ -282,7 +283,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       }
       if (!canWrite(FeAbsS)) {
         reportCustomDiagnostic(DE, UnwritableChangeDiagnosticLevel,
-                               "3C internal error: 3C generated changes to "
+                               "TT internal error: TT generated changes to "
                                "this file even though it is not allowed to "
                                "write to the file "
                                "(https://github.com/correctcomputation/"
@@ -306,7 +307,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
         } else {
           reportCustomDiagnostic(
               DE, UnwritableChangeDiagnosticLevel,
-              "3C generated changes to this file, which is under the base dir "
+              "TT generated changes to this file, which is under the base dir "
               "but is not the main file and thus cannot be written in stdout "
               "mode",
               BeginningOfFileSourceLoc);
@@ -321,7 +322,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       // because stdout mode is handled above. OutputPostfix defaults to "-"
       // when it's not provided, so any other value means that we should use
       // OutputPostfix. Otherwise, we must be in OutputDir mode.
-      if (_3COpts.OutputPostfix != "-") {
+      if (_TTOpts.OutputPostfix != "-") {
         // That path should be the same as the old one, with a
         // suffix added between the file name and the extension.
         // For example \foo\bar\a.c should become \foo\bar\a.checked.c
@@ -331,20 +332,20 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
         std::string FileName = sys::path::remove_leading_dotslash(PfName).str();
         std::string Ext = sys::path::extension(FileName).str();
         std::string Stem = sys::path::stem(FileName).str();
-        NFile = Stem + "." + _3COpts.OutputPostfix + Ext;
+        NFile = Stem + "." + _TTOpts.OutputPostfix + Ext;
         if (!DirName.empty())
           NFile = DirName + sys::path::get_separator().str() + NFile;
       } else {
-        assert(!_3COpts.OutputDir.empty());
+        assert(!_TTOpts.OutputDir.empty());
         // If this does not hold when OutputDir is set, it should have been a
-        // fatal error in the _3CInterface constructor.
-        assert(filePathStartsWith(FeAbsS, _3COpts.BaseDir));
+        // fatal error in the _TTInterface constructor.
+        assert(filePathStartsWith(FeAbsS, _TTOpts.BaseDir));
         // replace_path_prefix is not smart about separators, but this should be
         // OK because tryGetCanonicalFilePath should ensure that neither BaseDir
         // nor OutputDir has a trailing separator.
         SmallString<255> Tmp(FeAbsS);
-        llvm::sys::path::replace_path_prefix(Tmp, _3COpts.BaseDir,
-                                             _3COpts.OutputDir);
+        llvm::sys::path::replace_path_prefix(Tmp, _TTOpts.BaseDir,
+                                             _TTOpts.OutputDir);
         NFile = std::string(Tmp.str());
         EC = llvm::sys::fs::create_directories(sys::path::parent_path(NFile));
         if (EC) {
@@ -360,7 +361,7 @@ static void emit(Rewriter &R, ASTContext &C, bool &StdoutModeEmittedMainFile) {
       raw_fd_ostream Out(NFile, EC, sys::fs::F_None);
 
       if (!EC) {
-        if (_3COpts.Verbose)
+        if (_TTOpts.Verbose)
           errs() << "writing out " << NFile << "\n";
         Buffer->second.write(Out);
       } else {
@@ -509,27 +510,27 @@ private:
   }
 };
 
-SourceRange DeclReplacement::getSourceRange(SourceManager &SM) const {
+SourceRange BodyReplacement::getSourceRange(SourceManager &SM) const {
   return getDeclSourceRangeWithAnnotations(getDecl(),
                                            /*IncludeInitializer=*/false);
 }
 
-SourceRange FunctionDeclReplacement::getSourceRange(SourceManager &SM) const {
+SourceRange FunctionBodyReplacement::getSourceRange(SourceManager &SM) const {
   SourceLocation Begin = RewriteGeneric ? getDeclBegin(SM) :
                       (RewriteReturn ? getReturnBegin(SM) : getParamBegin(SM));
   SourceLocation End = RewriteParams ? getDeclEnd(SM) : getReturnEnd(SM);
   // Begin can be equal to End if the SourceRange only contains one token.
-  assert("Invalid FunctionDeclReplacement SourceRange!" &&
+  assert("Invalid FunctionBodyReplacement SourceRange!" &&
          (Begin == End || SM.isBeforeInTranslationUnit(Begin, End)));
   return SourceRange(Begin, End);
 }
 
-SourceLocation FunctionDeclReplacement::getDeclBegin(SourceManager &SM) const {
+SourceLocation FunctionBodyReplacement::getDeclBegin(SourceManager &SM) const {
   SourceLocation Begin = Decl->getBeginLoc();
   return Begin;
 }
 
-SourceLocation FunctionDeclReplacement::getReturnBegin(SourceManager &SM) const {
+SourceLocation FunctionBodyReplacement::getReturnBegin(SourceManager &SM) const {
   // TODO: more accuracy
   // This code gets the point after a modifier like "static"
   // But currently, that leads to multiple "static"s
@@ -545,7 +546,7 @@ SourceLocation FunctionDeclReplacement::getReturnBegin(SourceManager &SM) const 
   return getDeclBegin(SM);
 }
 
-SourceLocation FunctionDeclReplacement::getParamBegin(SourceManager &SM) const {
+SourceLocation FunctionBodyReplacement::getParamBegin(SourceManager &SM) const {
   FunctionTypeLoc FTypeLoc = getFunctionTypeLoc(Decl);
   // If we can't get a FunctionTypeLoc instance, then we'll guess that the
   // l-paren is the token following the function name. This can clobber some
@@ -556,11 +557,11 @@ SourceLocation FunctionDeclReplacement::getParamBegin(SourceManager &SM) const {
   return FTypeLoc.getLParenLoc();
 }
 
-SourceLocation FunctionDeclReplacement::getReturnEnd(SourceManager &SM) const {
+SourceLocation FunctionBodyReplacement::getReturnEnd(SourceManager &SM) const {
   return Decl->getReturnTypeSourceRange().getEnd();
 }
 
-SourceLocation FunctionDeclReplacement::getDeclEnd(SourceManager &SM) const {
+SourceLocation FunctionBodyReplacement::getDeclEnd(SourceManager &SM) const {
   SourceLocation End;
   if (isKAndRFunctionDecl(Decl)) {
     // For K&R style function declaration, use the beginning of the function
@@ -605,49 +606,49 @@ SourceLocation FunctionDeclReplacement::getDeclEnd(SourceManager &SM) const {
   return End;
 }
 
-std::string ArrayBoundsRewriter::getBoundsString(const PVConstraint *PV,
-                                                 Decl *D, bool Isitype,
-                                                 bool OmitLowerBound) {
-  auto &ABInfo = Info.getABoundsInfo();
+//std::string ArrayBoundsRewriter::getBoundsString(const PVConstraint *PV,
+//                                                 Decl *D, bool Isitype,
+//                                                 bool OmitLowerBound) {
+//  auto &ABInfo = Info.getABoundsInfo();
+//
+//  // Try to find a bounds key for the constraint variable. If we can't,
+//  // ValidBKey is set to false, indicating that DK has not been initialized.
+//  BoundsKey DK;
+//  bool ValidBKey = true;
+//  if (PV->hasBoundsKey())
+//    DK = PV->getBoundsKey();
+//  else if (!ABInfo.tryGetVariable(D, DK))
+//    ValidBKey = false;
+//
+//  std::string BString = "";
+//  // For itype we do not want to add a second ":".
+//  std::string Pfix = Isitype ? " " : " : ";
+//
+//  if (ValidBKey && !PV->hasSomeSizedArr()) {
+//    ABounds *ArrB = ABInfo.getBounds(DK);
+//    // If we have pointer arithmetic and cannot add range bounds, then do not
+//    // emit any bounds string.
+//    if (ArrB != nullptr && ABInfo.hasLowerBound(DK)) {
+//      if (OmitLowerBound)
+//        BString = ArrB->mkStringWithoutLowerBound(&ABInfo, D);
+//      else
+//        BString = ArrB->mkString(&ABInfo, D, DK);
+//      if (!BString.empty())
+//        BString = Pfix + BString;
+//    }
+//  }
+//  if (BString.empty() && PV->srcHasBounds()) {
+//    BString = Pfix + PV->getBoundsStr();
+//  }
+//  return BString;
+//}
 
-  // Try to find a bounds key for the constraint variable. If we can't,
-  // ValidBKey is set to false, indicating that DK has not been initialized.
-  BoundsKey DK;
-  bool ValidBKey = true;
-  if (PV->hasBoundsKey())
-    DK = PV->getBoundsKey();
-  else if (!ABInfo.tryGetVariable(D, DK))
-    ValidBKey = false;
-
-  std::string BString = "";
-  // For itype we do not want to add a second ":".
-  std::string Pfix = Isitype ? " " : " : ";
-
-  if (ValidBKey && !PV->hasSomeSizedArr()) {
-    ABounds *ArrB = ABInfo.getBounds(DK);
-    // If we have pointer arithmetic and cannot add range bounds, then do not
-    // emit any bounds string.
-    if (ArrB != nullptr && ABInfo.hasLowerBound(DK)) {
-      if (OmitLowerBound)
-        BString = ArrB->mkStringWithoutLowerBound(&ABInfo, D);
-      else
-        BString = ArrB->mkString(&ABInfo, D, DK);
-      if (!BString.empty())
-        BString = Pfix + BString;
-    }
-  }
-  if (BString.empty() && PV->srcHasBounds()) {
-    BString = Pfix + PV->getBoundsStr();
-  }
-  return BString;
-}
-
-bool ArrayBoundsRewriter::hasNewBoundsString(const PVConstraint *PV, Decl *D,
-                                             bool Isitype) {
-  std::string BStr = getBoundsString(PV, D, Isitype);
-  // There is a bounds string but has nothing declared?
-  return !BStr.empty() && !PV->srcHasBounds();
-}
+//bool ArrayBoundsRewriter::hasNewBoundsString(const PVConstraint *PV, Decl *D,
+//                                             bool Isitype) {
+//  std::string BStr = getBoundsString(PV, D, Isitype);
+//  // There is a bounds string but has nothing declared?
+//  return !BStr.empty() && !PV->srcHasBounds();
+//}
 
 std::set<PersistentSourceLoc> RewriteConsumer::EmittedDiagnostics;
 void RewriteConsumer::emitRootCauseDiagnostics(ASTContext &Context) {
@@ -672,7 +673,7 @@ void RewriteConsumer::emitRootCauseDiagnostics(ASTContext &Context) {
         // Limit emitted root causes to those that effect at least one pointer.
         // Alternatively, don't filter causes if -warn-all-root-cause is passed.
         int PtrCount = I.getNumPtrsAffected(WReason.first);
-        if (_3COpts.WarnAllRootCause || PtrCount > 0) {
+        if (_TTOpts.WarnAllRootCause || PtrCount > 0) {
           // SL is invalid when the File is not in the current translation unit.
           if (SL.isValid()) {
             EmittedDiagnostics.insert(PSL);
@@ -707,18 +708,18 @@ void RewriteConsumer::HandleTranslationUnit(ASTContext &Context) {
 
   Info.getPerfStats().startRewritingTime();
 
-  if (_3COpts.WarnRootCause)
+  if (_TTOpts.WarnRootCause)
     emitRootCauseDiagnostics(Context);
 
   // Rewrite Variable declarations
   Rewriter R(Context.getSourceManager(), Context.getLangOpts());
-  DeclRewriter::rewriteDecls(Context, Info, R);
+  DeclRewriter::rewriteBody(Context, Info, R);
 
   // Take care of some other rewriting tasks
   std::set<llvm::FoldingSetNodeID> Seen;
   std::map<llvm::FoldingSetNodeID, AnnotationNeeded> NodeMap;
   CheckedRegionFinder CRF(&Context, R, Info, Seen, NodeMap,
-                          _3COpts.WarnRootCause);
+                          _TTOpts.WarnRootCause);
   CheckedRegionAdder CRA(&Context, R, NodeMap, Info);
   CastLocatorVisitor CLV(&Context);
   CastPlacementVisitor ECPV(&Context, Info, R, CLV.getExprsWithCast());
@@ -727,7 +728,7 @@ void RewriteConsumer::HandleTranslationUnit(ASTContext &Context) {
   LowerBoundAssignmentUpdater AU(&Context, Info, R);
   TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
   for (const auto &D : TUD->decls()) {
-    if (_3COpts.AddCheckedRegions) {
+    if (_TTOpts.AddCheckedRegions) {
       // Adding checked regions enabled?
       // TODO: Should checked region finding happen somewhere else? This is
       //       supposed to be rewriting.

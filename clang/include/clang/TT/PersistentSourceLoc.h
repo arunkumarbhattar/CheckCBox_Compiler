@@ -12,8 +12,8 @@
 // for the instance of this class.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_PERSISTENTSOURCELOC_H
-#define LLVM_CLANG_3C_PERSISTENTSOURCELOC_H
+#ifndef LLVM_CLANG_TT_PERSISTENTSOURCELOC_H
+#define LLVM_CLANG_TT_PERSISTENTSOURCELOC_H
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
