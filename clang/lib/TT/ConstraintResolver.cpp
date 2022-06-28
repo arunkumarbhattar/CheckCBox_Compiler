@@ -11,6 +11,7 @@
 
 #include "clang/TT/ConstraintResolver.h"
 #include "clang/TT/TTGlobalOptions.h"
+#include <map>
 
 using namespace llvm;
 using namespace clang;
@@ -48,8 +49,45 @@ void ConstraintResolver::constraintCVarToWild(CVarOption CVar,
   }
 }
 
+std::string base_name(std::string const & path)
+{
+  return path.substr(path.find_last_of("/\\") + 1);
+}
+
+inline std::string resolve_base_name(std::string const & path)
+{
+  return base_name(path);
+}
+
 void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   Info.storeTaintedDecl(FD);
+  /*
+   * Check if the map has an entry(filename) corresponding to this FD's source file
+   */
+  std::string FD_source_file_name = "";
+
+  FD_source_file_name = resolve_base_name(FD->getASTContext().getSourceManager()
+                         .getFilename(FD->getLocation()).str());
+
+  if(std::find(Info.Tainted_rewrite_file_vector.begin(),
+                                            Info.Tainted_rewrite_file_vector.end(),
+                                            FD_source_file_name.c_str())
+      == Info.Tainted_rewrite_file_vector.end()){
+    /*
+     * This FD belongs to a new file, hence a new file has to be created for
+     * this tainted decl
+     */
+    //fetch the tainted directory path -->
+    std::string tainted_dir_path = _TTOpts.TaintedDefDir;
+    if(tainted_dir_path.find_last_not_of("/\\"))
+      tainted_dir_path += "/";
+
+    std::string final_path_with_file_name = tainted_dir_path + FD_source_file_name
+                                                             + "_tainted_def.c";
+
+    Info.Tainted_rewrite_file_vector.push_back(FD_source_file_name.c_str());
+    Info.tainted_stream_writer.insert({FD, final_path_with_file_name});
+  }
 }
 
 // Return a set of PVConstraints equivalent to the set given,

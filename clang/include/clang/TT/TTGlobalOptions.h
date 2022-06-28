@@ -19,6 +19,7 @@
 //
 // See clang/docs/checkedc/TT/clang-tidy.md#_3c-name-prefix
 // NOLINTNEXTLINE(readability-identifier-naming)
+
 struct _TTOptions {
   bool DumpIntermediate;
   bool Verbose;
@@ -35,7 +36,8 @@ struct _TTOptions {
   bool AllowSourcesOutsideBaseDir;
   bool AllTypes;
   bool AddCheckedRegions;
-  bool AddSandboxType;
+  std::string AddSandbox;
+  std::string TaintedDefDir;
   bool EnableCCTypeChecker;
   bool WarnRootCause;
   bool WarnAllRootCause;

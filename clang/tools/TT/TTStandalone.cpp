@@ -96,6 +96,12 @@ static cl::opt<std::string> OptOutputPostfix(
              "foo.checked.c)"),
     cl::init("-"), cl::cat(_TTCategory));
 
+static cl::opt<std::string> TaintedDefDir(
+    "tainted-dir",
+    cl::desc("Directory into which tainted files bearing tainted definitions"
+    "would be inserted for compiler directed sandbox enforcement"),
+    cl::init(""), cl::cat(_TTCategory));
+
 static cl::opt<std::string> OptOutputDir(
     "output-dir",
     cl::desc("Directory under which updated files will be written at the same "
@@ -151,10 +157,10 @@ static cl::opt<bool> OptAddCheckedRegions(
     cl::desc("Add Checked Regions"),
     cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptSandboxType(
+static cl::opt<std::string> OptSandboxType(
     "sbx",
-    cl::desc("Sandbox Type"),
-    cl::init(false), cl::cat(_TTCategory));
+    cl::desc("Sandbox Type: (0)->WASM, (1..)->Not Yet Supported"),
+    cl::init("wasm"), cl::cat(_TTCategory));
 
 static cl::opt<bool> OptEnableCCTypeChecker(
     "enccty",
@@ -183,16 +189,16 @@ static cl::opt<bool> OptAllowSourcesOutsideBaseDir(
              "in the future."),
     cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptWarnRootCause(
-    "warn-root-cause",
-    cl::desc("Emit warnings indicating root causes of unchecked pointers."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptWarnAllRootCause(
-    "warn-all-root-cause",
-    cl::desc("Emit warnings for all root causes, even those unlikely to be "
-             "interesting."),
-    cl::init(false), cl::cat(_TTCategory));
+//static cl::opt<bool> OptWarnRootCause(
+//    "warn-root-cause",
+//    cl::desc("Emit warnings indicating root causes of unchecked pointers."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptWarnAllRootCause(
+//    "warn-all-root-cause",
+//    cl::desc("Emit warnings for all root causes, even those unlikely to be "
+//             "interesting."),
+//    cl::init(false), cl::cat(_TTCategory));
 
 // In the future, we may enhance this to write the output to individual files.
 // For now, the user has to copy and paste the correct portions of stderr.
@@ -203,107 +209,96 @@ static cl::opt<bool> OptDumpUnwritableChanges(
              "of the file to stderr for troubleshooting."),
     cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptAllowUnwritableChanges(
-    "allow-unwritable-changes",
-    // "TT" for the software in general, "TT" for this frontend. :/
-    cl::desc("When TT generates changes to a file it cannot write (due to "
-             "stdout mode or implementation limitations), issue a warning "
-             "instead of an error. This option is intended to be used "
-             "temporarily until you fix the root cause of the problem (by "
-             "correcting your usage of stdout mode or reporting the "
-             "implementation limitation to the TT team to get it fixed) and "
-             "may be removed in the future."),
-    cl::init(false), cl::cat(_TTCategory));
+//static cl::opt<bool> OptAllowUnwritableChanges(
+//    "allow-unwritable-changes",
+//    // "TT" for the software in general, "TT" for this frontend. :/
+//    cl::desc("When TT generates changes to a file it cannot write (due to "
+//             "stdout mode or implementation limitations), issue a warning "
+//             "instead of an error. This option is intended to be used "
+//             "temporarily until you fix the root cause of the problem (by "
+//             "correcting your usage of stdout mode or reporting the "
+//             "implementation limitation to the TT team to get it fixed) and "
+//             "may be removed in the future."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptAllowRewriteFailures(
+//    "allow-rewrite-failures",
+//    cl::desc("When TT fails to make a rewrite to a source file (typically "
+//             "because of macros), issue a warning instead of an error. This "
+//             "option is intended to be used temporarily until you change your "
+//             "code to allow TT to work or you report the problem to the TT "
+//             "team to get it fixed; the option may be removed in the future. "
+//             "Note that some kinds of rewrite failures currently generate "
+//             "warnings regardless of this option, due to known bugs that "
+//             "affect common use cases."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptItypesForExtern(
+//    "itypes-for-extern",
+//    cl::desc("All functions with external linkage will be rewritten to use "
+//             "itypes instead checked types. This does not apply to static "
+//             "functions which continue to have itypes only when the function "
+//             "is internally unsafe."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptInferTypesForUndef(
+//    "infer-types-for-undefs",
+//    cl::desc("Enable type inference for undefined functions. Under this flag, "
+//             "types for undefined functions are inferred according to the same "
+//             "rules as defined functions with the caveat that an undefined "
+//             "function will only solve to an itype and not a fully checked "
+//             "type. Because TT is not able to examine the body of the "
+//             "function, the inferred pointer types (and array bounds) may not "
+//             "be consistent with the actual implementation. By default, the "
+//             "Checked C compiler trusts the declared itypes and will not "
+//             "detect a spatial memory safety violation if the function is used "
+//             "in a way that is consistent with the itypes but not the "
+//             "assumptions actually made by the implementation. Thus, if you "
+//             "want to guarantee spatial memory safety, you must manually "
+//             "check the inferred types against your understanding of what the "
+//             "function actually does (or any available documentation)."),
+//    cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptAllowRewriteFailures(
-    "allow-rewrite-failures",
-    cl::desc("When TT fails to make a rewrite to a source file (typically "
-             "because of macros), issue a warning instead of an error. This "
-             "option is intended to be used temporarily until you change your "
-             "code to allow TT to work or you report the problem to the TT "
-             "team to get it fixed; the option may be removed in the future. "
-             "Note that some kinds of rewrite failures currently generate "
-             "warnings regardless of this option, due to known bugs that "
-             "affect common use cases."),
-    cl::init(false), cl::cat(_TTCategory));
+//static cl::opt<bool> OptDebugSolver(
+//    "debug-solver",
+//    cl::desc("Dump intermediate solver state"),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptOnlyGreatestSol(
+//    "only-g-sol",
+//    cl::desc("Perform only greatest solution for Pty Constrains."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptOnlyLeastSol(
+//    "only-l-sol",
+//    cl::desc("Perform only least solution for Pty Constrains."),
+//    cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptItypesForExtern(
-    "itypes-for-extern",
-    cl::desc("All functions with external linkage will be rewritten to use "
-             "itypes instead checked types. This does not apply to static "
-             "functions which continue to have itypes only when the function "
-             "is internally unsafe."),
-    cl::init(false), cl::cat(_TTCategory));
+//static llvm::cl::opt<bool> OptDisableRDs(
+//    "disable-rds",
+//    llvm::cl::desc("Disable reverse edges for Checked Constraints."),
+//    llvm::cl::init(false), cl::cat(_TTCategory));
+//
+//static llvm::cl::opt<bool> OptDisableFunctionEdges(
+//    "disable-fnedgs",
+//    llvm::cl::desc("Disable reverse edges for external functions."),
+//    llvm::cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptDisableArrH(
+//    "disable-arr-hu",
+//    cl::desc("Disable Array Bounds Inference Heuristics."),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> DebugArrSolver(
+//    "debug-arr-solver",
+//    cl::desc("Dump array bounds inference graph"),
+//    cl::init(false), cl::cat(_TTCategory));
+//
+//static cl::opt<bool> OptDisableInfDecls(
+//    "disable-arr-missd",
+//    cl::desc("Disable ignoring of missed bounds from declarations."),
+//    cl::init(false), cl::cat(_TTCategory));
 
-static cl::opt<bool> OptInferTypesForUndef(
-    "infer-types-for-undefs",
-    cl::desc("Enable type inference for undefined functions. Under this flag, "
-             "types for undefined functions are inferred according to the same "
-             "rules as defined functions with the caveat that an undefined "
-             "function will only solve to an itype and not a fully checked "
-             "type. Because TT is not able to examine the body of the "
-             "function, the inferred pointer types (and array bounds) may not "
-             "be consistent with the actual implementation. By default, the "
-             "Checked C compiler trusts the declared itypes and will not "
-             "detect a spatial memory safety violation if the function is used "
-             "in a way that is consistent with the itypes but not the "
-             "assumptions actually made by the implementation. Thus, if you "
-             "want to guarantee spatial memory safety, you must manually "
-             "check the inferred types against your understanding of what the "
-             "function actually does (or any available documentation)."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptDebugSolver(
-    "debug-solver",
-    cl::desc("Dump intermediate solver state"),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptOnlyGreatestSol(
-    "only-g-sol",
-    cl::desc("Perform only greatest solution for Pty Constrains."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptOnlyLeastSol(
-    "only-l-sol",
-    cl::desc("Perform only least solution for Pty Constrains."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static llvm::cl::opt<bool> OptDisableRDs(
-    "disable-rds",
-    llvm::cl::desc("Disable reverse edges for Checked Constraints."),
-    llvm::cl::init(false), cl::cat(_TTCategory));
-
-static llvm::cl::opt<bool> OptDisableFunctionEdges(
-    "disable-fnedgs",
-    llvm::cl::desc("Disable reverse edges for external functions."),
-    llvm::cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptDisableArrH(
-    "disable-arr-hu",
-    cl::desc("Disable Array Bounds Inference Heuristics."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> DebugArrSolver(
-    "debug-arr-solver",
-    cl::desc("Dump array bounds inference graph"),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptDisableInfDecls(
-    "disable-arr-missd",
-    cl::desc("Disable ignoring of missed bounds from declarations."),
-    cl::init(false), cl::cat(_TTCategory));
-
-#ifdef FIVE_C
-static cl::opt<bool> OptRemoveItypes(
-    "remove-itypes",
-    cl::desc("Remove unneeded interoperation type annotations."),
-    cl::init(false), cl::cat(_TTCategory));
-
-static cl::opt<bool> OptForceItypes(
-    "force-itypes",
-    cl::desc("Use interoperation types instead of regular checked pointers. "),
-    cl::init(false), cl::cat(_TTCategory));
-#endif
 
 // clang-format on
 
@@ -337,39 +332,41 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+
   // Setup options.
   struct _TTOptions CcOptions;
   CcOptions.BaseDir = OptBaseDir.getValue();
   CcOptions.AllowSourcesOutsideBaseDir = OptAllowSourcesOutsideBaseDir;
-  CcOptions.HandleVARARGS = OptHandleVARARGS;
+  //CcOptions.HandleVARARGS = OptHandleVARARGS;
   CcOptions.DumpStats = OptDumpStats;
   CcOptions.OutputPostfix = OptOutputPostfix.getValue();
   CcOptions.OutputDir = OptOutputDir.getValue();
+  CcOptions.TaintedDefDir = TaintedDefDir.getValue();
   CcOptions.Verbose = OptVerbose;
   CcOptions.DumpIntermediate = OptDumpIntermediate;
   CcOptions.ConstraintOutputJson = OptConstraintOutputJson.getValue();
   CcOptions.StatsOutputJson = OptStatsOutputJson.getValue();
   CcOptions.WildPtrInfoJson = OptWildPtrInfoJson.getValue();
   CcOptions.PerWildPtrInfoJson = OptPerPtrWILDInfoJson.getValue();
-  CcOptions.AddCheckedRegions = OptAddCheckedRegions;
-  CcOptions.AddSandboxType = OptSandboxType;
-  CcOptions.AllTypes = OptAllTypes;
+//  CcOptions.AddCheckedRegions = OptAddCheckedRegions;
+  CcOptions.AddSandbox = OptSandboxType.getValue();
+//  CcOptions.AllTypes = OptAllTypes;
   CcOptions.EnableCCTypeChecker = OptEnableCCTypeChecker;
-  CcOptions.WarnRootCause = OptWarnRootCause;
-  CcOptions.WarnAllRootCause = OptWarnAllRootCause;
+//  CcOptions.WarnRootCause = OptWarnRootCause;
+//  CcOptions.WarnAllRootCause = OptWarnAllRootCause;
   CcOptions.DumpUnwritableChanges = OptDumpUnwritableChanges;
-  CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
-  CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
-  CcOptions.ItypesForExtern = OptItypesForExtern;
-  CcOptions.InferTypesForUndefs = OptInferTypesForUndef;
-  CcOptions.DebugSolver = OptDebugSolver;
-  CcOptions.OnlyGreatestSol = OptOnlyGreatestSol;
-  CcOptions.OnlyLeastSol = OptOnlyLeastSol;
-  CcOptions.DisableRDs = OptDisableRDs;
-  CcOptions.DisableFunctionEdges = OptDisableFunctionEdges;
-  CcOptions.DisableInfDecls = OptDisableInfDecls;
-  CcOptions.DisableArrH = OptDisableArrH;
-  CcOptions.DebugArrSolver = DebugArrSolver;
+//  CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
+//  CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
+//  CcOptions.ItypesForExtern = OptItypesForExtern;
+//  CcOptions.InferTypesForUndefs = OptInferTypesForUndef;
+//  CcOptions.DebugSolver = OptDebugSolver;
+//  CcOptions.OnlyGreatestSol = OptOnlyGreatestSol;
+//  CcOptions.OnlyLeastSol = OptOnlyLeastSol;
+//  CcOptions.DisableRDs = OptDisableRDs;
+//  CcOptions.DisableFunctionEdges = OptDisableFunctionEdges;
+//  CcOptions.DisableInfDecls = OptDisableInfDecls;
+//  CcOptions.DisableArrH = OptDisableArrH;
+//  CcOptions.DebugArrSolver = DebugArrSolver;
 
 
   //Add user specified function allocators
@@ -417,6 +414,13 @@ int main(int argc, const char **argv) {
     errs() << "Adding Top-level Constraint Variables.\n";
   }
 
+  /*
+   * Create a new directory at the location of source files called "Tainted"
+   * This directory will hold c files of tainted definitions
+   * that can be compiled for WASM Sandbox
+   */
+
+
   // Add variables.
   if (!_TTInterface.addVariables()) {
     errs() << "Failure occurred while trying to add variables. Exiting.\n";
@@ -451,7 +455,7 @@ int main(int argc, const char **argv) {
   }
 
   // Write all the converted files back.
-  if (!_TTInterface.writeAllConvertedFilesToDisk()) {
+  if ( !_TTInterface.writeAllConvertedFilesToDisk()) {
     errs() << "Failure occurred while trying to rewrite converted files back. "
               "Exiting.\n";
     return _TTInterface.determineExitCode();

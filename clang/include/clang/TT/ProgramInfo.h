@@ -83,8 +83,18 @@ public:
   typedef std::map<std::string, ExternalFunctionMapType> StaticFunctionMapType;
 
   std::vector<Decl*>Tainted_Decls;
+  /*
+   * This is the mapping between the FunctionDecl's actual file name to the
+   * tainted file to which its tainted generic C definition will be written
+   */
+  std::vector<std::string> Tainted_rewrite_file_vector;
+  //the below vector will help in close output stream that are still not closed
+  std::vector<llvm::raw_fd_ostream*> tainted_outfiles;
+
+  std::map<Decl*, std::string> tainted_stream_writer;
 
   ProgramInfo();
+
   void print(llvm::raw_ostream &O) const;
   void dump() const { print(llvm::errs()); }
   void dumpJson(llvm::raw_ostream &O) const;

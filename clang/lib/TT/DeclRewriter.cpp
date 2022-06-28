@@ -8,9 +8,7 @@
 
 #include "clang/TT/DeclRewriter.h"
 #include "clang/TT/TTGlobalOptions.h"
-#include "clang/TT/MappingVisitor.h"
 #include "clang/TT/RewriteUtils.h"
-#include "clang/TT/StructInit.h"
 #include "clang/TT/Utils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -23,338 +21,130 @@
 using namespace llvm;
 using namespace clang;
 
-//static bool checkNeedsFreshLowerBound(PVConstraint *Defn, std::string UseName,
-//                                      ProgramInfo &Info,
-//                                      std::string &DeclName) {
-//  bool NeedsFreshLowerBound = Info.getABoundsInfo().needsFreshLowerBound(Defn);
-//
-//  if (NeedsFreshLowerBound) {
-//    BoundsKey FreshLB = Info.getABoundsInfo()
-//                            .getBounds(Defn->getBoundsKey())
-//                            ->getLowerBoundKey();
-//    DeclName = Info.getABoundsInfo().getProgramVar(FreshLB)->getVarName();
-//  } else {
-//    DeclName = UseName;
-//  }
-//
-//  return NeedsFreshLowerBound;
-//}
 
-// You need a function like that above that tells you if you need instrumentation -->
-static bool checkNeedsTaintedInstrumentation(PVConstraint *Defn, DeclaratorDecl *Decl,
-                                             ProgramInfo &Info, bool SDeclTainted,
-                                             std::string FunctionName){
-  if(Decl->getAsFunction()->isTainted())
-    return true;
+bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, Decl* D){
+  /*
+   * first fetch the output stream buffer
+   */
+  /*
+   * For now lets just do the below, later we
+   */
+  std::error_code error_code;
+  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[D],
+                               error_code, llvm::sys::fs::OF_Append);
+  if(std::find(Info.tainted_outfiles.begin(),
+                Info.tainted_outfiles.end(),
+                const_cast<llvm::raw_fd_ostream*>(&outFile)) == Info.tainted_outfiles.end()){
+      /*
+       * This is a new file being written, hence Initialize it
+       */
+      RewriteBuffer RB;
+      RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
+                    "\n */");
+      RB.write(outFile);
+      Info.tainted_outfiles.push_back(&outFile);
+
+  }
+
+//  R.getEditBuffer(D->getASTContext().getSourceManager().
+//                  getFileID(D->getLocation())).write(outFile);
+
+  RewriteBuffer RB;
+  RB.Initialize("Hey There");
+  RB.write(outFile);
+  return true;
 }
 
-//// Not sure what this is, so we shall keep it for now -->
-//static std::string buildSupplementaryDecl(PVConstraint *Defn,
-//                                          DeclaratorDecl *Decl,
-//                                          ArrayBoundsRewriter &ABR,
-//                                          ProgramInfo &Info, bool SDeclChecked,
-//                                          std::string DeclName) {
-//  std::string SDecl = Defn->mkString(
-//      Info.getConstraints(), MKSTRING_OPTS(ForItypeBase = !SDeclChecked));
-//  if (SDeclChecked)
-//    SDecl += ABR.getBoundsString(Defn, Decl);
-//  SDecl += " = " + DeclName + ";";
-//  return SDecl;
-//}
+bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
+                          Rewriter &R)
+{
+  for(auto tainted_function_decls : Info.Tainted_Decls){
+    /*
+     *The Tainted function definition must move to a different file in order to
+     * be compilable to wasm-readable definitions
+     * Hence before writing anything, copy the entire original function to a different file
+    */
 
-/*
- * We dont care about this either -->
- */
-// Generate a new declaration for the PVConstraint using an itype where the
-// unchecked portion of the type is the original type, and the checked portion
-// is the taken from the constraint graph solution.
-//
-// If SDeclChecked = true, then any generated supplementary declaration uses the
-// checked type; that's generally what you want if an itype is being used only
-// because of -itypes-for-extern. If SDeclChecked = false, then the unchecked
-// type is used; that's what you want when the supplementary declaration is
-// standing in for a function parameter that got an itype because it is used
-// unsafely inside the function. TODO: Instead of using an ad-hoc boolean
-// parameter for this, maybe we could just pass in the internal PVConstraint and
-// look at that
-// (https://github.com/correctcomputation/checkedc-clang/issues/704).
-//RewrittenDecl
-//DeclRewriter::buildItypeDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
-//                             std::string UseName, ProgramInfo &Info,
-//                             ArrayBoundsRewriter &ABR, bool GenerateSDecls,
-//                             bool SDeclChecked) {
-//  std::string DeclName;
-//  bool NeedsFreshLowerBound =
-//      checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
-//
-//  const EnvironmentMap &Env = Info.getConstraints().getVariables();
-//  // True when the type of this variable is defined by a typedef, and the
-//  // constraint variable representing the typedef solved to an unchecked type.
-//  // In these cases, the typedef should be used in the unchecked part of the
-//  // itype. The typedef is expanded using checked pointer types for the checked
-//  // portion. In ItypesForExtern mode, typedefs are treated as unchecked because
-//  // TT will not rewrite the typedef to a checked type. Even if it solves to a
-//  // checked type, it is not rewritten, so it remains unchecked in the converted
-//  // code.
-//  bool IsUncheckedTypedef =
-//    Defn->isTypedef() && (_TTOpts.ItypesForExtern ||
-//                          !Defn->getTypedefVar()->isSolutionChecked(Env));
-//  // True if this variable is defined by a typedef, and the constraint variable
-//  // representing the typedef solves to a checked type. Notably not the negation
-//  // of IsUncheckedTypedef because both require the variable type be defined
-//  // by a typedef. The checked typedef is expanded using unchecked types in the
-//  // unchecked portion of the itype. The typedef is used directly in the checked
-//  // portion of the itype. TODO: Maybe we shouldn't do that if the solution for
-//  // the typedef doesn't fully equal the solution for the variable
-//  // (https://github.com/correctcomputation/checkedc-clang/issues/705)?
-//  bool IsCheckedTypedef = Defn->isTypedef() && !IsUncheckedTypedef;
-//
-//  bool BaseTypeRenamed =
-//      Decl && Info.TheMultiDeclsInfo.wasBaseTypeRenamed(Decl);
-//
-//  // It should in principle be possible to always generate the unchecked portion
-//  // of the itype by going through mkString. However, mkString has bugs that
-//  // lead to incorrect output in some less common cases
-//  // (https://github.com/correctcomputation/checkedc-clang/issues/703). So we
-//  // use the original type string generated by Clang (via qtyToStr or
-//  // getOriginalTypeWithName) unless we know we have a special requirement that
-//  // it doesn't meet, in which case we use mkString. Those cases are:
-//  // - Unmasking a typedef. The expansion of the typedef does not exist in the
-//  //   original source, so it must be constructed. (TODO: Couldn't we just get
-//  //   the underlying type with TypedefDecl::getUnderlyingType and then use
-//  //   qtyToStr?)
-//  // - A function pointer. For a function pointer with an itype to parse
-//  //   correctly, it needs an extra set of parentheses (e.g.,
-//  //   `void ((*f)()) : itype(...)` instead of `void (*f)() : itype(...)`), and
-//  //   Clang won't know to add them.
-//  // - When the base type is an unnamed TagDecl that TT has renamed, Clang won't
-//  //   know the new name.
-//  // - Possible future change: if the internal PVConstraint is partially checked
-//  //   and we want to use it
-//  //   (https://github.com/correctcomputation/checkedc-clang/issues/704).
-//  std::string Type;
-//  if (IsCheckedTypedef || Defn->getFV() || BaseTypeRenamed) {
-//    Type = Defn->mkString(Info.getConstraints(),
-//                          MKSTRING_OPTS(UnmaskTypedef = IsCheckedTypedef,
-//                                        ForItypeBase = true,
-//                                        UseName = DeclName));
-//  } else {
-//    // In the remaining cases, the unchecked portion of the itype is just the
-//    // original type of the pointer. The first branch tries to generate the type
-//    // using the type and name for this specific declaration. This is important
-//    // because it avoids changing parameter names, particularly in cases where
-//    // multiple functions sharing the same name are defined in different
-//    // translation units.
-//    if (isa_and_nonnull<ParmVarDecl>(Decl) && !DeclName.empty())
-//      Type = qtyToStr(Decl->getType(), DeclName);
-//    else
-//      Type = Defn->getOriginalTypeWithName();
-//  }
-//
-//  std::string IType = " : itype(" +
-//    Defn->mkString(Info.getConstraints(),
-//                   MKSTRING_OPTS(EmitName = false, ForItype = true,
-//                                 UnmaskTypedef = IsUncheckedTypedef)) + ")";
-//  IType += ABR.getBoundsString(Defn, Decl, true, NeedsFreshLowerBound);
-//
-//  std::string SDecl;
-//  if (GenerateSDecls && NeedsFreshLowerBound)
-//    SDecl =
-//        buildSupplementaryDecl(Defn, Decl, ABR, Info, SDeclChecked, DeclName);
-//  return RewrittenDecl(Type, IType, SDecl);
-//}
+    CopyTaintedDefToTaintedFile(Context, Info, R, tainted_function_decls);
 
-//RewrittenDecl
-//DeclRewriter::buildCheckedDecl(PVConstraint *Defn, DeclaratorDecl *Decl,
-//                               std::string UseName, ProgramInfo &Info,
-//                               ArrayBoundsRewriter &ABR, bool GenerateSDecls) {
-//  std::string DeclName;
-//  bool NeedsFreshLowerBound =
-//      checkNeedsFreshLowerBound(Defn, UseName, Info, DeclName);
-//
-//  std::string Type =
-//    Defn->mkString(Info.getConstraints(), MKSTRING_OPTS(UseName = DeclName));
-//  std::string IType =
-//    ABR.getBoundsString(Defn, Decl, false, NeedsFreshLowerBound);
-//  std::string SDecl;
-//  if (GenerateSDecls && NeedsFreshLowerBound)
-//    SDecl = buildSupplementaryDecl(Defn, Decl, ABR, Info, true, DeclName);
-//  return RewrittenDecl(Type, IType, SDecl);
-//}
+    R.InsertTextAfterToken(tainted_function_decls->getBody()->getBeginLoc()
+                               , "/*");
+    R.InsertText(tainted_function_decls->getBody()->getEndLoc(), "*/",
+                 false, true);
+    std::map<VarDecl*, std::string> map_of_params;
+    for(int i = 0 ; i < tainted_function_decls->getAsFunction()->getNumParams(); i++)
+    {
+      map_of_params.insert(std::pair<VarDecl*, std::string>(tainted_function_decls->getAsFunction()->getParamDecl(i),
+                                                             tainted_function_decls->getAsFunction()->getNameAsString()));
+    }
+    //fetch the function name -->
+    std::string function_name = tainted_function_decls->getAsFunction()->getNameAsString();
+    //for wasm -->
+    // append this with the w2c_ extension
+    std::string wasm_function_name = "w2c_"+function_name;
+    //now generate the return type -->
+    std::string returnArg = "";
+    bool isTaintedPointerReturn = false;
+    if(tainted_function_decls->getAsFunction()->getReturnType()->isTaintedPointerType()){
+      returnArg = "c_fetch_pointer_from_offset(";
+      isTaintedPointerReturn = true;
+      //now we generate appropriate cast because returned pointer is of tainted type -->
+      std::string cast_operation = "("+tainted_function_decls->getAsFunction()->getReturnType().getAsString()+")";
+      returnArg = cast_operation + returnArg;
+    }
 
+    //now generate the parameter list in form of a string -->
+    std::string final_param_string = "";
+    std::vector<std::string> set_of_params;
+    for(auto params: map_of_params)
+    {
+      std::string sbx_instrumented_param;
+      if(params.first->getType()->isTaintedPointerType())
+      {
+        sbx_instrumented_param = "c_fetch_pointer_offset(" +
+                                 params.first->getNameAsString()+")";
+      }
+      else if(isTaintedStruct(params.first))
+      {
+        //special instrumentation needed here that would accept a Tstruct and return a Tainted struct pointer
+      }
+      else{
+        sbx_instrumented_param = params.first->getNameAsString();
+      }
+      set_of_params.push_back(sbx_instrumented_param);
+    }
+
+    //now keep iterating and entering commas
+    for(int i = 0; i < set_of_params.size(); i ++)
+    {
+      final_param_string = final_param_string + set_of_params[i];
+      if(i < (set_of_params.size()-1)){
+        final_param_string = final_param_string + ",";
+      }
+    }
+
+    //by here you must have a proper final_param_string -->
+
+    // Now append it to required items and form the final call -->
+    std::string FinalBoardingCall = "";
+    FinalBoardingCall = "return " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
+
+    R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
+    R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
+  }
+}
+
+bool SandboxSpecificRewriteOp(ASTContext &Context, ProgramInfo &Info,
+                              Rewriter &R) {
+  if (_TTOpts.AddSandbox == "wasm") {
+    return WasmSandboxRewriteOp(Context, Info, R);
+  }
+}
 // This function is the public entry point for function body rewriting.
 void DeclRewriter::rewriteBody(ASTContext &Context, ProgramInfo &Info,
                                 Rewriter &R) {
-  // Collect function and record declarations that need to be rewritten in a set
-  // as well as their rewriten types in a map.
-  RSet RewriteThese;
-  Rewriter TheRewriter;
-  TheRewriter.setSourceMgr(Context.getSourceManager(), Context.getLangOpts());
-
-  FunctionBodyBuilder *TRV = nullptr;
-  auto TRVTT = FunctionBodyBuilder(&Context, Info, RewriteThese);
-
-//  //fetch all the members that need to be re-writed
-//  TStructVariableInitializer SVI =
-//      TStructVariableInitializer(&Context, Info, RewriteThese);
-//  for (const auto &D : Context.getTranslationUnitDecl()->decls()) {
-//    TRV->TraverseDecl(D);
-//    SVI.TraverseDecl(D);
-//    const auto &TD = dyn_cast<TypedefDecl>(D);
-//    // Don't convert typedefs when -itype-for-extern is passed. Typedefs will
-//    // keep their unchecked type but function using the typedef will be given a
-//    // checked itype.
-//    if (!_TTOpts.ItypesForExtern && TD) {
-//      auto PSL = PersistentSourceLoc::mkPSL(TD, Context);
-//      // Don't rewrite base types like int
-//      if (!TD->getUnderlyingType()->isBuiltinType()) {
-//        const auto O = Info.lookupTypedef(PSL);
-//        if (O.hasValue()) {
-//          const auto &Var = O.getValue();
-//          const auto &Env = Info.getConstraints().getVariables();
-//          if (Var.anyChanges(Env)) {
-//            std::string NewTy =
-//                getStorageQualifierString(D) +
-//                Var.mkString(Info.getConstraints(),
-//                             MKSTRING_OPTS(UnmaskTypedef = true));
-//            RewriteThese.insert(
-//                std::make_pair(TD, new MultiDeclMemberReplacement(TD, NewTy, {})));
-//          }
-//        }
-//      }
-//    }
-//  }
-//
-//  // Build a map of all of the PersistentSourceLoc's back to some kind of
-//  // Stmt, Decl, or Type.
-//  TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
-//  std::set<PersistentSourceLoc> Keys;
-//  for (const auto &I : Info.getVarMap())
-//    Keys.insert(I.first);
-//  MappingVisitor MV(Keys, Context);
-//  for (const auto &D : TUD->decls()) {
-//    MV.TraverseDecl(D);
-//  }
-//  SourceToDeclMapType PSLMap;
-//  PSLMap = MV.getResults();
-//
-//  // Add declarations from this map into the rewriting set
-//  for (const auto &V : Info.getVarMap()) {
-//    // PLoc specifies the location of the variable whose type it is to
-//    // re-write, but not where the actual type storage is. To get that, we
-//    // need to turn PLoc into a Decl and then get the SourceRange for the
-//    // type of the Decl. Note that what we need to get is the ExpansionLoc
-//    // of the type specifier, since we want where the text is printed before
-//    // the variable name, not the typedef or #define that creates the
-//    // name of the type.
-//    PersistentSourceLoc PLoc = V.first;
-//    if (Decl *D = PSLMap[PLoc]) {
-//      ConstraintVariable *CV = V.second;
-//      PVConstraint *PV = dyn_cast<PVConstraint>(CV);
-//      bool PVChanged =
-//          PV && (PV->anyChanges(Info.getConstraints().getVariables()) ||
-//                 ABRewriter.hasNewBoundsString(PV, D));
-//      if (PVChanged && !PV->isPartOfFunctionPrototype()) {
-//        // Rewrite a declaration, only if it is not part of function prototype.
-//        assert(!isa<ParmVarDecl>(D) &&
-//               "Got a PVConstraint for a ParmVarDecl where "
-//               "isPartOfFunctionPrototype returns false?");
-//        MultiDeclMemberDecl *MMD = getAsMultiDeclMember(D);
-//        assert(MMD && "Unrecognized declaration type.");
-//
-//        RewrittenDecl RD = mkStringForPVDecl(MMD, PV, Info);
-//        std::string ReplacementText = RD.Type + RD.IType;
-//        std::vector<std::string> SDecl;
-//        if (!RD.SupplementaryDecl.empty())
-//          SDecl.push_back(RD.SupplementaryDecl);
-//        RewriteThese.insert(std::make_pair(
-//            MMD, new MultiDeclMemberReplacement(MMD, ReplacementText, SDecl)));
-//      }
-//    }
-//  }
-//
-//  // Do the declaration rewriting
-//  DeclRewriter DeclR(R, Info, Context);
-//  DeclR.rewrite(RewriteThese);
-//
-//  for (auto Pair : RewriteThese)
-//    delete Pair.second;
-//
-//  DeclR.denestTagDecls();
-
-  //So Basically you gotta create a new declaration copy and insert that into this -->
-  for(auto tainted_function_decls : Info.Tainted_Decls){
-    // Instrument and rewrite -->
-      // Do the declaration rewriting
-//      R.InsertText(clang::Lexer::findLocationAfterToken(tainted_function_decls->getBody()->getBeginLoc(), tok::l_brace, Context.getSourceManager(), Context.getLangOpts(), false), "/*",
-//                           true, true);
-
-    R.InsertTextAfterToken(tainted_function_decls->getBody()->getBeginLoc()
-                                                                , "/*");
-      R.InsertText(tainted_function_decls->getBody()->getEndLoc(), "*/",
-                   false, true);
-      std::map<VarDecl*, std::string> map_of_params;
-      for(int i = 0 ; i < tainted_function_decls->getAsFunction()->getNumParams(); i++)
-      {
-        map_of_params.insert(std::pair<VarDecl*, std::string>(tainted_function_decls->getAsFunction()->getParamDecl(i),
-                                                            tainted_function_decls->getAsFunction()->getNameAsString()));
-      }
-      //fetch the function name -->
-      std::string function_name = tainted_function_decls->getAsFunction()->getNameAsString();
-      //for wasm -->
-      // append this with the w2c_ extension
-      std::string wasm_function_name = "w2c_"+function_name;
-      //now generate the return type -->
-      std::string returnArg = "";
-      bool isTaintedPointerReturn = false;
-      if(tainted_function_decls->getAsFunction()->getReturnType()->isTaintedPointerType()){
-        returnArg = "c_fetch_pointer_from_offset(";
-        isTaintedPointerReturn = true;
-        //now we generate appropriate cast because returned pointer is of tainted type -->
-        std::string cast_operation = "("+tainted_function_decls->getAsFunction()->getReturnType().getAsString()+")";
-        returnArg = cast_operation + returnArg;
-      }
-
-      //now generate the parameter list in form of a string -->
-      std::string final_param_string = "";
-      std::vector<std::string> set_of_params;
-      for(auto params: map_of_params)
-      {
-        std::string sbx_instrumented_param;
-        if(params.first->getType()->isTaintedPointerType())
-        {
-          sbx_instrumented_param = "c_fetch_pointer_offset(" +
-                                  params.first->getNameAsString()+")";
-        }
-        else if(isTaintedStruct(params.first))
-        {
-          //special instrumentation needed here that would accept a Tstruct and return a Tainted struct pointer
-        }
-        else{
-          sbx_instrumented_param = params.first->getNameAsString();
-        }
-        set_of_params.push_back(sbx_instrumented_param);
-      }
-
-      //now keep iterating and entering commas
-      for(int i = 0; i < set_of_params.size(); i ++)
-      {
-        final_param_string = final_param_string + set_of_params[i];
-        if(i < (set_of_params.size()-1)){
-          final_param_string = final_param_string + ",";
-        }
-      }
-
-      //by here you must have a proper final_param_string -->
-
-      // Now append it to required items and form the final call -->
-      std::string FinalBoardingCall = "";
-      FinalBoardingCall = "return " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
-
-      R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
-  }
-
-
+  SandboxSpecificRewriteOp(Context, Info, R);
 }
 
 void DeclRewriter::rewrite(RSet &ToRewrite) {
@@ -462,249 +252,6 @@ void DeclRewriter::denestTagDecls() {
   }
 }
 
-
-//void DeclRewriter::rewriteMultiDecl(MultiDeclInfo &MDI, RSet &ToRewrite) {
-//  // Rewrite a "multi-decl" consisting of one or more variables, fields, or
-//  // typedefs declared in a comma-separated list based on a single type "on the
-//  // left". See the comment at the top of clang/include/clang/TT/MultiDecls.h
-//  // for a detailed description of the design that is implemented here. As
-//  // mentioned in MultiDecls.h, this code is used even for "multi-decls" that
-//  // have only a single member to avoid having to maintain a separate code path
-//  // for them.
-//  //
-//  // Due to the overlap between members, a multi-decl can only be rewritten as a
-//  // unit, visiting the members in source code order from left to right. For
-//  // each member, we check whether it has a replacement in ToRewrite. If so, we
-//  // use it; if not, we generate a declaration equivalent to the original.
-//  // Existing initializers are preserved, and declarations that need an
-//  // initializer to be valid Checked C are given one.
-//
-//  SourceManager &SM = A.getSourceManager();
-//  bool IsFirst = true;
-//  SourceLocation PrevEnd;
-//
-//  if (MDI.TagDefToSplit != nullptr) {
-//    TagDecl *TD = MDI.TagDefToSplit;
-//    // `static struct T { ... } x;` -> `struct T { ... }; static struct T x;`
-//    // A storage qualifier such as `static` applies to the members but is not
-//    // meaningful on TD after it is split, and we need to remove it to avoid a
-//    // compiler warning. The beginning location of the first member should be
-//    // the `static` and the beginning location of TD should be the `struct`, so
-//    // we just remove anything between those locations. (Can other things appear
-//    // there? We hope it makes sense to remove them too.)
-//    //
-//    // We use `getCharRange` to get a range that excludes the first token of TD,
-//    // unlike the default conversion of a SourceRange to a "token range", which
-//    // would include it.
-//    rewriteSourceRange(R,
-//                       CharSourceRange::getCharRange(
-//                           MDI.Members[0]->getBeginLoc(), TD->getBeginLoc()),
-//                       "");
-//    if (TD->getName().empty()) {
-//      // If the record is unnamed, insert the name that we assigned it:
-//      // `struct {` -> `struct T {`
-//      PersistentSourceLoc PSL = PersistentSourceLoc::mkPSL(TD, A);
-//      // This will assert if we can't find the new name. Is that what we want?
-//      std::string NewTypeStr = *Info.TheMultiDeclsInfo.getTypeStrOverride(
-//          A.getTagDeclType(TD).getTypePtr(), A);
-//      // This token should be the tag kind, e.g., `struct`.
-//      std::string ExistingToken =
-//          getSourceText(SourceRange(TD->getBeginLoc()), A);
-//      if (NONFATAL_ASSERT_PLACEHOLDER(ExistingToken == TD->getKindName())) {
-//        rewriteSourceRange(R, TD->getBeginLoc(), NewTypeStr);
-//      }
-//    }
-//    // Make a note if the TagDecl needs to be de-nested later.
-//    if (isa<TagDecl>(TD->getLexicalDeclContext()))
-//      TagDeclsToDenest.push_back(TD);
-//    // `struct T { ... } foo;` -> `struct T { ... };\nfoo;`
-//    rewriteSourceRange(R, TD->getEndLoc(), "};\n");
-//    IsFirst = false;
-//    // Offset by one to skip past what we've just added so it isn't overwritten.
-//    PrevEnd = TD->getEndLoc().getLocWithOffset(1);
-//  }
-//
-//  for (auto MIt = MDI.Members.begin(); MIt != MDI.Members.end(); MIt++) {
-//    MultiDeclMemberDecl *DL = *MIt;
-//
-//    // If we modify this member in any way, this is the original source range
-//    // for the member that we expect to overwrite, before PrevEnd adjustment.
-//    //
-//    // We do want to overwrite existing Checked C annotations. Other than
-//    // ItypesForExtern, TT currently doesn't have real itype support for
-//    // multi-decl members as opposed to function parameters and returns
-//    // (https://github.com/correctcomputation/checkedc-clang/issues/744), but we
-//    // are probably still better off overwriting the annotations with a
-//    // complete, valid declaration than mixing and matching a declaration
-//    // generated by TT with existing annotations.
-//    //
-//    // If the variable has an initializer, we want this rewrite to end
-//    // before the initializer to avoid interfering with any other rewrites
-//    // that TT needs to make inside the initializer expression
-//    // (https://github.com/correctcomputation/checkedc-clang/issues/267).
-//    SourceRange ReplaceSR =
-//        getDeclSourceRangeWithAnnotations(DL, /*IncludeInitializer=*/false);
-//
-//    // Look for a declaration replacement object for the current declaration.
-//    MultiDeclMemberReplacement *Replacement = nullptr;
-//    auto TRIt = ToRewrite.find(DL);
-//    if (TRIt != ToRewrite.end()) {
-//      Replacement = cast<MultiDeclMemberReplacement>(TRIt->second);
-//      // We can't expect multi-decl rewriting to work properly on a source range
-//      // different from ReplaceSR above; for example, doDeclRewrite might insert
-//      // an initializer in the wrong place. This assertion should pass as long
-//      // as the implementation of DeclReplacement::getSourceRange matches
-//      // ReplaceSR above. If someone changes DeclReplacement::getSourceRange,
-//      // thinking that they can replace a different source range that way, we
-//      // want to fail fast.
-//      //
-//      // This is awkward and makes me wonder if we should just remove
-//      // DeclReplacement::getSourceRange since TT currently only calls
-//      // getSourceRange on an object already known to be a
-//      // FunctionDeclReplacement. But after drafting that, I wasn't convinced
-//      // that it was better than the status quo.
-//      assert(Replacement->getSourceRange(SM) == ReplaceSR);
-//    }
-//
-//    if (IsFirst) {
-//      // Rewriting the first declaration is easy. Nothing should change if its
-//      // type does not to be rewritten.
-//      IsFirst = false;
-//      if (Replacement) {
-//        doDeclRewrite(ReplaceSR, Replacement);
-//      }
-//    } else {
-//      // ReplaceSR.getBegin() is the beginning of the whole multi-decl. We only
-//      // want to replace the text starting after the previous multi-decl member,
-//      // which is given by PrevEnd.
-//      ReplaceSR.setBegin(PrevEnd);
-//
-//      // The subsequent decls are more complicated because we need to insert a
-//      // type string even if the variables type hasn't changed.
-//      if (Replacement) {
-//        // If the type has changed, the DeclReplacement object has a replacement
-//        // string stored in it that should be used.
-//        doDeclRewrite(ReplaceSR, Replacement);
-//      } else {
-//        // When the type hasn't changed, we still need to insert the original
-//        // type for the variable.
-//        std::string NewDeclStr = mkStringForDeclWithUnchangedType(DL, Info);
-//        rewriteSourceRange(R, ReplaceSR, NewDeclStr);
-//      }
-//    }
-//
-//    // Processing related to the comma or semicolon ("terminator") that follows
-//    // the multi-decl member. Members are separated by commas, and the last
-//    // member is terminated by a semicolon. The rewritten decls are each
-//    // terminated by a semicolon and are separated by newlines.
-//    bool IsLast = (MIt + 1 == MDI.Members.end());
-//    bool HaveSupplementaryDecls =
-//        (Replacement && !Replacement->getSupplementaryDecls().empty());
-//    // Unlike in ReplaceSR, we want to start searching for the terminator after
-//    // the entire multi-decl member, including any existing initializer.
-//    SourceRange FullSR =
-//        getDeclSourceRangeWithAnnotations(DL, /*IncludeInitializer=*/true);
-//    // Search for the terminator.
-//    //
-//    // FIXME: If the terminator is hidden inside a macro,
-//    // getNextCommaOrSemicolon will continue scanning and may return a comma or
-//    // semicolon later in the file (which has bizarre consequences if we try to
-//    // use it to rewrite this multi-decl) or fail an assertion if it doesn't
-//    // find one. As a stopgap for the existing regression test in
-//    // macro_rewrite_error.c that has a semicolon inside a macro, we only search
-//    // for the terminator if we actually need it.
-//    SourceLocation Terminator;
-//    if (!IsLast || HaveSupplementaryDecls) {
-//      Terminator = getNextCommaOrSemicolon(FullSR.getEnd());
-//    }
-//    if (!IsLast) {
-//      // We expect the terminator to be a comma. Change it to a semicolon.
-//      rewriteSourceRange(R, SourceRange(Terminator, Terminator), ";");
-//    }
-//    if (HaveSupplementaryDecls) {
-//      emitSupplementaryDeclarations(Replacement->getSupplementaryDecls(),
-//                                    Terminator);
-//    }
-//    if (!IsLast) {
-//      // Insert a newline between this multi-decl member and the next. The
-//      // Rewriter preserves the order of insertions at the same location, so if
-//      // there are supplementary declarations, this newline will go between them
-//      // and the next member, which is what we want because
-//      // emitSupplementaryDeclarations by itself doesn't add a newline after the
-//      // supplementary declarations.
-//      SourceLocation AfterTerminator =
-//          getLocationAfterToken(Terminator, A.getSourceManager(),
-//                                A.getLangOpts());
-//      R.InsertText(AfterTerminator, "\n");
-//      // When rewriting the next member, start after the terminator. The
-//      // Rewriter is smart enough not to mess with anything we already inserted
-//      // at that location.
-//      PrevEnd = AfterTerminator;
-//    }
-//  }
-//
-//  MDI.AlreadyRewritten = true;
-//}
-
-// Common rewriting logic used to replace a single decl either on its own or as
-// part of a multi decl. The primary responsibility of this method (aside from
-// invoking the rewriter) is to add any required initializer expression.
-//void DeclRewriter::doDeclRewrite(SourceRange &SR, DeclReplacement *N) {
-//  std::string Replacement = N->getReplacement();
-//  if (auto *VD = dyn_cast<VarDecl>(N->getDecl())) {
-//    if (!VD->hasInit()) {
-//      // There is no initializer. Add it if we need one.
-//      // MWH -- Solves issue 43. Should make it so we insert NULL if stdlib.h or
-//      // stdlib_checked.h is included
-//      // TODO: Centralize initialization logic for all types:
-//      // https://github.com/correctcomputation/checkedc-clang/issues/645#issuecomment-876474200
-//      // TODO: Don't add unnecessary initializers to global variables:
-//      // https://github.com/correctcomputation/checkedc-clang/issues/741
-//      if (VD->getStorageClass() != StorageClass::SC_Extern) {
-//        const std::string NullPtrStr = "((void *)0)";
-//        if (isPointerType(VD)) {
-//          Replacement += " = " + NullPtrStr;
-//        } else if (VD->getType()->isArrayType()) {
-//          const auto *ElemType = VD->getType()->getPointeeOrArrayElementType();
-//          if (ElemType->isPointerType())
-//            Replacement += " = {" + NullPtrStr + "}";
-//        }
-//      }
-//    }
-//  }
-//
-//  rewriteSourceRange(R, SR, Replacement);
-//}
-
-// Common rewriting logic used to replace a single function body either
-// The primary responsibility of this method (aside from
-// invoking the rewriter) is to add required calls to sandbox specific functions.
-void DeclRewriter::doBodyRewrite(SourceRange &SR, DeclReplacement *N) {
-//  std::string Replacement = N->getReplacement();
-//  if (auto *VD = dyn_cast<VarDecl>(N->getDecl())) {
-//    if (!VD->hasInit()) {
-//      // There is no initializer. Add it if we need one.
-//      // MWH -- Solves issue 43. Should make it so we insert NULL if stdlib.h or
-//      // stdlib_checked.h is included
-//      // TODO: Centralize initialization logic for all types:
-//      // https://github.com/correctcomputation/checkedc-clang/issues/645#issuecomment-876474200
-//      // TODO: Don't add unnecessary initializers to global variables:
-//      // https://github.com/correctcomputation/checkedc-clang/issues/741
-//      if (VD->getStorageClass() != StorageClass::SC_Extern) {
-//        const std::string NullPtrStr = "((void *)0)";
-//        if (isPointerType(VD)) {
-//          Replacement += " = " + NullPtrStr;
-//        } else if (VD->getType()->isArrayType()) {
-//          const auto *ElemType = VD->getType()->getPointeeOrArrayElementType();
-//          if (ElemType->isPointerType())
-//            Replacement += " = {" + NullPtrStr + "}";
-//        }
-//      }
-//    }
-//  }
-
-  //rewriteSourceRange(R, SR, Replacement);
-}
 void DeclRewriter::rewriteFunctionBody(FunctionDeclReplacement *N) {
 
   /*
