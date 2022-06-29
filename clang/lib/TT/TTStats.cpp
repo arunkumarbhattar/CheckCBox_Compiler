@@ -49,6 +49,12 @@ void PerformanceStats::endRewritingTime() {
   RewritingTime += getTimeSpentInSeconds(RewritingTimeSt);
 }
 
+void PerformanceStats::startC4Countdown() { RewritingTimeSt = clock(); }
+
+void PerformanceStats::endC4Countdown() {
+  RewritingTime += getTimeSpentInSeconds(RewritingTimeSt);
+}
+
 void PerformanceStats::startTotalTime() { TotalTimeSt = clock(); }
 
 void PerformanceStats::endTotalTime() {

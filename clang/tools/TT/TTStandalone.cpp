@@ -461,6 +461,12 @@ int main(int argc, const char **argv) {
     return _TTInterface.determineExitCode();
   }
 
+  //Run C4 on all the converted files
+  if ( !_TTInterface.PlaceC4Charges()) {
+    errs() << "Failure occurred while detonating C4 on converted files.\n";
+    return _TTInterface.determineExitCode();
+  }
+
   // Write all the performance related stats.
   if (!_TTInterface.dumpStats()) {
     errs() << "Failure occurred while trying to write performance stats. "

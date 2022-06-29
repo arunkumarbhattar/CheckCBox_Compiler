@@ -82,6 +82,9 @@ public:
   // to disk
   bool writeAllConvertedFilesToDisk();
 
+  //Run C4 on newly written files to converted them from tainted to Vanilla C
+  bool PlaceC4Charges();
+
   // Dump all stats related to performance.
   bool dumpStats();
 

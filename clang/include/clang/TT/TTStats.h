@@ -1,15 +1,15 @@
-//=--3CStats.h----------------------------------------------------*- C++-*-===//
+//=--TTStats.h----------------------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This class contains all the stats related to the conversion computed by 3C.
+// This class contains all the stats related to the conversion computed by TT.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_3C_3CSTATS_H
-#define LLVM_CLANG_3C_3CSTATS_H
+#ifndef LLVM_CLANG_TT_TTSTATS_H
+#define LLVM_CLANG_TT_TTSTATS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -65,6 +65,9 @@ public:
   void startRewritingTime();
   void endRewritingTime();
 
+  void startC4Countdown();
+  void endC4Countdown();
+
   void startTotalTime();
   void endTotalTime();
 
@@ -105,4 +108,4 @@ private:
   ProgramInfo *Info;
 };
 
-#endif // LLVM_CLANG_3C_3CSTATS_H
+#endif // LLVM_CLANG_TT_TTSTATS_H

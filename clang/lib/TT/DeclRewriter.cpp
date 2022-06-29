@@ -21,38 +21,63 @@
 using namespace llvm;
 using namespace clang;
 
+bool TaintedFunctionConstructor(ASTContext &Context, ProgramInfo &Info,
+Rewriter &R, Decl* tainted_D){
+  /*
+   * Here is where we will construct the function signature for the tainted type
+   *
+   */
+  std::string function_return_signature = "";
+
+}
+
+SourceLocation
+end_of_the_end(SourceLocation const & start_of_end, SourceManager & sm){
+  LangOptions lopt;
+  return Lexer::getLocForEndOfToken(start_of_end, 0, sm, lopt);
+}
 
 bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
-                                 Rewriter &R, Decl* D){
+                                 Rewriter &R, Decl* FD){
   /*
    * first fetch the output stream buffer
    */
   /*
    * For now lets just do the below, later we
    */
+
   std::error_code error_code;
-  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[D],
+  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[FD],
                                error_code, llvm::sys::fs::OF_Append);
+  RewriteBuffer RB;
   if(std::find(Info.tainted_outfiles.begin(),
                 Info.tainted_outfiles.end(),
                 const_cast<llvm::raw_fd_ostream*>(&outFile)) == Info.tainted_outfiles.end()){
       /*
        * This is a new file being written, hence Initialize it
        */
-      RewriteBuffer RB;
-      RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
-                    "\n */");
-      RB.write(outFile);
-      Info.tainted_outfiles.push_back(&outFile);
 
+    RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
+                    "\n */ \n");
   }
 
-//  R.getEditBuffer(D->getASTContext().getSourceManager().
-//                  getFileID(D->getLocation())).write(outFile);
-
-  RewriteBuffer RB;
-  RB.Initialize("Hey There");
   RB.write(outFile);
+  SourceRange decl_range(FD->getSourceRange());
+  SourceLocation decl_begin(decl_range.getBegin());
+  SourceLocation decl_start_end(decl_range.getEnd());
+
+  SourceLocation decl_end_end(end_of_the_end(decl_start_end, Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* buff_begin(Context.getSourceManager().getCharacterData(decl_begin));
+  const char* buff_end(Context.getSourceManager().getCharacterData(decl_end_end));
+  std::string const func_string(buff_begin, buff_end);
+  RB.Initialize("\n" + func_string + "\n");
+
+  RB.write(outFile);
+  Info.tainted_outfiles.push_back(&outFile);
+
   return true;
 }
 
@@ -60,6 +85,13 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                           Rewriter &R)
 {
   for(auto tainted_function_decls : Info.Tainted_Decls){
+
+
+    if(!tainted_function_decls->hasBody())
+    {
+      continue;
+    }
+
     /*
      *The Tainted function definition must move to a different file in order to
      * be compilable to wasm-readable definitions
@@ -130,7 +162,6 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     std::string FinalBoardingCall = "";
     FinalBoardingCall = "return " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
 
-    R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
     R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
   }
 }

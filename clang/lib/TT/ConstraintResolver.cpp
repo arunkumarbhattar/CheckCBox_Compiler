@@ -66,28 +66,30 @@ void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
    */
   std::string FD_source_file_name = "";
 
+  /*
+   * This FD belongs to a new file, hence a new file has to be created for
+   * this tainted decl
+  */
+  //fetch the tainted directory path -->
+  std::string tainted_dir_path = _TTOpts.TaintedDefDir;
+  if(tainted_dir_path.find_last_not_of("/\\"))
+    tainted_dir_path += "/";
+
   FD_source_file_name = resolve_base_name(FD->getASTContext().getSourceManager()
-                         .getFilename(FD->getLocation()).str());
+                                              .getFilename(FD->getLocation()).str());
+
+  std::string final_path_with_file_name = tainted_dir_path + FD_source_file_name
+                                          + "_tainted_def.c";
 
   if(std::find(Info.Tainted_rewrite_file_vector.begin(),
                                             Info.Tainted_rewrite_file_vector.end(),
-                                            FD_source_file_name.c_str())
+                final_path_with_file_name.c_str())
       == Info.Tainted_rewrite_file_vector.end()){
-    /*
-     * This FD belongs to a new file, hence a new file has to be created for
-     * this tainted decl
-     */
-    //fetch the tainted directory path -->
-    std::string tainted_dir_path = _TTOpts.TaintedDefDir;
-    if(tainted_dir_path.find_last_not_of("/\\"))
-      tainted_dir_path += "/";
 
-    std::string final_path_with_file_name = tainted_dir_path + FD_source_file_name
-                                                             + "_tainted_def.c";
-
-    Info.Tainted_rewrite_file_vector.push_back(FD_source_file_name.c_str());
-    Info.tainted_stream_writer.insert({FD, final_path_with_file_name});
+    Info.Tainted_rewrite_file_vector.push_back(final_path_with_file_name.c_str());
   }
+
+  Info.tainted_stream_writer.insert({FD, final_path_with_file_name});
 }
 
 // Return a set of PVConstraints equivalent to the set given,

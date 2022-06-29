@@ -16,6 +16,7 @@
 #include "clang/TT/ConstraintBuilder.h"
 #include "clang/TT/IntermediateToolHook.h"
 #include "clang/TT/RewriteUtils.h"
+#include "clang/TT/PlantC4.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -690,7 +691,14 @@ bool _TTInterface::solveConstraints() {
   return isSuccessfulSoFar();
 }
 
-bool _TTInterface::dumpStats() {
+bool _TTInterface::PlaceC4Charges() {
+  std::lock_guard<std::mutex> Lock(InterfaceMutex);
+  //Fetch the tainted directory
+  PlantC4 C4Planted(GlobalProgramInfo);
+  return C4Planted.ConvertTaintedToVanilla();
+}
+
+  bool _TTInterface::dumpStats() {
   /*
   if (_TTOpts.AllTypes && _TTOpts.DebugArrSolver) {
     GlobalProgramInfo.getABoundsInfo().dumpAVarGraph("arr_bounds_final.dot");

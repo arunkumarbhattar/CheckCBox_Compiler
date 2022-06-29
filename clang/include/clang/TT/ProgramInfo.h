@@ -156,6 +156,8 @@ public:
 
   PerformanceStats &getPerfStats() { return PerfS; }
 
+  PerformanceStats &getC4PerfStats() {return C4; }
+
   ConstraintsInfo &getInterimConstraintState() { return CState; }
   bool computeInterimConstraintState(const std::set<std::string> &FilePaths);
 
@@ -236,6 +238,8 @@ private:
   //Performance stats
   PerformanceStats PerfS;
 
+  // Perform Stats for TaintedC to Vanilla C conversion
+  PerformanceStats C4;
   // Constraint system.
   Constraints CS;
   // Is the ProgramInfo persisted? Only tested in asserts. Starts at true.

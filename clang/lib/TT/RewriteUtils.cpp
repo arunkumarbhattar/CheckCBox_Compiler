@@ -753,5 +753,6 @@ void RewriteConsumer::HandleTranslationUnit(ASTContext &Context) {
   Info.getPerfStats().endRewritingTime();
 
   Info.exitCompilationUnit();
+
   return;
 }

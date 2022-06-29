@@ -50,6 +50,7 @@ add_clang_library(clangTT
   ProgramInfo.cpp
   ProgramVar.cpp
   RewriteUtils.cpp
+  PlantC4.cpp
   StructInit.cpp
   TypeVariableAnalysis.cpp
   Utils.cpp
