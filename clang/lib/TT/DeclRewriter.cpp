@@ -21,9 +21,18 @@
 using namespace llvm;
 using namespace clang;
 
+bool TaintedFunctionConstructor(ASTContext &Context, ProgramInfo &Info,
+Rewriter &R, Decl* tainted_D){
+  /*
+   * Here is where we will construct the function signature for the tainted type
+   *
+   */
+  std::string function_return_signature = "";
+
+}
 
 bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
-                                 Rewriter &R, Decl* D){
+                                 Rewriter &R, Decl* FD){
   /*
    * first fetch the output stream buffer
    */
@@ -31,7 +40,7 @@ bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
    * For now lets just do the below, later we
    */
   std::error_code error_code;
-  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[D],
+  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[FD],
                                error_code, llvm::sys::fs::OF_Append);
   if(std::find(Info.tainted_outfiles.begin(),
                 Info.tainted_outfiles.end(),
@@ -49,9 +58,9 @@ bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
 
 //  R.getEditBuffer(D->getASTContext().getSourceManager().
 //                  getFileID(D->getLocation())).write(outFile);
-
+  TaintedFunctionConstructor(Context, Info, R, FD);
   RewriteBuffer RB;
-  RB.Initialize("Hey There");
+//  RB.Initialize("Hey There");
   RB.write(outFile);
   return true;
 }
