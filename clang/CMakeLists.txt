@@ -884,7 +884,7 @@ configure_file(
   ${CLANG_BINARY_DIR}/include/clang/Config/config.h)
 
 file(COPY
-        ${CLANG_SOURCE_DIR}/lib/TT/C4
+        ${CLANG_SOURCE_DIR}/lib/CheckMate/C4
         DESTINATION
         ${CLANG_BINARY_DIR}/../
       )
