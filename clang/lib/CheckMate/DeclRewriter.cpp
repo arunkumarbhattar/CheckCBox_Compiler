@@ -160,7 +160,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
 
     // Now append it to required items and form the final call -->
     std::string FinalBoardingCall = "";
-    FinalBoardingCall = "return " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
+    FinalBoardingCall = "\n\nreturn " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
 
     R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
   }
