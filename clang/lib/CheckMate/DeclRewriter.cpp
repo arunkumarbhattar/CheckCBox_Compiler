@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <sstream>
+#include <ostream>
 
 using namespace llvm;
 using namespace clang;
@@ -80,6 +81,92 @@ bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
 
   return true;
 }
+typedef enum {
+  WASM_RT_I32,
+  WASM_RT_I64,
+  WASM_RT_F32,
+  WASM_RT_F64,
+} wasm_rt_type_t;
+
+wasm_rt_type_t ReturnWasmArgType(ParmVarDecl *PV){
+  if(PV->getType()->isVoidType()){
+    return wasm_rt_type_t::WASM_RT_I32;
+  }
+  else if(PV->getType()->isTaintedPointerType()){
+    return wasm_rt_type_t::WASM_RT_I32;
+  }
+  else if((PV->getType()->isIntegerType() || PV->getType()->isEnumeralType()))
+  {
+    return wasm_rt_type_t::WASM_RT_I64;
+  }
+  else if(PV->getType()->isFloatingType()) /* There should also be future support for 64 bit types*/
+  {
+    return wasm_rt_type_t::WASM_RT_F64;
+  }
+  else
+  {
+    assert("Unknown Callback Type Encountered");
+  }
+}
+
+wasm_rt_type_t ReturnWasmArgType(QualType QV){
+  if(QV.getTypePtr()->isVoidType()){
+    return wasm_rt_type_t::WASM_RT_I32;
+  }
+  else if(QV.getTypePtr()->isTaintedPointerType()){
+    return wasm_rt_type_t::WASM_RT_I32;
+  }
+  else if((QV.getTypePtr()->isIntegerType() || QV.getTypePtr()->isEnumeralType()))
+  {
+    return wasm_rt_type_t::WASM_RT_I64;
+  }
+  else if(QV.getTypePtr()->isFloatingType()) /* There should also be future support for 64 bit types*/
+  {
+      return wasm_rt_type_t::WASM_RT_F64;
+    }
+  else
+  {
+    assert("Unknown Callback Type Encountered");
+  }
+}
+
+std::string ReturnRetParamType(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, VarDecl* FD){
+
+  /*
+   * Value types. Used to define function signatures.
+  typedef enum {
+    WASM_RT_I32,
+    WASM_RT_I64,
+    WASM_RT_F32,
+    WASM_RT_F64,
+  } wasm_rt_type_t;
+  */
+
+  std::string ArgString = "";
+  std::vector<std::string> ret_param_entries;
+  /*
+   * First check the return type
+   */
+  ret_param_entries.push_back(itostr(ReturnWasmArgType(FD->getAsFunction()->getReturnType())));
+  for(int i = 0 ; i < FD->getAsFunction()->getNumParams(); i++)
+  {
+    ret_param_entries.push_back(itostr(ReturnWasmArgType(FD->getAsFunction()->getParamDecl(i))));
+  }
+
+  /*
+   * Now iterate through all the argument types and generate the array string
+   */
+  for(auto arg: ret_param_entries){
+    ArgString += arg;
+    ArgString += ",";
+  }
+  /*
+   * Remove the trailing character
+   */
+    ArgString.pop_back();
+    return ArgString;
+}
 
 bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                           Rewriter &R)
@@ -117,6 +204,8 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     std::string wasm_function_name = "w2c_"+function_name;
     //now generate the return type -->
     std::string returnArg = "";
+    std::vector<std::string> VarDecls ;
+
     bool isTaintedPointerReturn = false;
     if(tainted_function_decls->getAsFunction()->getReturnType()->isTaintedPointerType()){
       returnArg = "c_fetch_pointer_from_offset(";
@@ -129,6 +218,12 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     //now generate the parameter list in form of a string -->
     std::string final_param_string = "";
     std::vector<std::string> set_of_params;
+    /*
+     * The first argument to the tainted function call will always be a
+     * fetch_sandbox_address()
+     */
+    set_of_params.push_back("c_fetch_sandbox_address()");
+
     for(auto params: map_of_params)
     {
       std::string sbx_instrumented_param;
@@ -137,9 +232,31 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
         sbx_instrumented_param = "c_fetch_pointer_offset(" +
                                  params.first->getNameAsString()+")";
       }
+      else if(params.first->getType()->isFunctionPointerType()){
+        /*
+         * This argument is a function pointer callback
+         * Fetch the callback_trampoline index for this function name and
+         * pass it as an argument
+         */
+         VarDecls.push_back("int ret_param_types[] = {"+
+          ReturnRetParamType(Context,Info,R,
+          params.first->getInitializingDeclaration())+"};\n");
+
+         int ret_param = 0;
+         if(!params.first->getAsFunction()->getReturnType()->isVoidType())
+           ret_param = 1;
+
+         sbx_instrumented_param = "sbx_register_callback("+
+                                  params.first->getNameAsString() + " , "
+                                  + itostr(params.first->getAsFunction()->getNumParams())
+                                  + " , "
+                                  + itostr(ret_param)
+                                  + " , "
+                                  + "ret_param_types)";
+      }
       else if(isTaintedStruct(params.first))
       {
-        //special instrumentation needed here that would accept a Tstruct and return a Tainted struct pointer
+
       }
       else{
         sbx_instrumented_param = params.first->getNameAsString();
@@ -160,6 +277,10 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
 
     // Now append it to required items and form the final call -->
     std::string FinalBoardingCall = "";
+    for (auto init_decl : VarDecls)
+    {
+      FinalBoardingCall += init_decl;
+    }
     FinalBoardingCall = "\n\nreturn " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
 
     R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);

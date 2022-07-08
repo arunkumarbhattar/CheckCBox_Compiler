@@ -413,6 +413,8 @@ def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
 def err_tainted_non_function: Error<
   "'_Tainted' can only appear on functions">;
+def err_tainted_callback_non_function: Error<
+  "'_Callback' can only appear on functions">;
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
@@ -800,8 +802,11 @@ def ext_noreturn_main : ExtWarn<
   "'main' is not allowed to be declared _Noreturn">, InGroup<Main>;
 def ext_tainted_main : ExtWarn<
     "'main' is not allowed to be declared _Tainted">, InGroup<Main>;
+def ext_tainted_callback_main : ExtWarn<
+    "'main' is not allowed to be declared _Callback">, InGroup<Main>;
 def note_main_remove_noreturn : Note<"remove '_Noreturn'">;
 def note_main_remove_tainted : Note<"remove '_Tainted'">;
+def note_main_remove_tainted_callback : Note<"remove '_Callback'">;
 def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
@@ -9499,8 +9504,13 @@ def err_incompatible_tainted_pointer_2_unchecked_assignment : Error<
   "Tainted-pointers cannot point to Unchecked-pointers">;
 def err_tainted_specified_functions_should_have_tainted_pointers : Error<
   "Functions marked as Tainted can only accept/return pointers of Tainted Type">;
- def err_tainted_specified_functions_should_have_tainted_structs : Error<
+def err_tainted_specified_functions_should_have_tainted_structs : Error<
    "Functions marked as Tainted can only accept/return structs of Tainted Type">;
+
+def err_callback_specified_functions_should_have_tainted_pointers : Error<
+  "Functions marked as Callback can only accept/return pointers of Tainted Type">;
+def err_callback_specified_functions_should_have_tainted_structs : Error<
+   "Functions marked as Callback can only accept/return structs of Tainted Type">;
 
 // Checked C specific error messages about returns
 def err_return_missing_expr : Error<

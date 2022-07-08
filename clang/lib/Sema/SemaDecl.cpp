@@ -6099,6 +6099,24 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
          diag::err_tainted_specified_functions_should_have_tainted_structs);
   }
 
+  // The Below condition is to prevent _Callback functions from having pointer
+  // return types that are not _Callback
+
+  if ((D.getDeclSpec().isCallbackSpecified()) &&
+      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
+       D.getDeclSpec().getPointerTypeChecked().isValid()))
+  {
+    Diag(D.getDeclSpec().getBeginLoc(),
+         diag::err_callback_specified_functions_should_have_tainted_pointers);
+  }
+  // The below condition is to prevent Callback functions from have struct
+  //return types that are not tainted
+  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+  {
+    Diag(D.getDeclSpec().getBeginLoc(),
+         diag::err_callback_specified_functions_should_have_tainted_structs);
+  }
+
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer() &&
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();

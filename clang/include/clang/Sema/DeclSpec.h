@@ -382,6 +382,7 @@ private:
 
   unsigned FS_tainted_specified : 1;
 
+  unsigned FS_tainted_callback_specified : 1;
   // constexpr-specifier
   unsigned ConstexprSpecifier : 2;
 
@@ -434,7 +435,7 @@ private:
       TQ_unalignedLoc;
   SourceLocation PT_Generic_C_Loc, PT_Checked_C_Loc , PT_Tainted_C_Loc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
-      FS_taintedLoc;
+      FS_taintedLoc, FS_tainted_callbackLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   // Checked C - checked keyword location
@@ -677,8 +678,10 @@ public:
 
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   bool isTaintedSpecified() const {return FS_tainted_specified; }
+  bool isCallbackSpecified() const {return FS_tainted_callback_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
   SourceLocation getTaintedSpecLoc() const { return FS_taintedLoc; }
+  SourceLocation getTaintedCallbackSpecLoc() const { return FS_tainted_callbackLoc;}
   SourceLocation getPointerTypeChecked() const {return PT_Checked_C_Loc; }
   SourceLocation getPointerTypeTainted() const {return PT_Tainted_C_Loc; }
   SourceLocation getPointerTypeGeneric() const {return PT_Generic_C_Loc; }
@@ -738,6 +741,7 @@ public:
     FS_tainted_specified = false;
     FS_noreturnLoc = SourceLocation();
     FS_taintedLoc = SourceLocation();
+    FS_tainted_callbackLoc = SourceLocation();
     FS_checked_specified = CSS_None;
     FS_checkedLoc = SourceLocation();
     FS_forany_specified = false;
@@ -969,6 +973,8 @@ public:
   ///
   /// Only tag declspecs can stand alone.
   bool isMissingDeclaratorOk();
+  bool setFunctionSpecCallback(SourceLocation Loc, const char *&PrevSpec,
+                               unsigned int &DiagID);
 };
 
 /// Captures information about "declaration specifiers" specific to

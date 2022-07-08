@@ -2006,26 +2006,46 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
                     : FixItHint());
     }
 
-    //The _Tainted keyword can't appear here
+    //The _Callback  keyword can't appear here
     // If we find the keyword here, tell the user to put it
     // at the start instead.
-    if (Tok.is(tok::kw__Tainted)) {
+    if (Tok.is(tok::kw__Callback)) {
       SourceLocation Loc = ConsumeToken();
       const char *PrevSpec;
       unsigned DiagID;
 
       // We can offer a fixit if it's valid to mark this function as _Tainted
       // and we don't have any other declarators in this declaration.
-      bool Fixit = !DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
+      bool Fixit = !DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
       MaybeParseGNUAttributes(D, &LateParsedAttrs);
       Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
 
-      Diag(Loc, diag::err_c11_tainted_misplaced)
+      Diag(Loc, diag::err_c11_tainted_callback_misplaced)
           << (Fixit ? FixItHint::CreateRemoval(Loc) : FixItHint())
-          << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Tainted ")
+          << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Callback")
                     : FixItHint());
     }
+
+  //The _Tainted keyword can't appear here
+  // If we find the keyword here, tell the user to put it
+  // at the start instead.
+  if (Tok.is(tok::kw__Tainted)) {
+    SourceLocation Loc = ConsumeToken();
+    const char *PrevSpec;
+    unsigned DiagID;
+
+    // We can offer a fixit if it's valid to mark this function as _Tainted
+    // and we don't have any other declarators in this declaration.
+    bool Fixit = !DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
+    MaybeParseGNUAttributes(D, &LateParsedAttrs);
+    Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
+
+    Diag(Loc, diag::err_c11_tainted_misplaced)
+        << (Fixit ? FixItHint::CreateRemoval(Loc) : FixItHint())
+        << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Tainted")
+                  : FixItHint());
   }
+}
 
   // Check to see if we have a function *definition* which must have a body.
   if (D.isFunctionDeclarator()) {
@@ -3203,7 +3223,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                         DeclSpecContext DSContext,
                                         LateParsedAttrList *LateAttrs) {
   if (DS.getSourceRange().isInvalid()) {
-    // Start the range at the current token but make the end of the range
+// Start the range at the current token but make the end of the range
     // invalid.  This will make the entire range invalid unless we successfully
     // consume a token.
     DS.SetRangeStart(Tok.getLocation());
@@ -3258,7 +3278,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // specifiers.  First verify that DeclSpec's are consistent.
       DS.Finish(Actions, Policy);
       return;
-
+    case tok::star:
+      if(DS.isTaintedSpecified()){
+        Diag(Tok, diag::err_tainted_specified_functions_should_have_tainted_structs) << Tok.getName();
+      }
+      continue;
     case tok::l_square:
     case tok::kw_alignas:
       if (!standardAttributesAllowed() || !isCXX11AttributeSpecifier())
@@ -3946,6 +3970,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
       break;
 
+   case tok::kw__Callback:
+     if(!getLangOpts().C11)
+       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+     isInvalid = DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
+     break;
+
     // alignment-specifier
     case tok::kw__Alignas:
       if (!getLangOpts().C11)
@@ -4170,6 +4200,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw__Ptr:
     case tok::kw__Array_ptr:
     case tok::kw__Nt_array_ptr: {
+      if(DS.isTaintedSpecified())
+      {
+        Diag(Tok, diag::err_tainted_specified_functions_should_have_tainted_pointers) << Tok.getName();
+      }
+      else if(DS.isCallbackSpecified())
+      {
+        Diag(Tok, diag::err_callback_specified_functions_should_have_tainted_pointers) << Tok.getName();
+      }
       isInvalid = DS.SetPointerTypeQual(DeclSpec::PT_Checked_C, Loc, PrevSpec, DiagID,
                                         getLangOpts());
       ParseCheckedPointerSpecifiers(DS);
@@ -4202,6 +4240,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_Tstruct:
     case tok::kw___interface:
     case tok::kw_union: {
+      if((Tok.is(tok::kw_struct)) && (DS.isTaintedSpecified()))
+      {
+        Diag(Tok, diag::err_tainted_specified_functions_should_have_tainted_structs) << Tok.getName();
+      }
+      else if((Tok.is(tok::kw_struct)) && (DS.isCallbackSpecified()))
+      {
+        Diag(Tok, diag::err_callback_specified_functions_should_have_tainted_structs) << Tok.getName();
+      }
+
       tok::TokenKind Kind = Tok.getKind();
       ConsumeToken();
 
@@ -5652,6 +5699,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_explicit:
   case tok::kw__Noreturn:
   case tok::kw__Tainted:
+  case tok::kw__Callback:
   case tok::kw__For_any:
   case tok::kw__Itype_for_any:
 
@@ -7278,9 +7326,10 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator
       ParmDeclarator.getDeclSpec().getTypeSpecType();
   SourceLocation Current_indentifier_type_loc =
       ParmDeclarator.getDeclSpec().getTypeSpecTypeLoc();
+
   if ((Current_indentifier_type == TST_plainPtr) ||
       (Current_indentifier_type == TST_arrayPtr) ||
-      (Current_indentifier_type == TST_ntarrayPtr)) {
+      (Current_indentifier_type == TST_ntarrayPtr)){
     Diag(ParmDeclarator.getIdentifierLoc(),
          diag::err_tainted_specified_functions_must_have_tainted_pointers)
         << FixItHint::CreateInsertion(

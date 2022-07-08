@@ -23,6 +23,8 @@
 #undef _Tainted
 #define _Tainted [[tainted]]
 
+#undef _Callback
+#define _Callback [[callback]]
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

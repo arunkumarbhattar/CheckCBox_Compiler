@@ -1131,6 +1131,21 @@ bool DeclSpec::setFunctionSpecTainted(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecCallback(SourceLocation Loc,
+                                      const char *&PrevSpec,
+                                      unsigned &DiagID) {
+  // '_Callback _Callback' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_tainted_callback_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_Callback";
+    return true;
+  }
+  FS_tainted_callback_specified = true;
+  FS_tainted_callbackLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecChecked(SourceLocation Loc,
                                       CheckedScopeSpecifier CSS,
                                       const char *&PrevSpec,

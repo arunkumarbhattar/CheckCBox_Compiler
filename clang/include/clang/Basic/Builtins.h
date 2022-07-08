@@ -120,6 +120,11 @@ public:
     return strcmp(getRecord(ID).Name, "_Tainted") == 0;
   }
 
+  /// Return true if we know this builtin never returns.
+  bool isTaintedCallback(unsigned ID) const {
+    return strcmp(getRecord(ID).Name, "_Callback") == 0;
+  }
+
   /// Return true if we know this builtin can return twice.
   bool isReturnsTwice(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'j') != nullptr;
