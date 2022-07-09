@@ -9506,11 +9506,19 @@ def err_tainted_specified_functions_should_have_tainted_pointers : Error<
   "Functions marked as Tainted can only accept/return pointers of Tainted Type">;
 def err_tainted_specified_functions_should_have_tainted_structs : Error<
    "Functions marked as Tainted can only accept/return structs of Tainted Type">;
+def err_tainted_function_can_only_have_callback_func_ptrs : Error<
+   "Functions marked as Tainted can only accept function pointers are \"_Callback\" specified">;
+def err_tainted_function_can_only_have_callback_func_ptrs_ret : Error<
+   "Functions marked as Tainted NOT return function pointers">;
+def err_callback_func_must_be_declarated: Error<
+   "Callback Function Prototype is missing!">;
 
 def err_callback_specified_functions_should_have_tainted_pointers : Error<
   "Functions marked as Callback can only accept/return pointers of Tainted Type">;
 def err_callback_specified_functions_should_have_tainted_structs : Error<
    "Functions marked as Callback can only accept/return structs of Tainted Type">;
+def err_callback_specified_functions_cannot_return_func_ptrs : Error<
+   "Functions marked as Callback can NOT return function pointers">;
 
 // Checked C specific error messages about returns
 def err_return_missing_expr : Error<

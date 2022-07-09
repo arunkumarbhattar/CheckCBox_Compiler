@@ -9462,6 +9462,116 @@ static bool isKNRDeclarationOnly(FunctionDecl *Decl) {
   return false;
 }
 
+bool Sema::CheckTaintedFunctionIntegrity(ParmVarDecl *Param)
+{
+  /*
+   * A _Tainted attributed function can NOT accept the following types
+   * as parameter values
+   * 1.) struct --> Alternative Tstruct
+   * 2.) _Ptr (checked Ptr) --> Alternative _TPtr
+   * 3.) _Array_ptr (checked array pointer) --> Alternative _TArray_ptr
+   * 4.) _Nt_array_ptr (checked null-terminated array pointer) --> Alternative _TNt_array_ptr
+   * 5.) Generic C pointer that is not a function pointer (example int* , char* , Tstruct*)
+   * 6.) A function pointer whose function declaration is not marked as Callback
+   * NOTE: func_ptr* are allowed as arguments, but not return value
+   */
+
+
+  if(Param->getType()->isCheckedPointerType())
+  {
+    Diag(Param->getLocation(), diag::err_tainted_specified_functions_should_have_tainted_pointers)
+        << FixItHint::CreateInsertion(
+               Param->getLocation(),
+               "Create a Tainted Pointer instead and Marshall the data into it");
+    return false;
+  }
+  else if(Param->getType()->isUncheckedPointerType() &&
+           !Param->getType()->getPointeeType()->isFunctionType())
+  {
+    /*
+     * The only allowed unchecked pointer (generic-C) pointer type is
+     * a function pointer type
+     */
+    Diag(Param->getLocation(), diag::err_tainted_specified_functions_should_have_tainted_pointers)
+        << FixItHint::CreateInsertion(
+               Param->getLocation(),
+               "Create a Tainted Pointer instead and Marshall the data into it");
+    return false;
+  }
+  else if(Param->getType()->isStructureType())
+  {
+    Diag(Param->getLocation(), diag::err_tainted_specified_functions_should_have_tainted_structs)
+        << FixItHint::CreateInsertion(Param->getLocation(),
+          "Create a Tstruct instead and reflect this data into it ");
+    return false;
+  }
+
+
+  if(Param->getType()->isUncheckedPointerType() &&
+     Param->getType()->getPointeeType()->isFunctionType())
+  {
+    if(Param->getAsFunction() == NULL)
+    {
+      Diag(Param->getLocation(), diag::err_callback_func_must_be_declarated)
+          << FixItHint::CreateInsertion(Param->getLocation(),
+                                        "Create the Function prototype with _Callback");
+    }
+    else if(!Param->getAsFunction()->isCallback()){
+    Diag(Param->getLocation(), diag::err_tainted_function_can_only_have_callback_func_ptrs)
+        << FixItHint::CreateInsertion(Param->getLocation(),
+                                      "Mark the Passed Function pointer as a Callback");
+    return false;
+    }
+  }
+  return true;
+}
+
+bool Sema::CheckCallbackFunctionIntegrity(ParmVarDecl *Param)
+{
+  /*
+   * A _Callback attributed function can NOT accept the following types
+   * as parameter values
+   * 1.) struct --> Alternative Tstruct
+   * 2.) _Ptr (checked Ptr) --> Alternative _TPtr
+   * 3.) _Array_ptr (checked array pointer) --> Alternative _TArray_ptr
+   * 4.) _Nt_array_ptr (checked null-terminated array pointer) --> Alternative _TNt_array_ptr
+   * 5.) Generic C pointer that is not a function pointer (example int* , char* , Tstruct*)
+   * NOTE: func_ptr* are allowed as arguments, but not Return values
+   */
+
+
+  if(Param->getType()->isCheckedPointerType())
+  {
+    Diag(Param->getLocation(), diag::err_callback_specified_functions_should_have_tainted_pointers)
+        << FixItHint::CreateInsertion(
+               Param->getLocation(),
+               "Create a Tainted Pointer(allocated with t_malloc) instead and Marshall the data into it");
+    return false;
+  }
+  else if(Param->getType()->isUncheckedPointerType() &&
+           !Param->getType()->getPointeeType()->isFunctionType())
+  {
+    /*
+     * The only allowed unchecked pointer (generic-C) pointer type is
+     * a function pointer type
+     */
+    Diag(Param->getLocation(), diag::err_callback_specified_functions_should_have_tainted_pointers)
+        << FixItHint::CreateInsertion(
+               Param->getLocation(),
+               "Create a Tainted Pointer(allocated with t_malloc) instead and Marshall the data into it");
+    return false;
+  }
+  else if(Param->getType()->isStructureType())
+  {
+    Diag(Param->getLocation(), diag::err_callback_specified_functions_should_have_tainted_structs)
+        << FixItHint::CreateInsertion(Param->getLocation(),
+                                      "Create a Tstruct instead and reflect this data into it ");
+    return false;
+  }
+
+  return true;
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -9521,6 +9631,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setTaintedFunctionFlag(true);
+  }
+
+  if(D.getDeclSpec().isCallbackSpecified())
+  {
+    //we need to set the Function's exttype class with this attribute
+    NewFD->setCallbackFunctionFlag(true);
   }
 
   if (D.getDeclSpec().isForanySpecified() || D.getDeclSpec().isItypeforanySpecified()) {
@@ -9923,6 +10039,22 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       for (unsigned i = 0, e = FTI.NumParams; i != e; ++i) {
         ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
         assert(Param->getDeclContext() != NewFD && "Was set before ?");
+        /*
+         * If the FunctionDecl is Tainted,
+         * Make sure the argument type signature is legal
+         */
+        if(D.getDeclSpec().isTaintedSpecified()){
+          if(!CheckTaintedFunctionIntegrity(Param)){
+            NewFD->setInvalidDecl();
+          }
+        }
+
+        if(D.getDeclSpec().isCallbackSpecified()){
+          if(!CheckCallbackFunctionIntegrity(Param)){
+            NewFD->setInvalidDecl();
+          }
+        }
+
         Param->setDeclContext(NewFD);
         Params.push_back(Param);
 
@@ -10515,7 +10647,66 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   MarkUnusedFileScopedDecl(NewFD);
 
+  if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isPointerType()) &&
+      (NewFD->getReturnType()->isTaintedPointerType())){
+    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
+    if(NewFD->isTainted()) {
+      Diag(D.getIdentifierLoc(),
+           diag::err_tainted_specified_functions_should_have_tainted_pointers)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Tainted Pointer")
+                  : FixItHint());
+    }
+    else if( NewFD->isCallback()){
+      Diag(D.getIdentifierLoc(),
+           diag::err_callback_specified_functions_should_have_tainted_pointers)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Tainted Pointer")
+                  : FixItHint());
+    }
+    D.setInvalidType();
+  }
 
+  if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isStructureType())){
+    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
+    if(NewFD->isTainted()) {
+      Diag(D.getIdentifierLoc(),
+           diag::err_tainted_specified_functions_should_have_tainted_structs)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Tstruct")
+                  : FixItHint());
+    }
+    else if( NewFD->isCallback()){
+      Diag(D.getIdentifierLoc(),
+           diag::err_callback_specified_functions_should_have_tainted_structs)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Tstruct")
+                  : FixItHint());
+    }
+    D.setInvalidType();
+  }
+
+  if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isPointerType()) &&
+      (NewFD->getReturnType()->isFunctionType())){
+    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
+    if(NewFD->isTainted()) {
+      Diag(D.getIdentifierLoc(),
+           diag::err_tainted_function_can_only_have_callback_func_ptrs_ret)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Call the tainted function directly "
+                                                          "instead of returning its function pointer")
+                  : FixItHint());
+    }
+    else if( NewFD->isCallback()){
+      Diag(D.getIdentifierLoc(),
+           diag::err_callback_specified_functions_cannot_return_func_ptrs)
+          << (RTRange.isValid()
+                  ? FixItHint::CreateReplacement(RTRange, "Register the function as a callback "
+                                                          "and then pass it as a function pointer argument to the tainted function")
+                  : FixItHint());
+    }
+    D.setInvalidType();
+  }
 
   if (getLangOpts().OpenCL && NewFD->hasAttr<OpenCLKernelAttr>()) {
     // OpenCL v1.2 s6.8 static is invalid for kernel functions.
@@ -10527,6 +10718,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     // OpenCL v1.2, s6.9 -- Kernels can only have return type void.
     if (!NewFD->getReturnType()->isVoidType()) {
+
       SourceRange RTRange = NewFD->getReturnTypeSourceRange();
       Diag(D.getIdentifierLoc(), diag::err_expected_kernel_void_return_type)
           << (RTRange.isValid() ? FixItHint::CreateReplacement(RTRange, "void")

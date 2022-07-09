@@ -3278,11 +3278,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // specifiers.  First verify that DeclSpec's are consistent.
       DS.Finish(Actions, Policy);
       return;
-    case tok::star:
-      if(DS.isTaintedSpecified()){
-        Diag(Tok, diag::err_tainted_specified_functions_should_have_tainted_structs) << Tok.getName();
-      }
-      continue;
     case tok::l_square:
     case tok::kw_alignas:
       if (!standardAttributesAllowed() || !isCXX11AttributeSpecifier())
@@ -7298,6 +7293,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     // The list continues if we see a comma.
   } while (TryConsumeToken(tok::comma));
 }
+/*
 void Parser::CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLoc) {
   unsigned int curr_token = 1;
   while ((GetLookAheadToken(curr_token).isNot(tok::comma)) &&
@@ -7319,7 +7315,8 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLo
     curr_token++;
   }
 }
-
+*/
+/*
 void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator)
 {
   TypeSpecifierType Current_indentifier_type =
@@ -7370,7 +7367,7 @@ void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator
     token_hop++;
   }
 }
-
+*/
 /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
 /// after the opening parenthesis. This function will not parse a K&R-style
 /// identifier list.
@@ -7421,10 +7418,10 @@ void Parser::ParseParameterDeclarationClause(
     return;
   }
 
-  if(isTaintedDeclaration)
-  {
-    CheckTaintedFunctionDeclarationIntegrity(EllipsisLoc);
-  }
+//  if(isTaintedDeclaration)
+//  {
+//    CheckTaintedFunctionDeclarationIntegrity(EllipsisLoc);
+//  }
 
   // Delay parsing/semantic checking of bounds expressions until after the
   // parameter list is parsed. For each variable with a bounds declaration,
@@ -7484,9 +7481,9 @@ void Parser::ParseParameterDeclarationClause(
     // Parse GNU attributes, if present.
     MaybeParseGNUAttributes(ParmDeclarator);
 
-    if (isTaintedDeclaration) {
-      CheckTaintedFunctionDeclarationIntegrity(ParmDeclarator);
-    }
+//    if (isTaintedDeclaration) {
+//      CheckTaintedFunctionDeclarationIntegrity(ParmDeclarator);
+//    }
 
     if (Tok.is(tok::kw_requires)) {
       // User tried to define a requires clause in a parameter declaration,

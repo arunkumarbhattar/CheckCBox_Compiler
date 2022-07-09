@@ -1977,6 +1977,8 @@ public:
   };
 
   bool Tainted = false;
+
+  bool Callback = false;
   /// Stashed information about a defaulted function definition whose body has
   /// not yet been lazily generated.
   class DefaultedFunctionInfo final
@@ -2199,6 +2201,8 @@ public:
   void setGenericFunctionFlag(bool f) { FunctionDeclBits.IsGenericFunction = f; }
   void setTaintedFunctionFlag(bool f = false) {
     this->Tainted = f; }
+  void setCallbackFunctionFlag(bool f = false) {
+    this->Callback = f; }
   bool isGenericFunction() const { return FunctionDeclBits.IsGenericFunction; }
 
   void setItypeGenericFunctionFlag(bool f) { FunctionDeclBits.IsItypeGenericFunction = f; }
@@ -2550,6 +2554,10 @@ public:
   /// Determines whether this function is known to be 'tainted', through
   /// an attribute on its declaration or its type.
   bool isTainted() const {return this->Tainted;};
+
+  /// Determines whether this function is known to be 'callback', through
+  /// an attribute on its declaration or its type.
+  bool isCallback() const {return this->Callback;};
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }

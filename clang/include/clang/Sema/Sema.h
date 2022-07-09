@@ -13436,6 +13436,8 @@ public:
   /// Adds Callee to DeviceCallGraph if we don't know if its caller will be
   /// codegen'ed yet.
   bool checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+  bool CheckTaintedFunctionIntegrity(ParmVarDecl *Param);
+  bool CheckCallbackFunctionIntegrity(ParmVarDecl *Param);
 };
 
 /// RAII object that enters a new expression evaluation context.
