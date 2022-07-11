@@ -7293,81 +7293,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     // The list continues if we see a comma.
   } while (TryConsumeToken(tok::comma));
 }
-/*
-void Parser::CheckTaintedFunctionDeclarationIntegrity(SourceLocation &EllipsisLoc) {
-  unsigned int curr_token = 1;
-  while ((GetLookAheadToken(curr_token).isNot(tok::comma)) &&
-         (GetLookAheadToken(curr_token).isNot(tok::r_paren))) {
-    if (GetLookAheadToken(curr_token).is(tok::star)) {
-      Diag(EllipsisLoc,
-           diag::err_tainted_specified_functions_must_have_tainted_pointers)
-          << FixItHint::CreateInsertion(EllipsisLoc.getLocWithOffset(1),
-                                        "Marshall this pointer data to tainted memory allocated by t_malloc ");
-      break;
-    }
 
-    if(GetLookAheadToken(curr_token).is(tok::kw_struct)) {
-      Diag(EllipsisLoc,
-           diag::err_tainted_specified_functions_must_have_tainted_structs)
-    << FixItHint::CreateInsertion(EllipsisLoc.getLocWithOffset(1),
-                                  "Create a TStruct and reflect this structs data to it ");
-    }
-    curr_token++;
-  }
-}
-*/
-/*
-void Parser::CheckTaintedFunctionDeclarationIntegrity(Declarator &ParmDeclarator)
-{
-  TypeSpecifierType Current_indentifier_type =
-      ParmDeclarator.getDeclSpec().getTypeSpecType();
-  SourceLocation Current_indentifier_type_loc =
-      ParmDeclarator.getDeclSpec().getTypeSpecTypeLoc();
-
-  if ((Current_indentifier_type == TST_plainPtr) ||
-      (Current_indentifier_type == TST_arrayPtr) ||
-      (Current_indentifier_type == TST_ntarrayPtr)){
-    Diag(ParmDeclarator.getIdentifierLoc(),
-         diag::err_tainted_specified_functions_must_have_tainted_pointers)
-        << FixItHint::CreateInsertion(
-               Current_indentifier_type_loc,
-               "Marshall this pointer data to tainted memory allocated by t_malloc ");
-  }
-
-  if(Current_indentifier_type == TST_struct){
-    Diag(ParmDeclarator.getIdentifierLoc(),
-         diag::err_tainted_specified_functions_must_have_tainted_structs)
-    << FixItHint::CreateInsertion(Current_indentifier_type_loc,
-                             "Create a TStruct and reflect this structs data to it ");
-  }
-
-  // Currently the Token points to a comma,
-  // keep hopping tokens until you see a r_paren or a comma
-  unsigned int token_hop = 1;
-  while (GetLookAheadToken(token_hop).isNot(tok::comma) &&
-         (GetLookAheadToken(token_hop).isNot(tok::r_paren)) &&
-         (token_hop < ParmDeclarator.getEndLoc().getRawEncoding() -
-                          ParmDeclarator.getBeginLoc().getRawEncoding())) {
-    if (GetLookAheadToken(token_hop).is(tok::star)) {
-      Diag(ParmDeclarator.getIdentifierLoc().getLocWithOffset(2),
-           diag::err_tainted_specified_functions_must_have_tainted_pointers)
-          << FixItHint::CreateInsertion(
-                 Current_indentifier_type_loc.getLocWithOffset(2),
-                 "Marshall this pointer data to tainted memory allocated by t_malloc ");
-      break;
-    }
-
-    if(GetLookAheadToken(token_hop).is(tok::kw_struct)) {
-      Diag(ParmDeclarator.getIdentifierLoc().getLocWithOffset(2),
-           diag::err_tainted_specified_functions_must_have_tainted_structs)
-    << FixItHint::CreateInsertion(Current_indentifier_type_loc.getLocWithOffset(2),
-                                  "Create a TStruct and reflect this structs data to it ");
-    }
-
-    token_hop++;
-  }
-}
-*/
 /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
 /// after the opening parenthesis. This function will not parse a K&R-style
 /// identifier list.
@@ -7417,11 +7343,6 @@ void Parser::ParseParameterDeclarationClause(
     cutOffParsing();
     return;
   }
-
-//  if(isTaintedDeclaration)
-//  {
-//    CheckTaintedFunctionDeclarationIntegrity(EllipsisLoc);
-//  }
 
   // Delay parsing/semantic checking of bounds expressions until after the
   // parameter list is parsed. For each variable with a bounds declaration,
@@ -7480,10 +7401,6 @@ void Parser::ParseParameterDeclarationClause(
 
     // Parse GNU attributes, if present.
     MaybeParseGNUAttributes(ParmDeclarator);
-
-//    if (isTaintedDeclaration) {
-//      CheckTaintedFunctionDeclarationIntegrity(ParmDeclarator);
-//    }
 
     if (Tok.is(tok::kw_requires)) {
       // User tried to define a requires clause in a parameter declaration,
