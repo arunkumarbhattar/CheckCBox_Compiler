@@ -10649,7 +10649,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   MarkUnusedFileScopedDecl(NewFD);
 
   if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isPointerType()) &&
-      (NewFD->getReturnType()->isTaintedPointerType())){
+      (!NewFD->getReturnType()->isTaintedPointerType())){
     SourceRange RTRange = NewFD->getReturnTypeSourceRange();
     if(NewFD->isTainted()) {
       Diag(D.getIdentifierLoc(),
