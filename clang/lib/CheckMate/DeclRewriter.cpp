@@ -16,21 +16,10 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <sstream>
 #include <ostream>
 
 using namespace llvm;
 using namespace clang;
-
-bool TaintedFunctionConstructor(ASTContext &Context, ProgramInfo &Info,
-Rewriter &R, Decl* tainted_D){
-  /*
-   * Here is where we will construct the function signature for the tainted type
-   *
-   */
-  std::string function_return_signature = "";
-
-}
 
 SourceLocation
 end_of_the_end(SourceLocation const & start_of_end, SourceManager & sm){
@@ -126,10 +115,66 @@ wasm_rt_type_t ReturnWasmArgType(QualType QV){
     }
   else
   {
-    assert("Unknown Callback Type Encountered");
+    assert("Unknown Callback argument Type Encountered");
   }
 }
 
+std::string WasmEnumToString(wasm_rt_type_t wasm_type)
+{
+  switch(wasm_type){
+  case WASM_RT_I32:
+    return "unsigned int";
+  case WASM_RT_I64:
+    return "unsigned long int";
+  case WASM_RT_F32:
+    return "float";
+  case WASM_RT_F64:
+    return "double";
+  default:
+    assert("Unknown Type WASM RT Type Encountered!!");
+  }
+}
+/*
+ * Return RetParamObject
+ * Purpose:
+ * This object would be useful in generating the callback trampoline function
+ * output:
+ * std::vector<int> RetParamObject --> this object Holds the signature of the
+ * callback trampoline
+ * ----> First Arg --> Return Type (WASM)
+ * ----> Subsequent Args --> params (WASM)
+ * input: ASTContext &Context, ProgramInfo &Info,
+    Rewriter &R, VarDecl* FD
+ */
+std::vector<int> ReturnRetParamObject(ASTContext &Context, ProgramInfo &Info,
+                                      Rewriter &R, VarDecl* FD)
+{
+  /*
+   * Value types. Used to define function signatures.
+  typedef enum {
+    WASM_RT_I32,
+    WASM_RT_I64,
+    WASM_RT_F32,
+    WASM_RT_F64,
+  } wasm_rt_type_t;
+  */
+
+  std::string ArgString = "";
+  std::vector<int> ret_param_entries;
+  /*
+   * First check the return type
+   */
+  const clang::PointerType *pt = FD->getType()->getAs<clang::PointerType>();
+  const clang::FunctionProtoType *ft = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
+  if (ft == nullptr)
+    assert("Function pointer argument to Tainted function not prototyped yet!");
+  ret_param_entries.push_back(ReturnWasmArgType(ft->getReturnType()));
+  for(int i = 0 ; i < ft->getNumParams(); i++)
+  {
+    ret_param_entries.push_back(ReturnWasmArgType(ft->getParamType(i)));
+  }
+  return ret_param_entries;
+}
 std::string ReturnRetParamType(ASTContext &Context, ProgramInfo &Info,
                                  Rewriter &R, VarDecl* FD){
 
@@ -148,10 +193,12 @@ std::string ReturnRetParamType(ASTContext &Context, ProgramInfo &Info,
   /*
    * First check the return type
    */
-  ret_param_entries.push_back(itostr(ReturnWasmArgType(FD->getAsFunction()->getReturnType())));
-  for(int i = 0 ; i < FD->getAsFunction()->getNumParams(); i++)
+  const clang::PointerType *pt = FD->getType()->getAs<clang::PointerType>();
+  const clang::FunctionProtoType *ft = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
+  ret_param_entries.push_back(itostr(ReturnWasmArgType(ft->getReturnType())));
+  for(int i = 0 ; i < ft->getNumParams(); i++)
   {
-    ret_param_entries.push_back(itostr(ReturnWasmArgType(FD->getAsFunction()->getParamDecl(i))));
+    ret_param_entries.push_back(itostr(ReturnWasmArgType(ft->getParamType(i))));
   }
 
   /*
@@ -166,6 +213,126 @@ std::string ReturnRetParamType(ASTContext &Context, ProgramInfo &Info,
    */
     ArgString.pop_back();
     return ArgString;
+}
+
+/*
+ * Func Name: GenerateCallbackInterceptor
+ * Purpose --> Generate the callback interceptor function.
+ * This function would be called from the tainted region.
+ * WASM-2->C type-conversion would be carried and the call to the actual
+ * callback function would be performed with the converted arguments.
+ *
+ * Return Type --> bool --> Successful conversion
+ *
+ * Params --> ASTContext &Context, ProgramInfo &Info,
+ * Rewriter &R, string callback_func_name, SourceLocation,
+ * std::vector<int> func_signature
+ *
+ * Location: This "trampoline" function would be inserted just before the tainted
+ * function definition
+ */
+bool GenerateCallbackInterceptor(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, std::string callback_func_name,
+                                 SourceLocation InsertionPt,
+                                 VarDecl *FD,
+                                 std::vector<int> func_signature)
+{
+/*
+ * Generate an entire string of the function and insert it before the InsertionPt
+ *
+ */
+const clang::PointerType *pt = FD->getType()->getAs<clang::PointerType>();
+const clang::FunctionProtoType *FPT = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
+/*
+ * First generate the return type
+ */
+  std::string Return_Type = "\n" + WasmEnumToString(
+    static_cast<wasm_rt_type_t>(func_signature[0]));
+
+  std::string trampoline_func_name = callback_func_name + "_trampoline";
+
+  std::string params = "";
+
+  std::string body = "";
+
+  std::string function = "";
+  //variable declarations (NOTE: must be inserted with ; and \n trailing characters)
+  std::vector<std::string> var_decls;
+  /*
+   * Iterate through the func_signature vector and start generating the
+   * params block
+   *
+   */
+  for(int i = 1; i < func_signature.size(); i++){
+    if(i == 1)
+      params = params + " (";
+    params = params + WasmEnumToString(
+                          static_cast<wasm_rt_type_t>(func_signature[i]));
+    // Insert the name of the arg
+    std::string arg_name = "arg_"+ itostr(i);
+    params = params + " " + arg_name;
+    // Insert comma
+    if(i < func_signature.size() - 1)
+      params = params + ",\n";
+    else
+      params = params + ") ";
+  }
+
+  /*
+   * Now generate the function body --->
+   */
+  body += "\n{\n";
+
+  /*
+   * Check if function returns a pointer
+   */
+  std::string call_content = "";
+  if(FPT->getReturnType()->isTaintedPointerType()){
+    call_content =  call_content + "\treturn " + "c_fetch_pointer_offset(\n";
+  }
+  else
+    call_content = call_content + "\treturn " + callback_func_name;
+
+  /*
+   * Now pass the converted arguments as parameters
+   */
+  call_content += " (";
+  for(int i = 0 ; i < FPT->getNumParams(); i ++)
+  {
+    auto callback_func_param = FPT->getParamType(i);
+    if(callback_func_param->isTaintedPointerType())
+    {
+      call_content =  call_content +
+                     "c_fetch_pointer_offset(" + "arg_" + itostr(i+1) + ")";
+    }
+    else
+    {
+      call_content += "arg_" + itostr(i+1);
+    }
+    if( i < FPT->getNumParams()-1)
+      call_content += ",\n";
+  }
+  call_content += ");";
+
+  body = body + call_content + "\n}\n";
+  /*
+   * Now generate the final function string
+   */
+  function += Return_Type;
+  function = function + " " + trampoline_func_name;
+  function += params;
+  for(auto variables : var_decls){
+    function += variables;
+  }
+  function += body;
+  function += "\n";
+
+  /*
+   * Now the std::string function is all ready to be written into the file
+   * This trampoline function must be inserted before the actual tainted function
+   */
+  R.InsertTextBefore(InsertionPt, function);
+  return true;
 }
 
 bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
@@ -188,8 +355,8 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     CopyTaintedDefToTaintedFile(Context, Info, R, tainted_function_decls);
 
     R.InsertTextAfterToken(tainted_function_decls->getBody()->getBeginLoc()
-                               , "/*");
-    R.InsertText(tainted_function_decls->getBody()->getEndLoc(), "*/",
+                               , "\n/*");
+    R.InsertText(tainted_function_decls->getBody()->getEndLoc(), "\n*/",
                  false, true);
     std::map<VarDecl*, std::string> map_of_params;
     for(int i = 0 ; i < tainted_function_decls->getAsFunction()->getNumParams(); i++)
@@ -233,22 +400,53 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                  params.first->getNameAsString()+")";
       }
       else if(params.first->getType()->isFunctionPointerType()){
+
+        /*
+         * There a more than a couple of steps involved here
+         * 1.)  We need to create a callback trampoline function
+         * 2.) Need to register this callback trampoline function with the WASM sbx
+         *
+         */
+        /*
+         * CALLBACK TRAMPOLINE FUNCTION -->
+         * 1.) has an extra argument called the sandbox (void*) which is
+         * basically is uint32
+         * 2.) performed uint32 to pointer type conversions and inserts a call
+         * to the actual function
+         * 3.) performs return type conversions too
+         * 4.) the void* is totally ignored.
+         */
         /*
          * This argument is a function pointer callback
          * Fetch the callback_trampoline index for this function name and
          * pass it as an argument
          */
-         VarDecls.push_back("int ret_param_types[] = {"+
+        auto func_signature = ReturnRetParamObject(Context,Info,R,
+                                     params.first);
+        if(!GenerateCallbackInterceptor(Context, Info,
+                                    R, params.first->getNameAsString(),
+                                    tainted_function_decls->getBeginLoc(),
+                                    params.first,
+                                    func_signature)){
+          assert("Callback Interceptor Generation Failed!!");
+        }
+
+        const clang::PointerType *pt = params.first->getType()->getAs<clang::PointerType>();
+        const clang::FunctionProtoType *FPT = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
+
+         VarDecls.push_back("\nint ret_param_types[] = {"+
           ReturnRetParamType(Context,Info,R,
           params.first->getInitializingDeclaration())+"};\n");
 
          int ret_param = 0;
-         if(!params.first->getAsFunction()->getReturnType()->isVoidType())
+         if(!FPT->getReturnType()->isVoidType())
            ret_param = 1;
 
-         sbx_instrumented_param = "sbx_register_callback("+
-                                  params.first->getNameAsString() + " , "
-                                  + itostr(params.first->getAsFunction()->getNumParams())
+         sbx_instrumented_param = " sbx_register_callback("+
+                                  params.first->getNameAsString()
+                                  + "_trampoline"
+                                  +" , "
+                                  + itostr(FPT->getNumParams())
                                   + " , "
                                   + itostr(ret_param)
                                   + " , "
@@ -269,7 +467,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     {
       final_param_string = final_param_string + set_of_params[i];
       if(i < (set_of_params.size()-1)){
-        final_param_string = final_param_string + ",";
+        final_param_string = final_param_string + ",\n";
       }
     }
 
@@ -281,7 +479,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     {
       FinalBoardingCall += init_decl;
     }
-    FinalBoardingCall = "\n\nreturn " +returnArg + wasm_function_name+ "(" + final_param_string + ");";
+    FinalBoardingCall += "\n\n\treturn " +returnArg + wasm_function_name+ "(" + final_param_string + ");\n";
 
     R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
   }

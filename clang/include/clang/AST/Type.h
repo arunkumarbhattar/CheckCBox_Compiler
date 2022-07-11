@@ -2613,6 +2613,7 @@ public:
   CanQualType getCanonicalTypeUnqualified() const; // in CanonicalType.h
   void dump() const;
   void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
+  bool isCallback() const;
 };
 
 /// This will check for a TypedefType by removing any existing sugar

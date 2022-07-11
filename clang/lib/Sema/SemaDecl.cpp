@@ -9508,22 +9508,25 @@ bool Sema::CheckTaintedFunctionIntegrity(ParmVarDecl *Param)
   }
 
 
-  if(Param->getType()->isUncheckedPointerType() &&
-     Param->getType()->getPointeeType()->isFunctionType())
-  {
-    if(Param->getAsFunction() == NULL)
-    {
-      Diag(Param->getLocation(), diag::err_callback_func_must_be_declarated)
-          << FixItHint::CreateInsertion(Param->getLocation(),
-                                        "Create the Function prototype with _Callback");
-    }
-    else if(!Param->getAsFunction()->isCallback()){
-    Diag(Param->getLocation(), diag::err_tainted_function_can_only_have_callback_func_ptrs)
-        << FixItHint::CreateInsertion(Param->getLocation(),
-                                      "Mark the Passed Function pointer as a Callback");
-    return false;
-    }
-  }
+//  if(Param->getType()->isUncheckedPointerType() &&
+//     Param->getType()->getPointeeType()->isFunctionType())
+//  {
+//    const clang::PointerType *pt = Param->getType()->getAs<clang::PointerType>();
+//    const clang::FunctionProtoType *FPT = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
+//    auto fd = FPT->getAs<clang::FunctionType>();
+//    if(FPT == NULL)
+//    {
+//      Diag(Param->getLocation(), diag::err_callback_func_must_be_declarated)
+//          << FixItHint::CreateInsertion(Param->getLocation(),
+//                                        "Create the Function prototype with _Callback");
+//    }
+//    else if(!fd->isCallback()){
+//    Diag(Param->getLocation(), diag::err_tainted_function_can_only_have_callback_func_ptrs)
+//        << FixItHint::CreateInsertion(Param->getLocation(),
+//                                      "Mark the Passed Function pointer as a Callback");
+//    return false;
+//    }
+//  }
   return true;
 }
 
