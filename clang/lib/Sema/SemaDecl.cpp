@@ -9498,7 +9498,8 @@ bool Sema::CheckTaintedFunctionIntegrity(ParmVarDecl *Param)
                "Create a Tainted Pointer instead and Marshall the data into it");
     return false;
   }
-  else if(Param->getType()->isStructureType())
+  else if((Param->getType()->isStructureType())
+           && (!Param->getType()->isTaintedStructureType()))
   {
     Diag(Param->getLocation(), diag::err_tainted_specified_functions_should_have_tainted_structs)
         << FixItHint::CreateInsertion(Param->getLocation(),

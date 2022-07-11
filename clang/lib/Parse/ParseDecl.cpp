@@ -4243,6 +4243,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       {
         Diag(Tok, diag::err_callback_specified_functions_should_have_tainted_structs) << Tok.getName();
       }
+      else if((Tok.is(tok::kw_struct)) && (DS.isTaintedStruct))
+      {
+        Diag(Tok, diag::err_tainted_struct_member_struct) << Tok.getName();
+      }
 
       tok::TokenKind Kind = Tok.getKind();
       ConsumeToken();
@@ -8051,7 +8055,14 @@ bool Parser::CheckCurrentTaintedPointerSanity()
         SkipUntil(tok::r_paren, StopAtSemi);
         return false;
       }
-
+      if(GetLookAheadToken(curr_tok).is(tok::kw_struct))
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_struct)<< FixItHint::CreateInsertion(
+            Tok.getLocation(),
+            "Tstruct");
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return false;
+      }
       if(GetLookAheadToken(curr_tok).is(tok::kw__Checked)
           || (GetLookAheadToken(curr_tok).is(tok::kw__Nt_checked))) {
         Diag(Tok, diag::err_invalid_tainted_ptr_checked);
