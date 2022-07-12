@@ -442,7 +442,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
          if(!FPT->getReturnType()->isVoidType())
            ret_param = 1;
 
-         sbx_instrumented_param = " sbx_register_callback("+
+         sbx_instrumented_param = "sbx_register_callback("+
                                   params.first->getNameAsString()
                                   + "_trampoline"
                                   +" , "
@@ -465,7 +465,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     //now keep iterating and entering commas
     for(int i = 0; i < set_of_params.size(); i ++)
     {
-      final_param_string = final_param_string + set_of_params[i];
+      final_param_string = final_param_string + " " + set_of_params[i];
       if(i < (set_of_params.size()-1)){
         final_param_string = final_param_string + ",\n";
       }
@@ -479,7 +479,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     {
       FinalBoardingCall += init_decl;
     }
-    FinalBoardingCall += "\n\n\treturn " +returnArg + wasm_function_name+ "(" + final_param_string + ");\n";
+    FinalBoardingCall += "\n\n return " +returnArg + wasm_function_name+ "(" + final_param_string + ");\n";
 
     R.InsertTextAfter(tainted_function_decls->getBody()->getEndLoc(), FinalBoardingCall);
   }
