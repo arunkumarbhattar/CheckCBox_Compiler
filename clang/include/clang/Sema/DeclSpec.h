@@ -488,7 +488,7 @@ public:
         PointerTypeQualifiers(PT_None),
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
-        FS_tainted_specified(false),
+        FS_tainted_specified(false), FS_tainted_callback_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         FS_explicit_specifier(), Attrs(attrFactory),
@@ -739,6 +739,7 @@ public:
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
     FS_tainted_specified = false;
+    FS_tainted_callback_specified = false;
     FS_noreturnLoc = SourceLocation();
     FS_taintedLoc = SourceLocation();
     FS_tainted_callbackLoc = SourceLocation();

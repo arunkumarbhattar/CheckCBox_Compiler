@@ -30,7 +30,7 @@ if(CHECKEDC_IN_TREE)
   )
 
   list(APPEND CHECKEDC_TEST_DEPS
-          clang clang-resource-headers checkedc-headers
+          checkedc-headers
           )
 
   if(CLANG_ENABLE_STATIC_ANALYZER)

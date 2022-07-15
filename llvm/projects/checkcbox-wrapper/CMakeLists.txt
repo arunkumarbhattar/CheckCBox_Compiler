@@ -1,10 +1,10 @@
-# This script adds the Checked C tests to the LLVM tests infrastructure,
-# provided that the Checked C repo exists as a subdirectory.
+# This script adds the checkcbox C tests to the LLVM tests infrastructure,
+# provided that the checkcbox C repo exists as a subdirectory.
 
 # LLVM uses the CMake meta-build system to generate the build system.
 # The build system includes targets for running tests.
 #
-# The script adds a new target for running Checked C tests.
+# The script adds a new target for running checkcbox C tests.
 # To do that, it sets up  the information needed by the LIT tool.
 
 if(CHECKCBOX_IN_TREE)
@@ -53,7 +53,7 @@ endif()
 
   add_custom_target(checkcbox-test-depends DEPENDS ${CHECKCBOX_TEST_DEPS})
 
-  add_lit_testsuite(check-checkcbox "Running the Checked C regression tests"
+  add_lit_testsuite(check-checkcbox "Running the checkcbox C regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     #LIT ${LLVM_LIT}
     PARAMS ${CHECKCBOX_TEST_PARAMS}
@@ -61,7 +61,7 @@ endif()
     ARGS ${CHECKCBOX_TEST_EXTRA_ARGS}
     )
 
-  set_target_properties(check-checkcbox PROPERTIES FOLDER "Checked C tests")
+  set_target_properties(check-checkcbox PROPERTIES FOLDER "checkcbox C tests")
 
 # Add a lit target to run the checkcbox tests for ARM.
 if (CHECKCBOX_ARM_SYSROOT AND CHECKCBOX_ARM_RUNUNDER)
@@ -75,7 +75,7 @@ if (CHECKCBOX_ARM_SYSROOT AND CHECKCBOX_ARM_RUNUNDER)
     ARGS ${CHECKCBOX_TEST_EXTRA_ARGS}
     )
 
-  set_target_properties(check-checkcbox-arm PROPERTIES FOLDER "Checked C tests for ARM")
+  set_target_properties(check-checkcbox-arm PROPERTIES FOLDER "checkcbox C tests for ARM")
 endif()
 
 endif()
