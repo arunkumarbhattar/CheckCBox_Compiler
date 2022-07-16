@@ -383,6 +383,9 @@ private:
   unsigned FS_tainted_specified : 1;
 
   unsigned FS_tainted_callback_specified : 1;
+
+  unsigned FS_tainted_mirror_specified : 1;
+
   // constexpr-specifier
   unsigned ConstexprSpecifier : 2;
 
@@ -435,7 +438,7 @@ private:
       TQ_unalignedLoc;
   SourceLocation PT_Generic_C_Loc, PT_Checked_C_Loc , PT_Tainted_C_Loc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
-      FS_taintedLoc, FS_tainted_callbackLoc;
+      FS_taintedLoc, FS_tainted_callbackLoc, FS_tainted_MirrorLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   // Checked C - checked keyword location
@@ -489,6 +492,7 @@ public:
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
         FS_tainted_specified(false), FS_tainted_callback_specified(false),
+        FS_tainted_mirror_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         FS_explicit_specifier(), Attrs(attrFactory),
@@ -678,10 +682,12 @@ public:
 
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   bool isTaintedSpecified() const {return FS_tainted_specified; }
+  bool isTaintedMirrorSpecified() const {return FS_tainted_mirror_specified;}
   bool isCallbackSpecified() const {return FS_tainted_callback_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
   SourceLocation getTaintedSpecLoc() const { return FS_taintedLoc; }
   SourceLocation getTaintedCallbackSpecLoc() const { return FS_tainted_callbackLoc;}
+  SourceLocation getTaintedMirrorSpecLoc() const { return FS_tainted_MirrorLoc;}
   SourceLocation getPointerTypeChecked() const {return PT_Checked_C_Loc; }
   SourceLocation getPointerTypeTainted() const {return PT_Tainted_C_Loc; }
   SourceLocation getPointerTypeGeneric() const {return PT_Generic_C_Loc; }
@@ -739,10 +745,12 @@ public:
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
     FS_tainted_specified = false;
+    FS_tainted_mirror_specified = false;
     FS_tainted_callback_specified = false;
     FS_noreturnLoc = SourceLocation();
     FS_taintedLoc = SourceLocation();
     FS_tainted_callbackLoc = SourceLocation();
+    FS_tainted_MirrorLoc = SourceLocation();
     FS_checked_specified = CSS_None;
     FS_checkedLoc = SourceLocation();
     FS_forany_specified = false;

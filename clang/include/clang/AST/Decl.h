@@ -1979,6 +1979,9 @@ public:
   bool Tainted = false;
 
   bool Callback = false;
+
+  bool Mirror = false;
+
   /// Stashed information about a defaulted function definition whose body has
   /// not yet been lazily generated.
   class DefaultedFunctionInfo final
@@ -2199,10 +2202,9 @@ public:
   }
 
   void setGenericFunctionFlag(bool f) { FunctionDeclBits.IsGenericFunction = f; }
-  void setTaintedFunctionFlag(bool f = false) {
-    this->Tainted = f; }
-  void setCallbackFunctionFlag(bool f = false) {
-    this->Callback = f; }
+  void setTaintedFunctionFlag(bool f = false) { this->Tainted = f; }
+  void setCallbackFunctionFlag(bool f = false) { this->Callback = f; }
+  void setMirrorFunctionFlag(bool f = false) { this->Mirror = f; }
   bool isGenericFunction() const { return FunctionDeclBits.IsGenericFunction; }
 
   void setItypeGenericFunctionFlag(bool f) { FunctionDeclBits.IsItypeGenericFunction = f; }
@@ -2553,11 +2555,15 @@ public:
 
   /// Determines whether this function is known to be 'tainted', through
   /// an attribute on its declaration or its type.
-  bool isTainted() const {return this->Tainted;};
+  bool isTainted() const {return this->Tainted;}
 
   /// Determines whether this function is known to be 'callback', through
   /// an attribute on its declaration or its type.
-  bool isCallback() const {return this->Callback;};
+  bool isCallback() const {return this->Callback;}
+
+  /// Determines whether this function is known to be 'mirror', through
+  /// an attribute on its declaration or its type.
+  bool isMirror() const {return this->Mirror;};
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }

@@ -25,6 +25,9 @@
 
 #undef _Callback
 #define _Callback [[callback]]
+
+#undef _Mirror
+#define _Mirror [[mirror]]
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

@@ -3900,6 +3900,7 @@ public:
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getTainted() const{ return Actually_tainted; }
+    bool getCallback() const{ return Actually_callback; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
@@ -3923,6 +3924,7 @@ public:
     }
 
     int Actually_tainted = 0;
+    int Actually_callback = 0;
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
 
@@ -3939,6 +3941,13 @@ public:
       else
         return ExtInfo(Actually_tainted = 0);
 
+    }
+
+    ExtInfo setCallback(bool callback) {
+      if (callback)
+        return ExtInfo(Actually_callback = 1);
+      else
+        return ExtInfo(Actually_callback = 0);
     }
 
     ExtInfo withProducesResult(bool producesResult) const {

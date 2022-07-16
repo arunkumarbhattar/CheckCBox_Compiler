@@ -121,6 +121,11 @@ public:
   }
 
   /// Return true if we know this builtin never returns.
+  bool isMirror(unsigned ID) const {
+    return strcmp(getRecord(ID).Name, "_Mirror") == 0;
+  }
+
+  /// Return true if we know this builtin never returns.
   bool isTaintedCallback(unsigned ID) const {
     return strcmp(getRecord(ID).Name, "_Callback") == 0;
   }

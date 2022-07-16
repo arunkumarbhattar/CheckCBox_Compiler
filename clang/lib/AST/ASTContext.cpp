@@ -11218,6 +11218,9 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   if (BuiltinInfo.isTainted(Id)) {
     EI = EI.setTainted(true);
   }
+  if(BuiltinInfo.isTaintedCallback(Id)){
+    EI = EI.setCallback(true);
+  }
 
 
   // We really shouldn't be making a no-proto type here.
