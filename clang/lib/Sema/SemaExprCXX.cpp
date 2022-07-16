@@ -821,7 +821,9 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
             }
 
             if (S->getFlags() &
-                (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+                (Scope::FnScope | Scope::TaintedFunctionScope |
+                 Scope::CallbackFunctionScope |
+                 Scope::ClassScope | Scope::BlockScope |
                  Scope::FunctionPrototypeScope | Scope::ObjCMethodScope |
                  Scope::TryScope))
               break;

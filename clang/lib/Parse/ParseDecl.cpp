@@ -2006,6 +2006,26 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
                     : FixItHint());
     }
 
+    //The _Mirror  keyword can't appear here
+    // If we find the keyword here, tell the user to put it
+    // at the start instead.
+    if (Tok.is(tok::kw__Mirror)) {
+      SourceLocation Loc = ConsumeToken();
+      const char *PrevSpec;
+      unsigned DiagID;
+
+      // We can offer a fixit if it's valid to mark this function as _Mirror
+      // and we don't have any other declarators in this declaration.
+      bool Fixit = !DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
+      MaybeParseGNUAttributes(D, &LateParsedAttrs);
+      Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
+
+      Diag(Loc, diag::err_c11_tainted_mirror_misplaced)
+          << (Fixit ? FixItHint::CreateRemoval(Loc) : FixItHint())
+          << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Mirror")
+                    : FixItHint());
+    }
+
     //The _Callback  keyword can't appear here
     // If we find the keyword here, tell the user to put it
     // at the start instead.
@@ -2014,7 +2034,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       const char *PrevSpec;
       unsigned DiagID;
 
-      // We can offer a fixit if it's valid to mark this function as _Tainted
+      // We can offer a fixit if it's valid to mark this function as _Callback
       // and we don't have any other declarators in this declaration.
       bool Fixit = !DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
       MaybeParseGNUAttributes(D, &LateParsedAttrs);
@@ -3969,6 +3989,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
      if(!getLangOpts().C11)
        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
      isInvalid = DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
+     break;
+
+   case tok::kw__Mirror:
+     if(!getLangOpts().C11)
+       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+     isInvalid = DS.setFunctionSpecMirror(Loc, PrevSpec, DiagID);
      break;
 
     // alignment-specifier

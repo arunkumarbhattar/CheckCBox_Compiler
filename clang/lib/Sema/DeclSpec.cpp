@@ -1146,6 +1146,21 @@ bool DeclSpec::setFunctionSpecCallback(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecMirror(SourceLocation Loc,
+                                       const char *&PrevSpec,
+                                       unsigned &DiagID) {
+  // '_Callback _Callback' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_tainted_mirror_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_Mirror";
+    return true;
+  }
+  FS_tainted_mirror_specified = true;
+  FS_tainted_MirrorLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecChecked(SourceLocation Loc,
                                       CheckedScopeSpecifier CSS,
                                       const char *&PrevSpec,

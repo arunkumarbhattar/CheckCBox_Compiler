@@ -1508,7 +1508,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   // FIXME: Rename BlockScope -> ClosureScope if we decide to continue using
   // it.
-  unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope | Scope::DeclScope |
+  unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope
+                        | Scope::TaintedFunctionScope
+                        | Scope::CallbackFunctionScope
+                        | Scope::DeclScope |
                         Scope::CompoundStmtScope;
   ParseScope BodyScope(this, ScopeFlags);
 

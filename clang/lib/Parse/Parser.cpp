@@ -1287,7 +1287,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+    ParseScope BodyScope(this, Scope::FnScope |
+                                   Scope::TaintedFunctionScope |
+                                   Scope::CallbackFunctionScope |
+                                   Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
@@ -1318,7 +1321,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
            (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
             Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+    ParseScope BodyScope(this, Scope::FnScope |
+                                   Scope::TaintedFunctionScope |
+                                   Scope::CallbackFunctionScope |
+                                   Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
@@ -1337,7 +1343,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   }
 
   // Enter a scope for the function body.
-  ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+  ParseScope BodyScope(this, Scope::FnScope |
+                                 Scope::TaintedFunctionScope |
+                                 Scope::CallbackFunctionScope |
+                                 Scope::DeclScope |
                                  Scope::CompoundStmtScope);
 
   // Tell the actions module that we have entered a function definition with the
@@ -2181,7 +2190,8 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   PrevTokLocation = Tok.getLocation();
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
-    if (S->getFlags() & Scope::FnScope) {
+    if (S->getFlags() & (Scope::FnScope | Scope::TaintedFunctionScope
+                         | Scope::CallbackFunctionScope)) {
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
       cutOffParsing();

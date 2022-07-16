@@ -377,10 +377,12 @@ public:
 
     if (_CheckMateOpts.Verbose)
       errs() << "Analyzing function " << D->getName() << "\n";
-    if(D->isTainted()){
+    if((D->isTainted())
+            || (D->isMirror())){
       std::cout<<toStringRef(D->getBody()).str();
       CB.storeTaintedFunctionDecl(D);
     }
+
 
     /*
      * This is where you get all the information you will ever need regarding the _Tainted function

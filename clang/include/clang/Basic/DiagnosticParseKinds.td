@@ -172,6 +172,9 @@ def err_c11_tainted_misplaced : Error<
 def err_c11_tainted_callback_misplaced : Error<
   "'_Callback' keyword must precede function declarator">;
 
+def err_c11_tainted_mirror_misplaced : Error<
+  "'_Mirror' keyword must precede function declarator">;
+
 def ext_gnu_indirect_goto : Extension<
   "use of GNU indirect-goto extension">, InGroup<GNULabelsAsValue>;
 def ext_gnu_address_of_label : Extension<

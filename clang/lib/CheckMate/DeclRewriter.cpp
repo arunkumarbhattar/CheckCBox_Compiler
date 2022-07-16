@@ -353,6 +353,12 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     */
 
     CopyTaintedDefToTaintedFile(Context, Info, R, tainted_function_decls);
+    /*
+     * if the Tainted_function_decl is _Mirror annotated, then we are done here
+     * We need not insert any type of instrumentation
+     */
+    if(tainted_function_decls->getAsFunction()->isMirror())
+      continue;
 
     R.InsertTextAfterToken(tainted_function_decls->getBody()->getBeginLoc()
                                , "\n/*");

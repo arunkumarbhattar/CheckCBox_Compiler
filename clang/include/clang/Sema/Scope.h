@@ -147,7 +147,13 @@ public:
     ExistentialTypeScope = 0x8000000,
 
     /// Checked C - Where clause scope.
-    WhereClauseScope = 0x10000000
+    WhereClauseScope = 0x10000000,
+
+    /// CheckCBox - Tainted Function scope
+    TaintedFunctionScope = 0x20000000,
+
+    /// CheckCBox - Callback Function scope
+    CallbackFunctionScope = 0x20000000
   };
 
 private:
@@ -363,6 +369,16 @@ public:
   /// isFunctionScope() - Return true if this scope is a function scope.
   bool isFunctionScope() const { return (getFlags() & Scope::FnScope); }
 
+  /// isTaintedFunctionScope() - Return true if this scope is a tainted
+  /// function's scope.
+  bool isTaintedFunctionScope() const {
+    return (getFlags() & Scope::TaintedFunctionScope); }
+
+  /// isCallbackFunctionScope() - Return true if this scope is a callback
+  /// function's scope.
+  bool isCallbackFunctionScope() const {
+    return (getFlags() & Scope::CallbackFunctionScope); }
+
   /// isClassScope - Return true if this scope is a class/struct/union scope.
   bool isClassScope() const {
     return (getFlags() & Scope::ClassScope);
@@ -442,7 +458,9 @@ public:
     for (const Scope *S = this; S; S = S->getParent()) {
       if (S->getFlags() & Scope::SwitchScope)
         return true;
-      else if (S->getFlags() & (Scope::FnScope | Scope::ClassScope |
+      else if (S->getFlags() & (Scope::FnScope | Scope::TaintedFunctionScope |
+                                Scope::CallbackFunctionScope |
+                                Scope::ClassScope |
                                 Scope::BlockScope | Scope::TemplateParamScope |
                                 Scope::FunctionPrototypeScope |
                                 Scope::AtCatchScope | Scope::ObjCMethodScope))

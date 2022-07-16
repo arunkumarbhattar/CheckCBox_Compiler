@@ -14,6 +14,7 @@
 #define __tainted__is_defined 1
 #define tainted_callback _Callback
 #define __tainted_callback__is_defined 1
-
+#define tainted_mirror _Mirror
+#define __tainted_mirror__is_defined 1
 
 #endif /* __STDTAINTED_H */

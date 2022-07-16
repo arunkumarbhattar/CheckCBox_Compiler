@@ -984,6 +984,8 @@ public:
   bool isMissingDeclaratorOk();
   bool setFunctionSpecCallback(SourceLocation Loc, const char *&PrevSpec,
                                unsigned int &DiagID);
+  bool setFunctionSpecMirror(SourceLocation Loc, const char *&PrevSpec,
+                             unsigned int &DiagID);
 };
 
 /// Captures information about "declaration specifiers" specific to
