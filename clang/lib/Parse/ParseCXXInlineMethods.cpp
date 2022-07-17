@@ -540,8 +540,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // Parse the method body. Function body parsing code is similar enough
   // to be re-used for method bodies as well.
   ParseScope FnScope(this, Scope::FnScope |
-                               Scope::TaintedFunctionScope |
-                               Scope::CallbackFunctionScope |
                                Scope::DeclScope |
                                Scope::CompoundStmtScope);
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
@@ -726,7 +724,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
       // If the Decl is on a function, add function parameters to the scope.
       bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
       if (HasFunScope) {
-        InDeclScope.Scopes.Enter(Scope::FnScope | Scope::TaintedFunctionScope |
+
+        InDeclScope.Scopes.Enter(Scope::FnScope |
+                        ((D->getAsFunction()->isTainted()) ?
+                         Scope::TaintedFunctionScope :
+                                               Scope::FnScope)|
+                        ((D->getAsFunction()->isCallback())?
+                              Scope::CallbackFunctionScope :
+                                               Scope::FnScope)|
                                  Scope::CallbackFunctionScope |
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);

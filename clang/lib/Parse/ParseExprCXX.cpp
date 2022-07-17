@@ -1508,8 +1508,14 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   // FIXME: Rename BlockScope -> ClosureScope if we decide to continue using
   // it.
-  unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope
-                        | Scope::TaintedFunctionScope
+  unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope |
+                        ((DS.isTaintedSpecified()) ?
+                         Scope::TaintedFunctionScope :
+                                            Scope::FnScope)|
+                        ((DS.isCallbackSpecified())?
+                        Scope::CallbackFunctionScope :
+                                            Scope::FnScope)|
+                          Scope::TaintedFunctionScope
                         | Scope::CallbackFunctionScope
                         | Scope::DeclScope |
                         Scope::CompoundStmtScope;

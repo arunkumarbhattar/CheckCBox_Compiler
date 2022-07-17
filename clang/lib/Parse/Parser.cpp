@@ -1288,6 +1288,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
     ParseScope BodyScope(this, Scope::FnScope |
+                                   ((D.getDeclSpec().isTaintedSpecified()) ?
+                                               Scope::TaintedFunctionScope :
+                                                            Scope::FnScope)|
+                                   ((D.getDeclSpec().isCallbackSpecified())?
+                                              Scope::CallbackFunctionScope :
+                                                            Scope::FnScope)|
                                    Scope::TaintedFunctionScope |
                                    Scope::CallbackFunctionScope |
                                    Scope::DeclScope |
@@ -1322,9 +1328,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
             Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
     ParseScope BodyScope(this, Scope::FnScope |
-                                   Scope::TaintedFunctionScope |
-                                   Scope::CallbackFunctionScope |
-                                   Scope::DeclScope |
+                    ((D.getDeclSpec().isTaintedSpecified()) ?
+                                Scope::TaintedFunctionScope :
+                                             Scope::FnScope)|
+                    ((D.getDeclSpec().isCallbackSpecified())?
+                               Scope::CallbackFunctionScope :
+                                             Scope::FnScope)|
+                                Scope::TaintedFunctionScope |
+                               Scope::CallbackFunctionScope |
+                                           Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
@@ -1344,7 +1356,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   // Enter a scope for the function body.
   ParseScope BodyScope(this, Scope::FnScope |
-                                 Scope::TaintedFunctionScope |
+                                 ((D.getDeclSpec().isTaintedSpecified()) ?
+                                 Scope::TaintedFunctionScope :
+                                 Scope::FnScope)|
+                                 ((D.getDeclSpec().isCallbackSpecified())?
+                                 Scope::CallbackFunctionScope :
+                                 Scope::TaintedFunctionScope) |
                                  Scope::CallbackFunctionScope |
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);
@@ -2190,8 +2207,10 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   PrevTokLocation = Tok.getLocation();
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
-    if (S->getFlags() & (Scope::FnScope | Scope::TaintedFunctionScope
-                         | Scope::CallbackFunctionScope)) {
+    if (S->getFlags() & (Scope::FnScope
+//                         | Scope::TaintedFunctionScope
+//                         | Scope::CallbackFunctionScope
+                         )) {
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
       cutOffParsing();

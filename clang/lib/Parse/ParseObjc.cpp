@@ -3674,8 +3674,8 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   // Enter a scope for the method or c-function body.
   ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
                                  Scope::FnScope |
-                                 Scope::TaintedFunctionScope |
-                                 Scope::CallbackFunctionScope |
+//                                 Scope::TaintedFunctionScope |
+//                                 Scope::CallbackFunctionScope |
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);
 

@@ -7919,6 +7919,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                                 ? getShadowedDeclaration(NewVD, Previous)
                                 : nullptr;
 
+  if(S->isTaintedFunctionScope() && NewVD->hasGlobalStorage())
+  {
+    Diag(NewVD->getLocation(), diag::err_typecheck_globalvar_tfscope);
+    NewVD->setInvalidDecl(true);
+  }
   // Don't consider existing declarations that are in a different
   // scope and are out-of-semantic-context declarations (if the new
   // declaration has linkage).

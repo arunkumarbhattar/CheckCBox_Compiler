@@ -14701,6 +14701,23 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   switch (Opc) {
   case BO_Assign:
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
+    /*
+     * Super Dumb, but  a good start
+     * Logic is --> We want to prevent global varbles from appearing anywhere in an RHS Expression
+     *
+     */
+    if(getCurScope()->isTaintedFunctionScope())
+    {
+      // Should Also be the same for RHS
+      if (RHS.get()->getReferencedDeclOfCallee()->getParentFunctionOrMethod() == NULL)
+      {
+        /*
+         * We are for sure this is a global value, we throw an error
+         */
+        SourceRange SR(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
+        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+      }
+    }
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
       VK = LHS.get()->getValueKind();
