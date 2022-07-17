@@ -357,8 +357,9 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   unsigned I = 0, E = ReductionTypes.size();
   for (Decl *D : DRD.get()) {
     TentativeParsingAction TPA(*this);
-    ParseScope OMPDRScope(this, Scope::FnScope | Scope::TaintedFunctionScope |
-                                    Scope::CallbackFunctionScope |
+    ParseScope OMPDRScope(this, Scope::FnScope |
+//                                    Scope::TaintedFunctionScope |
+//                                    Scope::CallbackFunctionScope |
                                     Scope::DeclScope |
                                     Scope::CompoundStmtScope |
                                     Scope::OpenMPDirectiveScope);
@@ -395,8 +396,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
           IsCorrect;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         ParseScope OMPDRScope(this, Scope::FnScope |
-                                        Scope::TaintedFunctionScope |
-                                        Scope::CallbackFunctionScope |
+//                                        Scope::TaintedFunctionScope |
+//                                        Scope::CallbackFunctionScope |
                                         Scope::DeclScope |
                                         Scope::CompoundStmtScope |
                                         Scope::OpenMPDirectiveScope);
@@ -583,8 +584,9 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   // Enter scope.
   DeclarationNameInfo DirName;
   SourceLocation Loc = Tok.getLocation();
-  unsigned ScopeFlags = Scope::FnScope | Scope::TaintedFunctionScope |
-                        Scope::CallbackFunctionScope |
+  unsigned ScopeFlags = Scope::FnScope |
+//                        Scope::TaintedFunctionScope |
+//                        Scope::CallbackFunctionScope |
                         Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
   ParseScope OMPDirectiveScope(this, ScopeFlags);
@@ -686,6 +688,12 @@ public:
     if (D->isFunctionOrFunctionTemplate()) {
       HasFunScope = true;
       Scopes.Enter(Scope::FnScope | Scope::TaintedFunctionScope |
+                   ((D->getAsFunction()->isTainted()) ?
+                          Scope::TaintedFunctionScope :
+                                                           Scope::FnScope)|
+                   ((D->getAsFunction()->isCallback())?
+                          Scope::CallbackFunctionScope :
+                                                           Scope::FnScope)|
                    Scope::CallbackFunctionScope | Scope::DeclScope |
                    Scope::CompoundStmtScope);
       Actions.ActOnReenterFunctionContext(Actions.getCurScope(), D);
@@ -2275,8 +2283,9 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
               llvm::omp::Clause_enumSize + 1>
       FirstClauses(llvm::omp::Clause_enumSize + 1);
-  unsigned ScopeFlags = Scope::FnScope | Scope::TaintedFunctionScope |
-                        Scope::CallbackFunctionScope |
+  unsigned ScopeFlags = Scope::FnScope |
+//                        Scope::TaintedFunctionScope |
+//                        Scope::CallbackFunctionScope |
                         Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
   SourceLocation Loc = ConsumeAnnotationToken(), EndLoc;

@@ -14635,7 +14635,44 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 
   return HasVectorOfHalfType(E0) && (!E1 || HasVectorOfHalfType(E1));
 }
+bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
+                                               SourceLocation OpLoc)
+{
+  if(getCurScope()->isTaintedFunctionScope())
+  {
+    // Should Also be the same for RHS
+    if (InputExpr->get()->getReferencedDeclOfCallee() != NULL &&
+        InputExpr->get()->getReferencedDeclOfCallee()
+            ->getParentFunctionOrMethod() == NULL)
+    {
+      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
+                 << InputExpr->get()->getSourceRange();
+      return false;
+    }
+  }
+}
 
+bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
+                                                  SourceLocation OpLoc,
+                                               SourceRange SR)
+{
+  if(getCurScope()->isTaintedFunctionScope())
+  {
+    // Should Also be the same for RHS
+    if (RHS->get()->getReferencedDeclOfCallee() != NULL
+        && RHS->get()->getReferencedDeclOfCallee()->getParentFunctionOrMethod() == NULL)
+    {
+      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+      return false;
+    }
+    else if (LHS->get()->getReferencedDeclOfCallee() != NULL &&
+             LHS->get()->getReferencedDeclOfCallee()->getParentFunctionOrMethod() == NULL)
+    {
+      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+      return false;
+    }
+  }
+}
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
 /// operator @p Opc at location @c TokLoc. This routine only supports
 /// built-in operations; ActOnBinOp handles overloaded operators.
@@ -14698,9 +14735,21 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     }
   }
 
+  SourceRange SR(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
+  if(!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR))
+  {
+    return ExprError();
+  }
+
   switch (Opc) {
   case BO_Assign:
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
+    /*
+     * Super Dumb, but we shall try doing it here
+     * Logic is --> We want to prevent global varbles from appearing anywhere in an RHS Expression
+     *
+     */
+
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
       VK = LHS.get()->getValueKind();
@@ -15331,12 +15380,17 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                       UnaryOperatorKind Opc,
                                       Expr *InputExpr) {
+
   ExprResult Input = InputExpr;
   ExprValueKind VK = VK_RValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType resultType;
   bool CanOverflow = false;
 
+  if(!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc))
+  {
+    return ExprError();
+  }
   bool ConvertHalfVec = false;
   if (getLangOpts().OpenCL) {
     QualType Ty = InputExpr->getType();

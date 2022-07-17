@@ -13438,6 +13438,11 @@ public:
   bool checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
   bool CheckTaintedFunctionIntegrity(ParmVarDecl *Param);
   bool CheckCallbackFunctionIntegrity(ParmVarDecl *Param);
+  bool CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
+                                           SourceLocation OpLoc,
+                                           SourceRange SR);
+  bool CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
+                                          SourceLocation OpLoc);
 };
 
 /// RAII object that enters a new expression evaluation context.
