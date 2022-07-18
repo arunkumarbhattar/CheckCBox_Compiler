@@ -2016,7 +2016,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
       // We can offer a fixit if it's valid to mark this function as _Mirror
       // and we don't have any other declarators in this declaration.
-      bool Fixit = !DS.setFunctionSpecCallback(Loc, PrevSpec, DiagID);
+      bool Fixit = !DS.setFunctionSpecMirror(Loc, PrevSpec, DiagID);
       MaybeParseGNUAttributes(D, &LateParsedAttrs);
       Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
 

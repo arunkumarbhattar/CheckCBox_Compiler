@@ -6516,6 +6516,9 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Call.isInvalid())
     return Call;
 
+  if(!CheckCallExprIntegrityInTaintedScope(Fn, LParenLoc))
+    return Call;
+
   // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
   // language modes.
   if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn)) {
@@ -14638,41 +14641,86 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
                                                SourceLocation OpLoc)
 {
-  if(getCurScope()->isTaintedFunctionScope())
-  {
     // Should Also be the same for RHS
-    if (InputExpr->get()->getReferencedDeclOfCallee() != NULL &&
-        InputExpr->get()->getReferencedDeclOfCallee()
-            ->getParentFunctionOrMethod() == NULL)
+    auto IpExpr = InputExpr->get();
+    if (IpExpr->getReferencedDeclOfCallee() != NULL)
     {
-      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
+        if(IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
+          == NULL)
+        {
+            Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
                  << InputExpr->get()->getSourceRange();
+            return false;
+        }
+
+        if(IpExpr->getType()->isFunctionType() &&
+            !(IpExpr->getReferencedDeclOfCallee()->getAsFunction()->isCallback()
+        || IpExpr->getReferencedDeclOfCallee()->getAsFunction()->isMirror()))
+        {
+          Diag(OpLoc, diag::err_typecheck_tainted_function_callbk) << 0
+                                  << IpExpr->getSourceRange();
+          return false;
+        }
+    }
+    return true;
+}
+
+bool Sema::CheckCallExprIntegrityInTaintedScope(Expr *Fn,
+                                              SourceLocation OpLoc)
+{
+  if (Fn->getReferencedDeclOfCallee() != NULL)
+  {
+    if(!(Fn->getReferencedDeclOfCallee()->getAsFunction()->isMirror() ||
+          Fn->getReferencedDeclOfCallee()->getAsFunction()->isCallback())) {
+      Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
+          << 0 << Fn->getSourceRange();
       return false;
     }
   }
+  return true;
 }
-
 bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
                                                   SourceLocation OpLoc,
                                                SourceRange SR)
 {
-  if(getCurScope()->isTaintedFunctionScope())
-  {
-    // Should Also be the same for RHS
-    if (RHS->get()->getReferencedDeclOfCallee() != NULL
-        && RHS->get()->getReferencedDeclOfCallee()->getParentFunctionOrMethod() == NULL)
-    {
-      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
-      return false;
+    auto RHSExpr = RHS->get();
+    auto LHSExpr = LHS->get();
+    if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
+      if (RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+          NULL) {
+        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+        return false;
+      } else if (LHSExpr->getReferencedDeclOfCallee()
+                     ->getParentFunctionOrMethod() == NULL) {
+        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+        return false;
+      }
+
+      if (RHSExpr->getType()->isFunctionType() &&
+          !(RHSExpr->getReferencedDeclOfCallee()
+                ->getAsFunction()
+                ->isCallback() ||
+            RHSExpr->getReferencedDeclOfCallee()
+                ->getAsFunction()
+                ->isMirror())) {
+        Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
+            << 0 << RHSExpr->getSourceRange();
+        return false;
+      } else if (LHSExpr->getType()->isFunctionType() &&
+                 !(LHSExpr->getReferencedDeclOfCallee()
+                       ->getAsFunction()
+                       ->isCallback() ||
+                   LHSExpr->getReferencedDeclOfCallee()
+                       ->getAsFunction()
+                       ->isMirror())) {
+        Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
+            << 0 << LHSExpr->getSourceRange();
+        return false;
+      }
     }
-    else if (LHS->get()->getReferencedDeclOfCallee() != NULL &&
-             LHS->get()->getReferencedDeclOfCallee()->getParentFunctionOrMethod() == NULL)
-    {
-      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
-      return false;
-    }
-  }
+    return true;
 }
+
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
 /// operator @p Opc at location @c TokLoc. This routine only supports
 /// built-in operations; ActOnBinOp handles overloaded operators.
@@ -14736,7 +14784,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   }
 
   SourceRange SR(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-  if(!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR))
+  if((getCurScope()->isTaintedFunctionScope()
+      || getCurScope()->isMirrorFunctionScope())
+   && (!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR)))
   {
     return ExprError();
   }
@@ -15387,7 +15437,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   QualType resultType;
   bool CanOverflow = false;
 
-  if(!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc))
+  if((getCurScope()->isTaintedFunctionScope()
+  || getCurScope()->isMirrorFunctionScope())
+  && (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc)))
   {
     return ExprError();
   }

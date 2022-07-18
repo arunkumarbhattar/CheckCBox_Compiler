@@ -22,7 +22,8 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
   Flags = flags;
 
   if (parent && !(flags & FnScope) && !(flags & TaintedFunctionScope)
-      && !(flags & CallbackFunctionScope)) {
+      && !(flags & CallbackFunctionScope)
+      && !(flags & MirrorFunctionScope)) {
     BreakParent    = parent->BreakParent;
     ContinueParent = parent->ContinueParent;
   } else {
@@ -40,7 +41,9 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     TemplateParamParent = parent->TemplateParamParent;
     MSLastManglingParent = parent->MSLastManglingParent;
     MSCurManglingNumber = getMSLastManglingNumber();
-    if ((Flags & (FnScope | TaintedFunctionScope| CallbackFunctionScope |
+    if ((Flags & (FnScope | TaintedFunctionScope|
+                  MirrorFunctionScope |
+                  CallbackFunctionScope |
                   ClassScope | BlockScope | TemplateParamScope |
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
@@ -62,7 +65,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
   // The MS mangler uses the number of scopes that can hold declarations as
   // part of an external name.
   if (Flags & (ClassScope | FnScope | TaintedFunctionScope
-               | CallbackFunctionScope)) {
+               | CallbackFunctionScope | MirrorFunctionScope)) {
     MSLastManglingNumber = getMSLastManglingNumber();
     MSLastManglingParent = this;
     MSCurManglingNumber = 1;
@@ -151,6 +154,7 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {FnScope, "FnScope"},
       {TaintedFunctionScope, "TaintedFunctionScope"},
       {CallbackFunctionScope, "CallbackFunctionScope"},
+      {MirrorFunctionScope, "MirrorFunctionScope"},
       {BreakScope, "BreakScope"},
       {ContinueScope, "ContinueScope"},
       {DeclScope, "DeclScope"},

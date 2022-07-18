@@ -1515,8 +1515,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                         ((DS.isCallbackSpecified())?
                         Scope::CallbackFunctionScope :
                                             Scope::FnScope)|
-                          Scope::TaintedFunctionScope
-                        | Scope::CallbackFunctionScope
+                        ((DS.isTaintedMirrorSpecified())?
+                        Scope::MirrorFunctionScope :
+                                            Scope::FnScope)
                         | Scope::DeclScope |
                         Scope::CompoundStmtScope;
   ParseScope BodyScope(this, ScopeFlags);

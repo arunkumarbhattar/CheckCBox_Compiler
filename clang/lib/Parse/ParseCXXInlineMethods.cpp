@@ -732,6 +732,9 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
                         ((D->getAsFunction()->isCallback())?
                               Scope::CallbackFunctionScope :
                                                Scope::FnScope)|
+                        ((D->getAsFunction()->isMirror())?
+                              Scope::MirrorFunctionScope :
+                                               Scope::FnScope)|
                                  Scope::CallbackFunctionScope |
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);

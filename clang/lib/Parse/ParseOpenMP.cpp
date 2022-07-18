@@ -694,7 +694,10 @@ public:
                    ((D->getAsFunction()->isCallback())?
                           Scope::CallbackFunctionScope :
                                                            Scope::FnScope)|
-                   Scope::CallbackFunctionScope | Scope::DeclScope |
+                   ((D->getAsFunction()->isMirror())?
+                          Scope::MirrorFunctionScope :
+                                                           Scope::FnScope)|
+                    Scope::DeclScope |
                    Scope::CompoundStmtScope);
       Actions.ActOnReenterFunctionContext(Actions.getCurScope(), D);
     }

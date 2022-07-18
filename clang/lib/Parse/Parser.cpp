@@ -1294,8 +1294,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                    ((D.getDeclSpec().isCallbackSpecified())?
                                               Scope::CallbackFunctionScope :
                                                             Scope::FnScope)|
-                                   Scope::TaintedFunctionScope |
-                                   Scope::CallbackFunctionScope |
+                                   ((D.getDeclSpec().isTaintedMirrorSpecified())?
+                                              Scope::CallbackFunctionScope :
+                                                            Scope::FnScope)|
                                    Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
@@ -1334,8 +1335,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                     ((D.getDeclSpec().isCallbackSpecified())?
                                Scope::CallbackFunctionScope :
                                              Scope::FnScope)|
-                                Scope::TaintedFunctionScope |
-                               Scope::CallbackFunctionScope |
+                    ((D.getDeclSpec().isTaintedMirrorSpecified())?
+                               Scope::MirrorFunctionScope :
+                                             Scope::FnScope)|
                                            Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
@@ -1361,8 +1363,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                  Scope::FnScope)|
                                  ((D.getDeclSpec().isCallbackSpecified())?
                                  Scope::CallbackFunctionScope :
-                                 Scope::TaintedFunctionScope) |
-                                 Scope::CallbackFunctionScope |
+                                 Scope::FnScope)|
+                                 ((D.getDeclSpec().isTaintedMirrorSpecified())?
+                                 Scope::MirrorFunctionScope :
+                                 Scope::FnScope)|
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);
 

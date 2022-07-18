@@ -7919,11 +7919,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                                 ? getShadowedDeclaration(NewVD, Previous)
                                 : nullptr;
 
-  if(S->isTaintedFunctionScope() && NewVD->hasGlobalStorage())
-  {
-    Diag(NewVD->getLocation(), diag::err_typecheck_globalvar_tfscope);
-    NewVD->setInvalidDecl(true);
-  }
   // Don't consider existing declarations that are in a different
   // scope and are out-of-semantic-context declarations (if the new
   // declaration has linkage).
@@ -9646,6 +9641,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setCallbackFunctionFlag(true);
+  }
+
+  if(D.getDeclSpec().isTaintedMirrorSpecified())
+  {
+    //we need to set the Function's exttype class with this attribute
+    NewFD->setMirrorFunctionFlag(true);
   }
 
   if (D.getDeclSpec().isForanySpecified() || D.getDeclSpec().isItypeforanySpecified()) {

@@ -153,7 +153,10 @@ public:
     TaintedFunctionScope = 0x20000000,
 
     /// CheckCBox - Callback Function scope
-    CallbackFunctionScope = 0x20000000
+    CallbackFunctionScope = 0x40000000,
+
+    /// CheckCBox - Callback Function scope
+    MirrorFunctionScope = 0x80000000
   };
 
 private:
@@ -379,6 +382,11 @@ public:
   bool isCallbackFunctionScope() const {
     return (getFlags() & Scope::CallbackFunctionScope); }
 
+  /// isCallbackFunctionScope() - Return true if this scope is a callback
+  /// function's scope.
+  bool isMirrorFunctionScope() const {
+    return (getFlags() & Scope::MirrorFunctionScope); }
+
   /// isClassScope - Return true if this scope is a class/struct/union scope.
   bool isClassScope() const {
     return (getFlags() & Scope::ClassScope);
@@ -460,6 +468,7 @@ public:
         return true;
       else if (S->getFlags() & (Scope::FnScope | Scope::TaintedFunctionScope |
                                 Scope::CallbackFunctionScope |
+                                Scope::MirrorFunctionScope |
                                 Scope::ClassScope |
                                 Scope::BlockScope | Scope::TemplateParamScope |
                                 Scope::FunctionPrototypeScope |

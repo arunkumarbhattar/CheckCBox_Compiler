@@ -13443,6 +13443,7 @@ public:
                                            SourceRange SR);
   bool CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
                                           SourceLocation OpLoc);
+  bool CheckCallExprIntegrityInTaintedScope(Expr *Fn, SourceLocation OpLoc);
 };
 
 /// RAII object that enters a new expression evaluation context.
