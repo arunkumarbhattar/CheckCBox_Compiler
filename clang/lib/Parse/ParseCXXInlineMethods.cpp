@@ -735,7 +735,9 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
                         ((D->getAsFunction()->isMirror())?
                               Scope::MirrorFunctionScope :
                                                Scope::FnScope)|
-                                 Scope::CallbackFunctionScope |
+                        ((D->getAsFunction()->isTLIB())?
+                              Scope::TLIBFunctionScope :
+                                               Scope::FnScope)|
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);
         Actions.ActOnReenterFunctionContext(Actions.CurScope, D);

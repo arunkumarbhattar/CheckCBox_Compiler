@@ -9649,6 +9649,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     NewFD->setMirrorFunctionFlag(true);
   }
 
+  if(D.getDeclSpec().isTLIBSpecified())
+  {
+    //we need to set the Function's exttype class with this attribute
+    NewFD->setTLIBFunctionFlag(true);
+  }
+
   if (D.getDeclSpec().isForanySpecified() || D.getDeclSpec().isItypeforanySpecified()) {
     if (NewFD->hasPrototype()) {
       NewFD->setTypeVars(D.getDeclSpec().typeVariables());

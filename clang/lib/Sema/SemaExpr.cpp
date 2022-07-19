@@ -14667,7 +14667,8 @@ bool Sema::CheckCallExprIntegrityInTaintedScope(Expr *Fn,
   {
     if(!(Fn->getReferencedDeclOfCallee()->getAsFunction()->isMirror() ||
           Fn->getReferencedDeclOfCallee()->getAsFunction()->isCallback() ||
-          Fn->getReferencedDeclOfCallee()->getAsFunction()->isTainted())) {
+          Fn->getReferencedDeclOfCallee()->getAsFunction()->isTainted() ||
+        Fn->getReferencedDeclOfCallee()->getAsFunction()->isTLIB())) {
       Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
           << 0 << Fn->getSourceRange();
       return false;

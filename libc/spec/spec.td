@@ -57,6 +57,7 @@ def NoReturn : NamedType<"_Noreturn void">;
 def Tainted : NamedType<"_Tainted">;
 def Callback : NamedType<"_Callback">;
 def Mirror : NamedType<"_Mirror">;
+def TLIB : NamedType<"_TLIB">;
 //types moved from stdc.td
 def VoidRestrictedPtr : RestrictedPtrType<VoidType>;
 def ConstVoidRestrictedPtr : ConstType<VoidRestrictedPtr>;

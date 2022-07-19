@@ -1161,6 +1161,21 @@ bool DeclSpec::setFunctionSpecMirror(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecTLIB(SourceLocation Loc,
+                                     const char *&PrevSpec,
+                                     unsigned &DiagID) {
+  // '_TLIB _TLIB' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_tainted_lib_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_TLIB";
+    return true;
+  }
+  FS_tainted_lib_specified = true;
+  FS_tainted_LibLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecChecked(SourceLocation Loc,
                                       CheckedScopeSpecifier CSS,
                                       const char *&PrevSpec,

@@ -161,6 +161,7 @@ namespace {
         return;
       PlaceholderKind = (BuiltinType::Kind) 0;
     }
+    Scope *RecursiveScopeResolve(Scope *S);
   };
 
   void CheckNoDeref(Sema &S, const QualType FromType, const QualType ToType,
@@ -2689,6 +2690,19 @@ static void DiagnoseBadFunctionCast(Sema &Self, const ExprResult &SrcExpr,
             << SrcType << DestType << SrcExpr.get()->getSourceRange();
 }
 
+Scope* CastOperation::RecursiveScopeResolve(Scope* S){
+  /*
+   * Recurse the parent scope tree until you get a scope that is a function type
+   *
+   */
+  Scope* Resolved_scope = S;
+  while ((Resolved_scope != nullptr) && (!Resolved_scope->isFunctionScope()))
+  {
+     Resolved_scope = this->RecursiveScopeResolve(S->getParent());
+  }
+  return Resolved_scope;
+}
+
 /// Check the semantics of a C-style cast operation, in C.
 void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
   assert(!Self.getLangOpts().CPlusPlus);
@@ -2970,7 +2984,15 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
  *
  */
   //CheckCBox - Un-Tainted Pointers Cannot be Cast to Tainted Pointers
-  if(S != nullptr && S->isTaintedFunctionScope()) {
+  /*
+   * Sometimes if the cast (to be relaxed) is happening within a switch scope
+   * or other nested scope, we need to traceback upwards until we
+   * trace back upwards till a switch scope
+   */
+  if(S != nullptr && !S->isFunctionScope())
+    S = this->RecursiveScopeResolve(S);
+
+  if(S != nullptr && !(S->isTaintedFunctionScope() || S->isTLIBFunctionScope())) {
     if (DestType->isTaintedPointerType()) {
       if ((!SrcType->isTaintedPointerType())) {
         Self.Diag(SrcExpr.get()->getExprLoc(),
@@ -3005,7 +3027,8 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
     }
   }
 
-  if(S != nullptr && S->isTaintedFunctionScope()) {
+  if(S != nullptr && !(S->isTaintedFunctionScope()) &&
+      (!S->isTLIBFunctionScope())) {
     // Checked C - No C-style casts to unchecked pointer/array type or variadic
     // type in a checked block.
     if (IsCheckedScope) {

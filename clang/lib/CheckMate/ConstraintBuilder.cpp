@@ -378,16 +378,15 @@ public:
     if (_CheckMateOpts.Verbose)
       errs() << "Analyzing function " << D->getName() << "\n";
     if((D->isTainted())
-            || (D->isMirror())){
+            || (D->isMirror()) ||
+        (D->isCallback()) ||
+        (D->isTLIB())){
       std::cout<<toStringRef(D->getBody()).str();
       CB.storeTaintedFunctionDecl(D);
     }
 
 
     /*
-     * This is where you get all the information you will ever need regarding the _Tainted function
-     * Push as much information as possible from here
-     * Basic the FunctionDecl has everything you ever fuckin need
 
     if (FL.isValid()) { // TODO: When would this ever be false?
       if (D->hasBody() && D->isThisDeclarationADefinition()) {

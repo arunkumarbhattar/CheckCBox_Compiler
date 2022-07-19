@@ -4671,6 +4671,13 @@ public:
   void DiagnoseUnterminatedCheckedScope();
 
   bool IsCheckedScope() {
+    /*
+     * This is very very risky
+     */
+    auto FnScope = this->RecursiveScopeResolve(getCurScope());
+    if(FnScope != nullptr && FnScope->isTaintedFunctionScope())
+      return false;
+
     return CheckingKind != CSS_Unchecked;
   }
 
@@ -13444,6 +13451,7 @@ public:
   bool CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
                                           SourceLocation OpLoc);
   bool CheckCallExprIntegrityInTaintedScope(Expr *Fn, SourceLocation OpLoc);
+  Scope *RecursiveScopeResolve(Scope *S);
 };
 
 /// RAII object that enters a new expression evaluation context.

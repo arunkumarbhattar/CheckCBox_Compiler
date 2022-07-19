@@ -120,14 +120,19 @@ public:
     return strcmp(getRecord(ID).Name, "_Tainted") == 0;
   }
 
-  /// Return true if we know this builtin never returns.
+  /// Return true if we know this builtin should be mirrored to Tainted region.
   bool isMirror(unsigned ID) const {
     return strcmp(getRecord(ID).Name, "_Mirror") == 0;
   }
 
-  /// Return true if we know this builtin never returns.
+  /// Return true if we know this builtin allows for tainted access to global memory.
   bool isTaintedCallback(unsigned ID) const {
     return strcmp(getRecord(ID).Name, "_Callback") == 0;
+  }
+
+  /// Return true if we know this builtin is a tainted LIB.
+  bool isTLIB(unsigned ID) const {
+    return strcmp(getRecord(ID).Name, "_TLIB") == 0;
   }
 
   /// Return true if we know this builtin can return twice.

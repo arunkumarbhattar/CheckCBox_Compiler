@@ -824,6 +824,7 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
                 (Scope::FnScope | Scope::TaintedFunctionScope |
                  Scope::MirrorFunctionScope |
                  Scope::CallbackFunctionScope |
+                 Scope::TLIBFunctionScope |
                  Scope::ClassScope | Scope::BlockScope |
                  Scope::FunctionPrototypeScope | Scope::ObjCMethodScope |
                  Scope::TryScope))

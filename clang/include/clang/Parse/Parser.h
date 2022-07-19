@@ -1122,7 +1122,7 @@ public:
     // ParseScope - Construct a new object to manage a scope in the
     // parser Self where the new Scope is created with the flags
     // ScopeFlags, but only when we aren't about to enter a compound statement.
-    ParseScope(Parser *Self, unsigned ScopeFlags, bool EnteredScope = true,
+    ParseScope(Parser *Self, long ScopeFlags, bool EnteredScope = true,
                bool BeforeCompoundStmt = false)
       : Self(Self) {
       if (EnteredScope && !BeforeCompoundStmt)
@@ -1159,7 +1159,7 @@ public:
 
   public:
     MultiParseScope(Parser &Self) : Self(Self) {}
-    void Enter(unsigned ScopeFlags) {
+    void Enter(long ScopeFlags) {
       Self.EnterScope(ScopeFlags);
       ++NumScopes;
     }
@@ -1175,7 +1175,7 @@ public:
   };
 
   /// EnterScope - Start a new scope.
-  void EnterScope(unsigned ScopeFlags);
+  void EnterScope(long ScopeFlags);
 
   /// ExitScope - Pop a scope off the scope stack.
   void ExitScope();
@@ -1192,7 +1192,7 @@ private:
     void operator=(const ParseScopeFlags &) = delete;
 
   public:
-    ParseScopeFlags(Parser *Self, unsigned ScopeFlags, bool ManageFlags = true);
+    ParseScopeFlags(Parser *Self, long ScopeFlags, bool ManageFlags = true);
     ~ParseScopeFlags();
   };
 
@@ -2200,7 +2200,7 @@ private:
                                 ExprResult Expr = ExprResult());
   StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
   StmtResult ParseCompoundStatement(bool isStmtExpr = false);
-  StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags);
+  StmtResult ParseCompoundStatement(bool isStmtExpr, long ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
   bool ConsumeNullStmt(StmtVector &Stmts);
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,

@@ -17,13 +17,14 @@
 
 using namespace clang;
 
-void Scope::setFlags(Scope *parent, unsigned flags) {
+void Scope::setFlags(Scope *parent, long flags) {
   AnyParent = parent;
   Flags = flags;
 
   if (parent && !(flags & FnScope) && !(flags & TaintedFunctionScope)
       && !(flags & CallbackFunctionScope)
-      && !(flags & MirrorFunctionScope)) {
+      && !(flags & MirrorFunctionScope)
+      && !(flags & TLIBFunctionScope)) {
     BreakParent    = parent->BreakParent;
     ContinueParent = parent->ContinueParent;
   } else {
@@ -44,6 +45,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     if ((Flags & (FnScope | TaintedFunctionScope|
                   MirrorFunctionScope |
                   CallbackFunctionScope |
+                  TLIBFunctionScope |
                   ClassScope | BlockScope | TemplateParamScope |
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
@@ -92,7 +94,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
   }
 }
 
-void Scope::Init(Scope *parent, unsigned flags) {
+void Scope::Init(Scope *parent, long flags) {
   setFlags(parent, flags);
 
   DeclsInScope.clear();
@@ -112,7 +114,7 @@ bool Scope::containedInPrototypeScope() const {
   return false;
 }
 
-void Scope::AddFlags(unsigned FlagsToSet) {
+void Scope::AddFlags(long FlagsToSet) {
   assert((FlagsToSet & ~(BreakScope | ContinueScope)) == 0 &&
          "Unsupported scope flags");
   if (FlagsToSet & BreakScope) {
@@ -144,7 +146,7 @@ void Scope::mergeNRVOIntoParent() {
 LLVM_DUMP_METHOD void Scope::dump() const { dumpImpl(llvm::errs()); }
 
 void Scope::dumpImpl(raw_ostream &OS) const {
-  unsigned Flags = getFlags();
+  long Flags = getFlags();
   bool HasFlags = Flags != 0;
 
   if (HasFlags)
@@ -155,6 +157,7 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {TaintedFunctionScope, "TaintedFunctionScope"},
       {CallbackFunctionScope, "CallbackFunctionScope"},
       {MirrorFunctionScope, "MirrorFunctionScope"},
+      {TLIBFunctionScope, "TLIBFunctionScope"},
       {BreakScope, "BreakScope"},
       {ContinueScope, "ContinueScope"},
       {DeclScope, "DeclScope"},

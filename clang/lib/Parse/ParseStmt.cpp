@@ -971,7 +971,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 ///
 /// [CHECKED C] bundled-spec:
 ///            '_Bundled'
-StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags) {
+StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   // Checked C - process optional checked scope and bundled block information.
   CheckedScopeSpecifier CSS = CSS_None;
   SourceLocation CSSLoc;

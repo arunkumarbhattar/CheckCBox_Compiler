@@ -85,6 +85,18 @@ PrintingPolicy Sema::getPrintingPolicy(const ASTContext &Context,
 
   return Policy;
 }
+Scope* Sema::RecursiveScopeResolve(Scope* S){
+  /*
+   * Recurse the parent scope tree until you get a scope that is a function type
+   *
+   */
+  Scope* Resolved_scope = S;
+  while ((Resolved_scope != nullptr) && (!Resolved_scope->isFunctionScope()))
+  {
+    Resolved_scope = this->RecursiveScopeResolve(S->getParent());
+  }
+  return Resolved_scope;
+}
 
 void Sema::ActOnTranslationUnitScope(Scope *S) {
   TUScope = S;

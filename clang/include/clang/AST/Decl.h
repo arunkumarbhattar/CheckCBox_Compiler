@@ -1982,6 +1982,8 @@ public:
 
   bool Mirror = false;
 
+  bool TLIB = false;
+
   /// Stashed information about a defaulted function definition whose body has
   /// not yet been lazily generated.
   class DefaultedFunctionInfo final
@@ -2205,6 +2207,7 @@ public:
   void setTaintedFunctionFlag(bool f = false) { this->Tainted = f; }
   void setCallbackFunctionFlag(bool f = false) { this->Callback = f; }
   void setMirrorFunctionFlag(bool f = false) { this->Mirror = f; }
+  void setTLIBFunctionFlag(bool f = false) { this->TLIB = f; }
   bool isGenericFunction() const { return FunctionDeclBits.IsGenericFunction; }
 
   void setItypeGenericFunctionFlag(bool f) { FunctionDeclBits.IsItypeGenericFunction = f; }
@@ -2564,6 +2567,10 @@ public:
   /// Determines whether this function is known to be 'mirror', through
   /// an attribute on its declaration or its type.
   bool isMirror() const {return this->Mirror;};
+
+  /// Determines whether this function is known to be 'Tainted LIB', through
+  /// an attribute on its declaration or its type.
+  bool isTLIB() const {return this->TLIB;};
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
