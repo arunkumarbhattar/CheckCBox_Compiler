@@ -11221,6 +11221,12 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   if(BuiltinInfo.isTaintedCallback(Id)){
     EI = EI.setCallback(true);
   }
+  if(BuiltinInfo.isMirror(Id)){
+    EI = EI.setMirror(true);
+  }
+  if(BuiltinInfo.isMirror(Id)){
+    EI = EI.setMirror(true);
+  }
 
 
   // We really shouldn't be making a no-proto type here.

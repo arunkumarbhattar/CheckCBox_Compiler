@@ -28,6 +28,10 @@
 
 #undef _Mirror
 #define _Mirror [[mirror]]
+
+#undef _TLIB
+#define _TLIB [[TLIB]]
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

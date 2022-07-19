@@ -2065,6 +2065,26 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
         << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_Tainted")
                   : FixItHint());
   }
+
+  //The _TLIB keyword can't appear here
+  // If we find the keyword here, tell the user to put it
+  // at the start instead.
+  if (Tok.is(tok::kw__TLIB)) {
+    SourceLocation Loc = ConsumeToken();
+    const char *PrevSpec;
+    unsigned DiagID;
+
+    // We can offer a fixit if it's valid to mark this function as _TLIB
+    // and we don't have any other declarators in this declaration.
+    bool Fixit = !DS.setFunctionSpecTLIB(Loc, PrevSpec, DiagID);
+    MaybeParseGNUAttributes(D, &LateParsedAttrs);
+    Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
+
+    Diag(Loc, diag::err_c11_tainted_misplaced)
+        << (Fixit ? FixItHint::CreateRemoval(Loc) : FixItHint())
+        << (Fixit ? FixItHint::CreateInsertion(D.getBeginLoc(), "_TLIB")
+                  : FixItHint());
+  }
 }
 
   // Check to see if we have a function *definition* which must have a body.
@@ -3995,6 +4015,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
      if(!getLangOpts().C11)
        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
      isInvalid = DS.setFunctionSpecMirror(Loc, PrevSpec, DiagID);
+     break;
+
+   case tok::kw__TLIB:
+     if(!getLangOpts().C11)
+       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+     isInvalid = DS.setFunctionSpecTLIB(Loc, PrevSpec, DiagID);
      break;
 
     // alignment-specifier
@@ -8190,14 +8216,6 @@ bool Parser::CheckCurrentTaintedPointerSanity()
     /*
      * 1.) canonical types must NOT be checked/or unchecked type pointers
      * 2.) canonical types must NOT be NON-Tainted structs (struct)
-     * Now the thing here is that --> we allow Tainted Structs to have generic
-     * structs, provided that its being done in the context of a _Mirror
-     * function.
-     *
-     * _Mirror functions really dont need Tainted pointers to point to Tainted
-     * Structs, because, when a _Mirror annotated functions is called from the
-     * checked region, this function would basically be returning a pointer
-     * from within the checked memory, even if the type is annotated
      */
     if(typedef_resolved_type->getAsRecordDecl() != NULL)
     {

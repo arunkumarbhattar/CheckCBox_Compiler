@@ -400,7 +400,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
 //===----------------------------------------------------------------------===//
 
 /// EnterScope - Start a new scope.
-void Parser::EnterScope(unsigned ScopeFlags) {
+void Parser::EnterScope(long ScopeFlags) {
   if (NumCachedScopes) {
     Scope *N = ScopeCache[--NumCachedScopes];
     N->Init(getCurScope(), ScopeFlags);
@@ -429,7 +429,7 @@ void Parser::ExitScope() {
 
 /// Set the flags for the current scope to ScopeFlags. If ManageFlags is false,
 /// this object does nothing.
-Parser::ParseScopeFlags::ParseScopeFlags(Parser *Self, unsigned ScopeFlags,
+Parser::ParseScopeFlags::ParseScopeFlags(Parser *Self, long ScopeFlags,
                                  bool ManageFlags)
   : CurScope(ManageFlags ? Self->getCurScope() : nullptr) {
   if (CurScope) {
@@ -1297,6 +1297,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                    ((D.getDeclSpec().isTaintedMirrorSpecified())?
                                               Scope::CallbackFunctionScope :
                                                             Scope::FnScope)|
+                                   ((D.getDeclSpec().isTLIBSpecified())?
+                                              Scope::TLIBFunctionScope :
+                                                            Scope::FnScope)|
                                    Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
@@ -1338,6 +1341,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                     ((D.getDeclSpec().isTaintedMirrorSpecified())?
                                Scope::MirrorFunctionScope :
                                              Scope::FnScope)|
+                    ((D.getDeclSpec().isTLIBSpecified())?
+                               Scope::TLIBFunctionScope :
+                                             Scope::FnScope)|
                                            Scope::DeclScope |
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
@@ -1366,6 +1372,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                  Scope::FnScope)|
                                  ((D.getDeclSpec().isTaintedMirrorSpecified())?
                                  Scope::MirrorFunctionScope :
+                                 Scope::FnScope)|
+                                 ((D.getDeclSpec().isTLIBSpecified())?
+                                 Scope::TLIBFunctionScope :
                                  Scope::FnScope)|
                                  Scope::DeclScope |
                                  Scope::CompoundStmtScope);

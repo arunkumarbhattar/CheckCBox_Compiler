@@ -2970,7 +2970,8 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
  *
  */
   //CheckCBox - Un-Tainted Pointers Cannot be Cast to Tainted Pointers
-  if(S != nullptr && S->isTaintedFunctionScope()) {
+  if(S != nullptr && !(S->isTaintedFunctionScope()) &&
+      (!S->isTLIBFunctionScope())) {
     if (DestType->isTaintedPointerType()) {
       if ((!SrcType->isTaintedPointerType())) {
         Self.Diag(SrcExpr.get()->getExprLoc(),
@@ -3005,7 +3006,8 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
     }
   }
 
-  if(S != nullptr && S->isTaintedFunctionScope()) {
+  if(S != nullptr && !(S->isTaintedFunctionScope()) &&
+      (!S->isTLIBFunctionScope())) {
     // Checked C - No C-style casts to unchecked pointer/array type or variadic
     // type in a checked block.
     if (IsCheckedScope) {

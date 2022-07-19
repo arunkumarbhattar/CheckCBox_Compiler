@@ -697,6 +697,9 @@ public:
                    ((D->getAsFunction()->isMirror())?
                           Scope::MirrorFunctionScope :
                                                            Scope::FnScope)|
+                   ((D->getAsFunction()->isTLIB())?
+                          Scope::TLIBFunctionScope :
+                                                           Scope::FnScope)|
                     Scope::DeclScope |
                    Scope::CompoundStmtScope);
       Actions.ActOnReenterFunctionContext(Actions.getCurScope(), D);
