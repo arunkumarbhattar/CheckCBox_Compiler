@@ -6516,7 +6516,9 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Call.isInvalid())
     return Call;
 
-  if(!CheckCallExprIntegrityInTaintedScope(Fn, LParenLoc))
+  if ((getCurScope()->isTaintedFunctionScope()
+   || getCurScope()->isMirrorFunctionScope())
+   && (!CheckCallExprIntegrityInTaintedScope(Fn, LParenLoc)))
     return Call;
 
   // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
@@ -7812,7 +7814,7 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
   DiscardMisalignedMemberAddress(castType.getTypePtr(), CastExpr);
 
   return BuildCStyleCastExpr(LParenLoc, castTInfo, RParenLoc, CastExpr,
-                             IsCheckedScope());
+                             IsCheckedScope(), getCurScope());
 }
 
 ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
@@ -14641,6 +14643,8 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
                                                SourceLocation OpLoc)
 {
+    if(InputExpr->get() == NULL)
+      return true;
     // Should Also be the same for RHS
     auto IpExpr = InputExpr->get();
     if (IpExpr->getReferencedDeclOfCallee() != NULL)
@@ -14652,15 +14656,6 @@ bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
                  << InputExpr->get()->getSourceRange();
             return false;
         }
-
-        if(IpExpr->getType()->isFunctionType() &&
-            !(IpExpr->getReferencedDeclOfCallee()->getAsFunction()->isCallback()
-        || IpExpr->getReferencedDeclOfCallee()->getAsFunction()->isMirror()))
-        {
-          Diag(OpLoc, diag::err_typecheck_tainted_function_callbk) << 0
-                                  << IpExpr->getSourceRange();
-          return false;
-        }
     }
     return true;
 }
@@ -14671,7 +14666,8 @@ bool Sema::CheckCallExprIntegrityInTaintedScope(Expr *Fn,
   if (Fn->getReferencedDeclOfCallee() != NULL)
   {
     if(!(Fn->getReferencedDeclOfCallee()->getAsFunction()->isMirror() ||
-          Fn->getReferencedDeclOfCallee()->getAsFunction()->isCallback())) {
+          Fn->getReferencedDeclOfCallee()->getAsFunction()->isCallback() ||
+          Fn->getReferencedDeclOfCallee()->getAsFunction()->isTainted())) {
       Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
           << 0 << Fn->getSourceRange();
       return false;
@@ -14683,6 +14679,9 @@ bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
                                                   SourceLocation OpLoc,
                                                SourceRange SR)
 {
+    if((RHS->get() == NULL) || (LHS->get() == NULL))
+      return true;
+
     auto RHSExpr = RHS->get();
     auto LHSExpr = LHS->get();
     if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
@@ -14690,33 +14689,14 @@ bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
           NULL) {
         Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
         return false;
-      } else if (LHSExpr->getReferencedDeclOfCallee()
-                     ->getParentFunctionOrMethod() == NULL) {
+      }
+    }
+
+    if ((LHSExpr->getReferencedDeclOfCallee() != NULL) &&
+        (LHSExpr->getReferencedDeclOfCallee()
+                     ->getParentFunctionOrMethod() == NULL)) {
         Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
         return false;
-      }
-
-      if (RHSExpr->getType()->isFunctionType() &&
-          !(RHSExpr->getReferencedDeclOfCallee()
-                ->getAsFunction()
-                ->isCallback() ||
-            RHSExpr->getReferencedDeclOfCallee()
-                ->getAsFunction()
-                ->isMirror())) {
-        Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
-            << 0 << RHSExpr->getSourceRange();
-        return false;
-      } else if (LHSExpr->getType()->isFunctionType() &&
-                 !(LHSExpr->getReferencedDeclOfCallee()
-                       ->getAsFunction()
-                       ->isCallback() ||
-                   LHSExpr->getReferencedDeclOfCallee()
-                       ->getAsFunction()
-                       ->isMirror())) {
-        Diag(OpLoc, diag::err_typecheck_tainted_function_callbk)
-            << 0 << LHSExpr->getSourceRange();
-        return false;
-      }
     }
     return true;
 }

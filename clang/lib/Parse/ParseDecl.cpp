@@ -8062,7 +8062,10 @@ bool Parser::CheckCurrentTaintedPointerSanity()
           (GetLookAheadToken(curr_tok).is(tok::kw__Nt_array_ptr)) ||
           (GetLookAheadToken(curr_tok).is(tok::kw__Ptr)))
       {
-        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked)
+            << FixItHint::CreateInsertion(
+            Tok.getLocation(),
+            "One of _TPtr/_TArray_ptr/_TNt_array_ptr");
         SkipUntil(tok::r_paren, StopAtSemi);
         return false;
       }
@@ -8167,7 +8170,72 @@ bool Parser::CheckCurrentTaintedPointerSanity()
     return;
   }
 
+  /*
+   * This a corner case for when the canonical type value of a tainted pointer
+   * is a Typedef.
+   *
+   * The type-checking done above is solely done on the basis of tokens
+   * and is not Smart enough to resolve Type-defs
+   *
+   * Hence, the below will look for typedef and then resolve the
+   * typedef
+   *
+   * Note: C Does not Support Nested Typedef
+   */
+
   // The starting location of the last token in the type
+  auto typedef_resolved_type = Result.get().get()->getCanonicalTypeInternal();
+  if (typedef_resolved_type->isTypedefNameType())
+  {
+    /*
+     * 1.) canonical types must NOT be checked/or unchecked type pointers
+     * 2.) canonical types must NOT be NON-Tainted structs (struct)
+     * Now the thing here is that --> we allow Tainted Structs to have generic
+     * structs, provided that its being done in the context of a _Mirror
+     * function.
+     *
+     * _Mirror functions really dont need Tainted pointers to point to Tainted
+     * Structs, because, when a _Mirror annotated functions is called from the
+     * checked region, this function would basically be returning a pointer
+     * from within the checked memory, even if the type is annotated
+     */
+    if(typedef_resolved_type->getAsRecordDecl() != NULL)
+    {
+      auto typedef_record_decl = typedef_resolved_type->getAsRecordDecl();
+      if((typedef_record_decl->isStruct())
+              && (!typedef_record_decl->isTaintedStruct())
+              )
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_struct)
+            << FixItHint::CreateInsertion(
+            Tok.getLocation(),
+            "Tstruct");
+        SkipUntil(tok::greater, StopAtSemi);
+        return;
+      }
+      else if(typedef_record_decl->getTypeForDecl()->isCheckedPointerType()){
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked)
+            << FixItHint::CreateInsertion(
+            Tok.getLocation(),
+            "One of _TPtr/_TArray_ptr/_TNt_array_ptr");
+        SkipUntil(tok::greater, StopAtSemi);
+        return;
+      }
+      else if(typedef_record_decl->getTypeForDecl()->isPointerType()
+               && !typedef_record_decl->getTypeForDecl()->isTaintedPointerType())
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_unchecked);
+        SkipUntil(tok::greater, StopAtSemi);
+        return;
+      }
+      else if(typedef_record_decl->getTypeForDecl()->isCheckedArrayType())
+      {
+        Diag(Tok, diag::err_invalid_tainted_ptr_checked);
+        SkipUntil(tok::greater, StopAtSemi);
+        return;
+      }
+    }
+  }
   SourceLocation EndLoc = Tok.getLocation();
 
   // Match the '>'

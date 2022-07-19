@@ -5541,7 +5541,7 @@ public:
                                  TypeSourceInfo *Ty,
                                  SourceLocation RParenLoc,
                                  Expr *Op,
-                                 bool isCheckedScope = false);
+                                 bool isCheckedScope = false, Scope* S = nullptr);
   CastKind PrepareScalarCast(ExprResult &src, QualType destType);
 
   /// Build an altivec or OpenCL literal.

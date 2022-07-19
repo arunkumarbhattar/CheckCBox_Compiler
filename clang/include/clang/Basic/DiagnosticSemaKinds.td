@@ -6614,7 +6614,7 @@ def err_typecheck_sclass_fscope : Error<
 def err_typecheck_globalvar_tfscope : Error<
   "Tainted/Mirror Annotated functions cannot access Global Storage">;
 def err_typecheck_tainted_function_callbk : Error<
-  "Tainted Annotated functions cannot call functions that are not marked as Callback or Mirror">;
+  "Tainted Annotated functions cannot call functions that are not marked as Callback/Mirror/Tainted">;
 def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
   InGroup<MissingDeclarations>;
 def ext_standalone_specifier : ExtWarn<"'%0' is not permitted on a declaration "
