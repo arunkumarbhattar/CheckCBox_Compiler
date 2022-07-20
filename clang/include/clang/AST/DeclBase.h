@@ -236,6 +236,7 @@ public:
     ModulePrivate
   };
 
+
 protected:
   /// The next declaration within the same lexical
   /// DeclContext. These pointers form the linked list that is
@@ -311,6 +312,11 @@ private:
 
   /// Whether statistic collection is enabled.
   static bool StatisticsEnabled;
+
+  unsigned TaintedDecl: 1;
+  unsigned MirrorDecl : 1;
+  unsigned LIBDecl : 1;
+  unsigned CallbackDecl : 1;
 
 protected:
   friend class ASTDeclReader;
@@ -562,6 +568,21 @@ public:
   /// was written explicitly in the source code.
   bool isImplicit() const { return Implicit; }
   void setImplicit(bool I = true) { Implicit = I; }
+
+  /*
+   * CheckcBox
+   */
+  bool isTaintedDecl() const {return TaintedDecl; }
+  void setTaintedDecl(bool I = false) {TaintedDecl = I; }
+
+  bool isMirrorDecl() const {return MirrorDecl; }
+  void setMirrorDecl(bool I = false) {MirrorDecl = I; }
+
+  bool isLibDecl() const {return LIBDecl; }
+  bool setLibDecl(bool I = false) {LIBDecl = I; }
+
+  bool isCallbackDecl() const {return CallbackDecl;}
+  bool setCallbackDecl(bool I = false) {CallbackDecl = I;}
 
   /// Whether *any* (re-)declaration of the entity was used, meaning that
   /// a definition is required.

@@ -14649,17 +14649,39 @@ bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
     auto IpExpr = InputExpr->get();
     if (IpExpr->getReferencedDeclOfCallee() != NULL)
     {
-        if(IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
-          == NULL)
+        if((IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
+          == NULL) && (!IpExpr->getReferencedDeclOfCallee()->isTaintedDecl()))
         {
             Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
-                 << InputExpr->get()->getSourceRange();
+                 << InputExpr->get()->getSourceRange()
+           << FixItHint::CreateInsertion(OpLoc, "Qualify"
+                                     " the global variable as _Tainted");
             return false;
         }
     }
     return true;
 }
-
+bool Sema::CheckUnExprIntegrityInCheckedScope(ExprResult *InputExpr,
+                                              SourceLocation OpLoc)
+{
+  if(InputExpr->get() == NULL)
+    return true;
+  // Should Also be the same for RHS
+  auto IpExpr = InputExpr->get();
+  if (IpExpr->getReferencedDeclOfCallee() != NULL)
+  {
+    if((IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
+         == NULL) && (IpExpr->getReferencedDeclOfCallee()->isTaintedDecl()))
+    {
+      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
+                          << InputExpr->get()->getSourceRange()
+                          << FixItHint::CreateInsertion(OpLoc, "Modify"
+                          " this variable through a _Tainted Function");
+      return false;
+    }
+  }
+  return true;
+}
 bool Sema::CheckCallExprIntegrityInTaintedScope(Expr *Fn,
                                               SourceLocation OpLoc)
 {
@@ -14687,20 +14709,62 @@ bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
     auto RHSExpr = RHS->get();
     auto LHSExpr = LHS->get();
     if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
-      if (RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
-          NULL) {
-        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+      if ((RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+          NULL) && ((!RHSExpr->getReferencedDeclOfCallee()->isTaintedDecl())
+              && !(RHSExpr->getReferencedDeclOfCallee()->isMirrorDecl()
+                  && RHSExpr->getType().isConstQualified()))){
+        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR
+                                    << FixItHint::CreateInsertion(OpLoc, "Qualify"
+                                         " the global variable as _Tainted or "
+                                         "const-qualified _Mirror");
         return false;
       }
     }
 
     if ((LHSExpr->getReferencedDeclOfCallee() != NULL) &&
         (LHSExpr->getReferencedDeclOfCallee()
-                     ->getParentFunctionOrMethod() == NULL)) {
-        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR;
+                     ->getParentFunctionOrMethod() == NULL)
+        && (!RHSExpr->getReferencedDeclOfCallee()->isTaintedDecl())) {
+        Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << SR
+                                    << FixItHint::CreateInsertion(OpLoc, "Qualify"
+                                           " the global variable as _Tainted");
         return false;
     }
     return true;
+}
+
+bool Sema::CheckBinExprIntegrityInCheckedScope(ExprResult *LHS, ExprResult *RHS,
+                                               SourceLocation OpLoc,
+                                               SourceRange SR)
+{
+  if((RHS->get() == NULL) || (LHS->get() == NULL))
+    return true;
+
+  auto RHSExpr = RHS->get();
+  auto LHSExpr = LHS->get();
+
+  if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
+    if ((RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+         NULL) && ((RHSExpr->getReferencedDeclOfCallee()->isTaintedDecl()))){
+      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << SR
+                       << FixItHint::CreateInsertion(OpLoc, "Consider either Qualifying the "
+                        " this as _Mirror const (faster) or access this through"
+                                    " a _Tainted function");
+      return false;
+    }
+  }
+
+  if (LHSExpr->getReferencedDeclOfCallee() != NULL) {
+    if ((LHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+         NULL) && ((LHSExpr->getReferencedDeclOfCallee()->isTaintedDecl()))){
+      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << SR
+          << FixItHint::CreateInsertion(OpLoc, "Modify this through a "
+                                               "_Tainted function");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
@@ -14766,12 +14830,17 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   }
 
   SourceRange SR(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-  if((getCurScope()->isTaintedFunctionScope()
+  if (getCurScope()->isTaintedFunctionScope()
       || getCurScope()->isMirrorFunctionScope())
-   && (!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR)))
-  {
-    return ExprError();
-  }
+     {
+          if(!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR))
+          return ExprError();
+
+     }
+  else{
+       if(!CheckBinExprIntegrityInCheckedScope(&LHS, &RHS, OpLoc, SR))
+         return ExprError();
+     }
 
   switch (Opc) {
   case BO_Assign:
@@ -15424,6 +15493,18 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   && (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc)))
   {
     return ExprError();
+  }
+
+  if (getCurScope()->isTaintedFunctionScope()
+      || getCurScope()->isMirrorFunctionScope())
+  {
+    if (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc))
+      return ExprError();
+
+  }
+  else{
+    if (!CheckUnExprIntegrityInCheckedScope(&Input, OpLoc))
+      return ExprError();
   }
   bool ConvertHalfVec = false;
   if (getLangOpts().OpenCL) {

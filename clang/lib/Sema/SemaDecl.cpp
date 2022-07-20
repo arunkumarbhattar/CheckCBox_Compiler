@@ -6078,6 +6078,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
 }
 
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
+
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Declaration);
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
 
@@ -6123,6 +6124,19 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
 
   if (getLangOpts().OpenCL)
     setCurrentOpenCLExtensionForDecl(Dcl);
+
+  if (D.getDeclSpec().isTaintedSpecified())
+  {
+    Dcl->setTaintedDecl(true);
+  }
+  else if (D.getDeclSpec().isCallbackSpecified())
+  {
+    Dcl->setCallbackDecl(true);
+  }
+  else if (D.getDeclSpec().isTaintedMirrorSpecified())
+  {
+    Dcl->setMirrorDecl(true);
+  }
 
   return Dcl;
 }
@@ -10791,6 +10805,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // separately by checking on variable declarations.
   for (unsigned I = 0, E = NewFD->getNumParams(); I != E; ++I) {
     ParmVarDecl *PVD = NewFD->getParamDecl(I);
+
+    /*
+     * (gdb) p D.getDeclSpec().isTaintedSpecified()
+      $7 = true
+
+     */
     if (!DiagnoseCheckedDecl(PVD))
       PVD->setInvalidDecl();
   }
@@ -12928,6 +12948,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit,
     return;
   }
 
+  /*
+   *
+   */
+
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(RealDecl)) {
     // Pure-specifiers are handled in ActOnPureSpecifier.
     Diag(Method->getLocation(), diag::err_member_function_initialization)
@@ -13011,6 +13035,23 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit,
       !VDecl->isThisDeclarationADemotedDefinition() &&
       checkVarDeclRedefinition(Def, VDecl))
     return;
+  /*
+   * CheckCBox:
+   * If you are in a tainted scope or, make sure that the decl
+   * is being initialized with either a local variable or a global variable that
+   * has been marked as Mirror
+   */
+
+  if((IsTaintedScope()) || (IsMirrorScope()))
+  {
+    ExprResult InitExpr = Init;
+    auto isLegalInit = CheckUnExprIntegrityInTaintedScope(&InitExpr, EqualLoc);
+    if(!isLegalInit)
+    {
+      VDecl->setInvalidDecl();
+      return;
+    }
+  }
 
   if (getLangOpts().CPlusPlus) {
     // C++ [class.static.data]p4
