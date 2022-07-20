@@ -2928,6 +2928,12 @@ namespace {
      Cfg->print(llvm::outs(), S.getLangOpts(), true);
      llvm::outs() << "Traversing CFG:\n";
 #endif
+     /*
+      * If the FunctionDecl is tainted, do not perform any bounds analysis
+      *
+      */
+     if(FD->isTainted())
+       return;
 
      // Reset the AbstractSetMgr at the beginning of each function, since
      // the storage of AbstractSets should only persist for one function.
@@ -4821,6 +4827,7 @@ namespace {
                               const EquivExprSets EquivExprs,
                               const EqualExprTy RetSameValue,
                               CheckedScopeSpecifier CSS) {
+
       // In an unchecked scope, if the enclosing function has a bounds-safe
       // interface, and the return value has not been implicitly converted
       // to an unchecked pointer, we skip checking the return value bounds.
@@ -6700,7 +6707,10 @@ Expr *Sema::MakeAssignmentImplicitCastExplicit(Expr *E) {
 }
 
 void Sema::CheckFunctionBodyBoundsDecls(FunctionDecl *FD, Stmt *Body) {
+
   if (Body == nullptr)
+    return;
+  if(IsTaintedScope())
     return;
 #if TRACE_CFG
   llvm::outs() << "Checking " << FD->getName() << "\n";

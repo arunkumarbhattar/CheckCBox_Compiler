@@ -14663,7 +14663,8 @@ bool Sema::CheckUnExprIntegrityInTaintedScope(ExprResult *InputExpr,
 bool Sema::CheckCallExprIntegrityInTaintedScope(Expr *Fn,
                                               SourceLocation OpLoc)
 {
-  if (Fn->getReferencedDeclOfCallee() != NULL)
+  if (Fn != NULL && Fn->getReferencedDeclOfCallee() != NULL
+      && Fn->getReferencedDeclOfCallee()->getAsFunction() != NULL)
   {
     if(!(Fn->getReferencedDeclOfCallee()->getAsFunction()->isMirror() ||
           Fn->getReferencedDeclOfCallee()->getAsFunction()->isCallback() ||

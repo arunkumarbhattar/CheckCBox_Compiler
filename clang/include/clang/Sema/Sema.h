@@ -4670,6 +4670,14 @@ public:
 
   void DiagnoseUnterminatedCheckedScope();
 
+  bool IsTaintedScope() {
+    auto FnScope = this->RecursiveScopeResolve(getCurScope());
+    if(FnScope != nullptr && FnScope->isTaintedFunctionScope())
+      return true;
+    else
+      return false;
+  }
+
   bool IsCheckedScope() {
     /*
      * This is very very risky
