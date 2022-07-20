@@ -4678,6 +4678,14 @@ public:
       return false;
   }
 
+  bool IsMirrorScope() {
+    auto FnScope = this->RecursiveScopeResolve(getCurScope());
+    if(FnScope != nullptr && FnScope->isMirrorFunctionScope())
+      return true;
+    else
+      return false;
+  }
+
   bool IsCheckedScope() {
     /*
      * This is very very risky
@@ -13460,6 +13468,11 @@ public:
                                           SourceLocation OpLoc);
   bool CheckCallExprIntegrityInTaintedScope(Expr *Fn, SourceLocation OpLoc);
   Scope *RecursiveScopeResolve(Scope *S);
+  bool CheckBinExprIntegrityInCheckedScope(ExprResult *LHS, ExprResult *RHS,
+                                           SourceLocation OpLoc,
+                                           SourceRange SR);
+  bool CheckUnExprIntegrityInCheckedScope(ExprResult *InputExpr,
+                                          SourceLocation OpLoc);
 };
 
 /// RAII object that enters a new expression evaluation context.

@@ -6612,7 +6612,9 @@ def err_realimag_invalid_type : Error<"invalid type %0 to %1 operator">;
 def err_typecheck_sclass_fscope : Error<
   "illegal storage class on file-scoped variable">;
 def err_typecheck_globalvar_tfscope : Error<
-  "Tainted/Mirror Annotated functions cannot access Global Storage">;
+  "Tainted/Mirror Annotated functions cannot access Un-Qualified Global Storage">;
+def err_typecheck_globalvar_chkscope : Error<
+  "Checked functions cannot Access/Modify Global Storage Marked as _Tainted">;
 def err_typecheck_tainted_function_callbk : Error<
   "Tainted Annotated functions cannot call functions that are not marked as Callback/Mirror/Tainted">;
 def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
