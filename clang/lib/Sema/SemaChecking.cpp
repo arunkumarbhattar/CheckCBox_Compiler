@@ -15494,10 +15494,22 @@ bool Sema::AllowedInCheckedScope(QualType Ty,
   if (Ty.isNull())
     return true;
 
+  /*
+   * Gotta rework on this
+   * Tainted types wont have itypes, hence we neglect the rule to require
+   * itypes.
+   * Tainted function pointer as parameter types would be declared this way -->
+   * _TNt_array_ptr<char> (*process_string)(_TNt_array_ptr<const char> input, size_t len))
+   */
+  if((Ty->isTaintedPointerType()) || (Ty->isFunctionPointerType()))
+    return true;
+
   CheckedScopeTypeLocation CurrentLoc = Loc;
   if (Loc == CSTL_TopLevel)
     Loc = CSTL_Nested;
-
+/*
+ * Tainted Pointers are considered as bounds-safe pointers
+ */
   if (Ty->isPointerType() || Ty->isArrayType()) {
     if ((Ty->isUncheckedPointerType() || Ty->isUncheckedArrayType()) &&
         !InteropType) {
