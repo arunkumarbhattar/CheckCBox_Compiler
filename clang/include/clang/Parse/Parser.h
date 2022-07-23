@@ -237,7 +237,9 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> CheckedScopeHandler;
-
+  std::unique_ptr<PragmaHandler> TlibScopeHandler;
+  std::unique_ptr<PragmaHandler> MirrorScopeHandler;
+  std::unique_ptr<PragmaHandler> TaintedScopeHandler;
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
   /// Whether the '>' token acts as an operator or not. This will be
@@ -3540,6 +3542,9 @@ private:
   bool isGNUAsmQualifier(const Token &TokAfterAsm) const;
   GNUAsmQualifiers::AQ getGNUAsmQualifier(const Token &Tok) const;
   bool parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ);
+  void HandlePragmaTlibScope();
+  void HandlePragmaTaintedScope();
+  void HandlePragmaMirrorScope();
 };
 
 }  // end namespace clang

@@ -465,6 +465,18 @@ Retry:
   case tok::annot_pragma_checked_scope:
     HandlePragmaCheckedScope();
     return StmtEmpty();
+
+  case tok::annot_pragma_tainted_scope:
+    HandlePragmaTaintedScope();
+    return StmtEmpty();
+
+  case tok::annot_pragma_tlib_scope:
+    HandlePragmaTlibScope();
+    return StmtEmpty();
+
+  case tok::annot_pragma_mirror_scope:
+    HandlePragmaMirrorScope();
+    return StmtEmpty();
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -1062,6 +1074,15 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_checked_scope:
       HandlePragmaCheckedScope();
+      break;
+    case tok::annot_pragma_tainted_scope:
+      HandlePragmaTaintedScope();
+      break;
+    case tok::annot_pragma_mirror_scope:
+      HandlePragmaMirrorScope();
+      break;
+    case tok::annot_pragma_tlib_scope:
+      HandlePragmaTlibScope();
       break;
     default:
       checkForPragmas = false;

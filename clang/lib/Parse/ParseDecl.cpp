@@ -4708,6 +4708,21 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       continue;
     }
 
+    if (Tok.is(tok::annot_pragma_tainted_scope)) {
+      HandlePragmaTaintedScope();
+      continue;
+    }
+
+    if (Tok.is(tok::annot_pragma_mirror_scope)) {
+      HandlePragmaMirrorScope();
+      continue;
+    }
+
+    if (Tok.is(tok::annot_pragma_tlib_scope)) {
+      HandlePragmaTlibScope();
+      continue;
+    }
+
     if (!Tok.is(tok::at)) {
       auto CFieldCallback = [&](ParsingFieldDeclarator &FD) {
         // Install the declarator into the current TagDecl.

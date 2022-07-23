@@ -1073,6 +1073,9 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
   DiagnoseUnterminatedCheckedScope();
+  DiagnoseUnterminatedTaintedScope();
+  DiagnoseUnterminatedMirrorScope();
+  DiagnoseUnterminatedTLIBScope();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.

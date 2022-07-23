@@ -1594,6 +1594,19 @@ def err_pragma_checked_scope_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma CHECKED_SCOPE'; "
   "expected 'on','off', '_Bounds_only', 'push', or 'pop'">;
 
+// CHECKCBOX pragmas
+def err_pragma_tlib_scope_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma TLIB'; "
+  "expected 'on','off', 'push', or 'pop'">;
+
+def err_pragma_tainted_scope_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma TAINTED_SCOPE'; "
+  "expected 'on','off', 'push', '_Bounds_only', or 'pop'">;
+
+def err_pragma_mirror_scope_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma MIRROR_SCOPE'; "
+  "expected 'on','off', 'push', or 'pop'">;
+
 def err_expected_expr_in_where_clause : Error<
   "expected bounds declaration or equality expression in where clause">;
 

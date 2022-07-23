@@ -6138,6 +6138,7 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
     Dcl->setMirrorDecl(true);
   }
 
+
   return Dcl;
 }
 
@@ -6672,9 +6673,9 @@ void Sema::DiagnoseFunctionSpecifiers(const DeclSpec &DS) {
     Diag(DS.getNoreturnSpecLoc(),
          diag::err_noreturn_non_function);
 
-  if(DS.isTaintedSpecified())
-    Diag(DS.getNoreturnSpecLoc(),
-         diag::err_tainted_non_function);
+//  if(DS.isTaintedSpecified())
+//    Diag(DS.getNoreturnSpecLoc(),
+//         diag::err_tainted_non_function);
 
   if (DS.getCheckedScopeSpecifier() != CheckedScopeSpecifier::CSS_None)
     Diag(DS.getCheckedSpecLoc(), 
@@ -10784,6 +10785,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   for (const ParmVarDecl *Param : NewFD->parameters()) {
+
     QualType PT = Param->getType();
 
     // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
@@ -10806,11 +10808,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (unsigned I = 0, E = NewFD->getNumParams(); I != E; ++I) {
     ParmVarDecl *PVD = NewFD->getParamDecl(I);
 
-    /*
-     * (gdb) p D.getDeclSpec().isTaintedSpecified()
-      $7 = true
+    if(D.getDeclSpec().isTaintedSpecified())
+      PVD->setTaintedDecl(true);
+    else if(D.getDeclSpec().isTaintedMirrorSpecified())
+      PVD->setMirrorDecl(true);
 
-     */
     if (!DiagnoseCheckedDecl(PVD))
       PVD->setInvalidDecl();
   }
@@ -15795,8 +15797,15 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   }
 
   // Introduce our parameters into the function scope
+  // All the parameter Decls must be marked _Tainted to make the global
+  // tainted typechecked happy
   for (auto Param : FD->parameters()) {
     Param->setOwningFunction(FD);
+    if (FD->isTainted())
+      Param->setTaintedDecl(true);
+
+    if(FD->isMirror())
+      Param->setMirrorDecl(true);
 
     // If this has an identifier, add it to the scope stack.
     if (Param->getIdentifier() && FnBodyScope) {

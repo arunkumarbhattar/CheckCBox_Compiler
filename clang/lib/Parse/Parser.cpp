@@ -634,6 +634,18 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     HandlePragmaCheckedScope();
     return false;
 
+  case tok::annot_pragma_tlib_scope:
+    HandlePragmaTlibScope();
+    return false;
+
+  case tok::annot_pragma_tainted_scope:
+    HandlePragmaTaintedScope();
+    return false;
+
+  case tok::annot_pragma_mirror_scope:
+    HandlePragmaMirrorScope();
+    return false;
+
   case tok::kw_export:
     switch (NextToken().getKind()) {
     case tok::kw_module:

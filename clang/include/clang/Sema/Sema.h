@@ -4634,6 +4634,9 @@ public:
 
 private:
   CheckedScopeSpecifier CheckingKind;
+  TaintedScopeSpecifier TaintedKind;
+  TLIBScopeSpecifier TLIBKind;
+  MirrorScopeSpecifier MirrorKind;
 
   // Keep a stack of saved checked scope information.
   class SavedCheckedScope {
@@ -4643,19 +4646,82 @@ private:
     SourceLocation Loc;
     CheckedScopeSpecifier Saved;
   };
+
+  // Keep a stack of saved checked scope information.
+  class SavedTLIBScope {
+  public:
+    SavedTLIBScope(TLIBScopeSpecifier S, SourceLocation L) :
+                                                                   Loc(L), Saved(S) {}
+    SourceLocation Loc;
+    TLIBScopeSpecifier Saved;
+  };
+
+  class SavedTaintedScope {
+  public:
+    SavedTaintedScope(TaintedScopeSpecifier S, SourceLocation L) :
+                                                             Loc(L), Saved(S) {}
+    SourceLocation Loc;
+    TaintedScopeSpecifier Saved;
+  };
+
+  class SavedMirrorScope {
+  public:
+    SavedMirrorScope(MirrorScopeSpecifier S, SourceLocation L) :
+                                                             Loc(L), Saved(S) {}
+    SourceLocation Loc;
+    MirrorScopeSpecifier  Saved;
+  };
+
   SmallVector<SavedCheckedScope, 8> CheckingKindStack; // can be empty
+  SmallVector<SavedTLIBScope, 8> TLIBKindStack; // can be empty
+  SmallVector<SavedTaintedScope, 8> TaintedKindStack; // can be empty
+  SmallVector<SavedMirrorScope, 8> MirrorKindStack; // can be empty
 
 public:
   CheckedScopeSpecifier GetCheckedScopeInfo() {
     return CheckingKind;
   }
 
+  TaintedScopeSpecifier GetTaintedScopeInfo() {
+    return TaintedKind;
+  }
+
+  TLIBScopeSpecifier GetTLIBScopeInfo() {
+    return TLIBKind;
+  }
+
+  MirrorScopeSpecifier GetMirrorScopeInfo() {
+    return MirrorKind;
+  }
+
   void SetCheckedScopeInfo(CheckedScopeSpecifier CSS) {
     CheckingKind = CSS;
   }
 
+  void SetTaintedScopeInfo(TaintedScopeSpecifier CSS) {
+    TaintedKind = CSS;
+  }
+  void SetTLIBScopeInfo(TLIBScopeSpecifier CSS) {
+    TLIBKind = CSS;
+  }
+  void SetMirrorScopeInfo(MirrorScopeSpecifier CSS) {
+    MirrorKind = CSS;
+  }
+
   void PushCheckedScopeInfo(SourceLocation Loc) {
     CheckingKindStack.push_back(SavedCheckedScope(CheckingKind, Loc));
+  }
+
+  void PushTaintedScopeInfo(SourceLocation Loc) {
+    TaintedKindStack.push_back(SavedTaintedScope(TaintedKind, Loc));
+  }
+
+  void PushTLIBScopeInfo(SourceLocation Loc) {
+    TLIBKindStack.push_back(SavedTLIBScope(TLIBKind, Loc));
+  }
+
+  void PushMirrorScopeInfo(SourceLocation Loc) {
+    MirrorKindStack.push_back(SavedMirrorScope(MirrorKind, Loc));
   }
 
   bool PopCheckedScopeInfo() {
@@ -4668,11 +4734,53 @@ public:
      return true;
   }
 
+  bool PopTaintedScopeInfo() {
+    if (TaintedKindStack.size() > 0) {
+      TaintedKind = TaintedKindStack.back().Saved;
+      TaintedKindStack.pop_back();
+      return false;
+    }
+    else
+      return true;
+  }
+
+  bool PopTLIBScopeInfo() {
+    if (TLIBKindStack.size() > 0) {
+      TLIBKind = TLIBKindStack.back().Saved;
+      TLIBKindStack.pop_back();
+      return false;
+    }
+    else
+      return true;
+  }
+
+  bool PopMirrorScopeInfo() {
+    if (MirrorKindStack.size() > 0) {
+      MirrorKind = MirrorKindStack.back().Saved;
+      MirrorKindStack.pop_back();
+      return false;
+    }
+    else
+      return true;
+  }
+
   void DiagnoseUnterminatedCheckedScope();
 
   bool IsTaintedScope() {
     auto FnScope = this->RecursiveScopeResolve(getCurScope());
     if(FnScope != nullptr && FnScope->isTaintedFunctionScope())
+      return true;
+    else if(TaintedKind != Tainted_None)
+      return true;
+    else
+      return false;
+  }
+
+  bool IsTLIBScope() {
+    auto FnScope = this->RecursiveScopeResolve(getCurScope());
+    if(FnScope != nullptr && FnScope->isTLIBFunctionScope())
+      return true;
+    else if(TLIBKind != TLIB_None)
       return true;
     else
       return false;
@@ -4681,6 +4789,8 @@ public:
   bool IsMirrorScope() {
     auto FnScope = this->RecursiveScopeResolve(getCurScope());
     if(FnScope != nullptr && FnScope->isMirrorFunctionScope())
+      return true;
+    else if(MirrorKind != Mirror_None)
       return true;
     else
       return false;
@@ -5833,6 +5943,34 @@ public:
     PCSK_BoundsOnly,
     PCSK_Push,
     PCSK_Pop
+  };
+
+  // \#pragma TLIB.
+  enum PragmaTlibScopeKind {
+    TLIB_On,
+    TLIB_RELAX,
+    TLIB_Off,
+    TLIB_BoundsOnly,
+    TLIB_Push,
+    TLIB_Pop
+  };
+
+  // \#pragma TAINTED_SCOPE.
+  enum PragmaTaintedScopeKind {
+    TAINTED_On,
+    TAINTED_Off,
+    TAINTED_BoundsOnly,
+    TAINTED_Push,
+    TAINTED_Pop
+  };
+
+  // \#pragma CHECKED_SCOPE.
+  enum PragmaMirrorScopeKind {
+    MIRROR_On,
+    MIRROR_Off,
+    MIRROR_BoundsOnly,
+    MIRROR_Push,
+    MIRROR_Pop
   };
   void ActOnPragmaCheckedScope(PragmaCheckedScopeKind Kind, SourceLocation Loc);
   void DiagnoseUnterminatedPragmaCheckedScopePush();
@@ -13473,6 +13611,12 @@ public:
                                            SourceRange SR);
   bool CheckUnExprIntegrityInCheckedScope(ExprResult *InputExpr,
                                           SourceLocation OpLoc);
+  void ActOnPragmaTlibScope(PragmaTlibScopeKind Kind, SourceLocation Loc);
+  void ActOnPragmaTaintedScope(PragmaTaintedScopeKind Kind, SourceLocation Loc);
+  void ActOnPragmaMirrorScope(PragmaMirrorScopeKind Kind, SourceLocation Loc);
+  void DiagnoseUnterminatedTaintedScope();
+  void DiagnoseUnterminatedMirrorScope();
+  void DiagnoseUnterminatedTLIBScope();
 };
 
 /// RAII object that enters a new expression evaluation context.

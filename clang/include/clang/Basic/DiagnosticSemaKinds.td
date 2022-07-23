@@ -11587,8 +11587,26 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_pragma_pop_checked_scope_mismatch : Error<
   "#pragma CHECKED_SCOPE pop with no matching #pragma CHECKED_SCOPE push">;
 
+  def err_pragma_pop_tainted_scope_mismatch : Error<
+  "#pragma TAINTED_SCOPE pop with no matching #pragma TAINTED_SCOPE push">;
+
+  def err_pragma_pop_tlib_scope_mismatch : Error<
+  "#pragma TLIB pop with no matching #pragma TLIB push">;
+
+  def err_pragma_pop_mirror_scope_mismatch : Error<
+  "#pragma MIRROR_SCOPE pop with no matching #pragma MIRROR_SCOPE push">;
+
   def err_pragma_checked_scope_no_pop_eof : Error<"unterminated "
     "'#pragma CHECKED_SCOPE push' at end of file">;
+
+  def err_pragma_tainted_scope_no_pop_eof : Error<"unterminated "
+    "'#pragma TAINTED_SCOPE push' at end of file">;
+
+  def err_pragma_mirror_scope_no_pop_eof : Error<"unterminated "
+    "'#pragma MIRROR_SCOPE push' at end of file">;
+
+  def err_pragma_tlib_scope_no_pop_eof : Error<"unterminated "
+    "'#pragma TLIB push' at end of file">;
 
   def err_bounds_cast_expected_ptr_or_unchecked : Error<
     "expected _Ptr or * type">;
