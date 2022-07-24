@@ -579,7 +579,7 @@ public:
   void setMirrorDecl(bool I = false) {MirrorDecl = I; }
 
   bool isLibDecl() const {return LIBDecl; }
-  bool setLibDecl(bool I = false) {LIBDecl = I; }
+  void setLibDecl(bool I = false) {LIBDecl = I; }
 
   bool isCallbackDecl() const {return CallbackDecl;}
   void setCallbackDecl(bool I = false) {CallbackDecl = I;}

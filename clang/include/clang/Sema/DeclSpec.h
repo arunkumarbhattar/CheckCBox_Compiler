@@ -497,17 +497,17 @@ public:
   }
 
   DeclSpec(AttributeFactory &attrFactory)
-      : StorageClassSpec(SCS_unspecified),
+      : isTaintedStruct(false),
+        StorageClassSpec(SCS_unspecified),
         ThreadStorageClassSpec(TSCS_unspecified),
         SCS_extern_in_linkage_spec(false),
-        TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
-        TypeSpecComplex(TSC_unspecified), isTaintedStruct(false),
+        TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)), TypeSpecComplex(TSC_unspecified),
         TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
-        TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
-        PointerTypeQualifiers(PT_None),
+        TypeQualifiers(TQ_unspecified), PointerTypeQualifiers(PT_None),
+        FS_inline_specified(false),
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
         FS_tainted_specified(false), FS_tainted_callback_specified(false),
