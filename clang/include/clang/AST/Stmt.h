@@ -1572,10 +1572,11 @@ class CompoundStmt final : public Stmt,
                SourceLocation BNDLoc = SourceLocation());
 
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty),
-       WrittenCSS(CSS_None), CSS(CSS_Unchecked), CSSLoc(),
-WrittenTaintedSS(Tainted_None), TaintedSS(Tainted_None), TaintedLoc(),
-WrittenMirrorSS(Mirror_None), MirrorSS(Mirror_None), MirrorLoc(),
-WrittenTLIBSS(TLIB_None), TLIBSS(TLIB_None), TLIBLoc(),
+       WrittenCSS(CSS_None), CSS(CSS_Unchecked),
+       WrittenTaintedSS(Tainted_None), TaintedSS(Tainted_None),
+       WrittenMirrorSS(Mirror_None), MirrorSS(Mirror_None), WrittenTLIBSS(TLIB_None)
+, TLIBSS(TLIB_None), CSSLoc(),
+TaintedLoc(), MirrorLoc(), TLIBLoc(),
                                             CSMLoc(), BNDLoc() {}
 
   void setStmts(ArrayRef<Stmt *> Stmts);
@@ -1601,10 +1602,10 @@ public:
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
       : Stmt(CompoundStmtClass), RBraceLoc(Loc),
-        WrittenCSS(CSS_None), CSS(CSS_Unchecked), CSSLoc(Loc),
-        WrittenTaintedSS(Tainted_None), TaintedSS(Tainted_None), TaintedLoc(Loc),
-        WrittenMirrorSS(Mirror_None), MirrorSS(Mirror_None), MirrorLoc(Loc),
-        WrittenTLIBSS(TLIB_None), TLIBSS(TLIB_None), TLIBLoc(Loc),
+        WrittenCSS(CSS_None), CSS(CSS_Unchecked), WrittenTaintedSS(Tainted_None),
+        TaintedSS(Tainted_None), WrittenMirrorSS(Mirror_None), MirrorSS(Mirror_None),
+        WrittenTLIBSS(TLIB_None), TLIBSS(TLIB_None), CSSLoc(Loc),
+        TaintedLoc(Loc), MirrorLoc(Loc), TLIBLoc(Loc),
         CSMLoc(Loc), BNDLoc(SourceLocation()) {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.LBraceLoc = Loc;
