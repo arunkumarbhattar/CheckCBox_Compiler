@@ -108,7 +108,7 @@ protected:
     unsigned MirrorSS : 2;
     unsigned TLIBSS : 2;
   };
-  enum { NumStmtBits = 10 };
+  enum { NumStmtBits = 16 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -488,7 +488,7 @@ protected:
     unsigned HasFPFeatures : 1;
 
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    unsigned : 30 - 3 - NumExprBits;
 
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
@@ -605,7 +605,7 @@ protected:
     // These don't need to be particularly wide, because they're
     // strictly limited by the forms of expressions we permit.
     unsigned NumSubExprs : 8;
-    unsigned ResultIndex : 32 - 8 - NumExprBits;
+    unsigned ResultIndex : 38 - 8 - NumExprBits;
   };
 
   class SourceLocExprBitfields {
@@ -1198,7 +1198,7 @@ public:
   Stmt &operator=(Stmt &&) = delete;
 
   Stmt(StmtClass SC) {
-    static_assert(sizeof(*this) <= 8,
+    static_assert(sizeof(*this) <= 16,
                   "changing bitfields changed sizeof(Stmt)");
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
