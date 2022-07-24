@@ -2208,6 +2208,18 @@ private:
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,
                                         CheckedScopeSpecifier WrittenCSS = CSS_None,
                                         SourceLocation CSSLoc = SourceLocation(),
+                                        TaintedScopeSpecifier WrittenTaintedSS
+                                        = Tainted_None,
+                                        SourceLocation TaintedLoc
+                                        = SourceLocation(),
+                                        MirrorScopeSpecifier WrittenMirrorSS
+                                        = Mirror_None,
+                                        SourceLocation MirrorLoc
+                                        = SourceLocation(),
+                                        TLIBScopeSpecifier WrittenTLIBSS
+                                        = TLIB_None,
+                                        SourceLocation TLIBLoc
+                                        = SourceLocation(),
                                         SourceLocation CSMLoc = SourceLocation(),
                                         SourceLocation BNDLoc = SourceLocation());
 

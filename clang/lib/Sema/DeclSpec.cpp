@@ -1116,21 +1116,6 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   return false;
 }
 
-bool DeclSpec::setFunctionSpecTainted(SourceLocation Loc,
-                                       const char *&PrevSpec,
-                                       unsigned &DiagID) {
-  // '_Tainted _Tainted' is ok, but warn as this is likely not what the user
-  // intended.
-  if (FS_tainted_specified) {
-    DiagID = diag::warn_duplicate_declspec;
-    PrevSpec = "_Tainted";
-    return true;
-  }
-  FS_tainted_specified = true;
-  FS_taintedLoc = Loc;
-  return false;
-}
-
 bool DeclSpec::setFunctionSpecCallback(SourceLocation Loc,
                                       const char *&PrevSpec,
                                       unsigned &DiagID) {
@@ -1146,33 +1131,79 @@ bool DeclSpec::setFunctionSpecCallback(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecTLIB(SourceLocation Loc,
+                                   TLIBScopeSpecifier TLIBSS,
+                                   const char *&PrevSpec,
+                                   unsigned &DiagID) {
+  // '_Tainted _Tainted' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_tainted_lib_specified != TLIB_None) {
+    if (FS_tainted_mirror_specified == TLIBSS)
+      DiagID = diag::warn_duplicate_declspec;
+    else
+      DiagID = diag::err_invalid_decl_spec_combination;
+    switch(FS_tainted_mirror_specified)
+    {
+      case TLIB_None: PrevSpec = ""; break;
+      case TLIB_Relax: PrevSpec = "_TLIB _Relax"; break;
+      case TLIB_Bounds: PrevSpec = "_TLIB _Bounds_only"; break;
+      case TLIB_Memory: PrevSpec = "_TLIB"; break;
+    }
+    PrevSpec = "_TLIB";
+    return true;
+  }
+  FS_tainted_lib_specified = TLIBSS;
+  FS_tainted_LibLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecMirror(SourceLocation Loc,
+                                     MirrorScopeSpecifier MirrorSS,
                                        const char *&PrevSpec,
                                        unsigned &DiagID) {
   // '_Callback _Callback' is ok, but warn as this is likely not what the user
   // intended.
-  if (FS_tainted_mirror_specified) {
-    DiagID = diag::warn_duplicate_declspec;
+  if(FS_tainted_mirror_specified != Mirror_None) {
+    if (FS_tainted_mirror_specified == MirrorSS)
+      DiagID = diag::warn_duplicate_declspec;
+    else
+      DiagID = diag::err_invalid_decl_spec_combination;
+    switch(FS_tainted_mirror_specified)
+    {
+    case Mirror_None: PrevSpec = ""; break;
+    case Mirror_Bounds: PrevSpec = "_Mirror _Bounds_only"; break;
+    case Mirror_Memory: PrevSpec = "_Mirror"; break;
+    }
     PrevSpec = "_Mirror";
     return true;
   }
-  FS_tainted_mirror_specified = true;
+  FS_tainted_mirror_specified = MirrorSS;
   FS_tainted_MirrorLoc = Loc;
   return false;
 }
 
-bool DeclSpec::setFunctionSpecTLIB(SourceLocation Loc,
+bool DeclSpec::setFunctionSpecTainted(SourceLocation Loc,
+                                     TaintedScopeSpecifier TaintedSS,
                                      const char *&PrevSpec,
                                      unsigned &DiagID) {
-  // '_TLIB _TLIB' is ok, but warn as this is likely not what the user
+  // '_Tainted _Tainted' is ok, but warn as this is likely not what the user
   // intended.
-  if (FS_tainted_lib_specified) {
-    DiagID = diag::warn_duplicate_declspec;
-    PrevSpec = "_TLIB";
+  if (FS_tainted_lib_specified != Tainted_None) {
+    if (FS_tainted_specified == TaintedSS)
+      DiagID = diag::warn_duplicate_declspec;
+    else
+      DiagID = diag::err_invalid_decl_spec_combination;
+    switch(FS_tainted_specified)
+    {
+      case Tainted_None: PrevSpec = ""; break;
+      case Tainted_Bounds: PrevSpec = "_Tainted _Bounds_only"; break;
+      case Tainted_Memory: PrevSpec = "_Tainted"; break;
+    }
+    PrevSpec = "_Tainted";
     return true;
   }
-  FS_tainted_lib_specified = true;
-  FS_tainted_LibLoc = Loc;
+  FS_tainted_specified = TaintedSS;
+  FS_taintedLoc = Loc;
   return false;
 }
 

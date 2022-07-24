@@ -346,6 +346,22 @@ public:
   static const CSS CSS_Bounds = clang::CSS_Bounds;
   static const CSS CSS_Memory = clang::CSS_Memory;
 
+  typedef TaintedScopeSpecifier TaintedSS;
+  static const TaintedSS Tainted_None = clang::Tainted_None;
+  static const TaintedSS Tainted_Bounds = clang::Tainted_Bounds;
+  static const TaintedSS Tainted_Memory = clang::Tainted_Memory;
+
+  typedef MirrorScopeSpecifier MirrorSS;
+  static const MirrorSS Mirror_None = clang::Mirror_None;
+  static const MirrorSS Mirror_Bounds = clang::Mirror_Bounds;
+  static const MirrorSS Mirror_Memory = clang::Mirror_Memory;
+
+  typedef TLIBScopeSpecifier TLIBSS;
+  static const TLIBSS TLIB_None = clang::TLIB_None;
+  static const TLIBSS TLIB_Relax = clang::TLIB_Relax_cast;
+  static const TLIBSS TLIB_Bounds = clang::TLIB_Bounds;
+  static const TLIBSS TLIB_Memory = clang::TLIB_Memory;
+
 
 private:
   // storage-class-specifier
@@ -380,13 +396,13 @@ private:
   // friend-specifier
   unsigned Friend_specified : 1;
 
-  unsigned FS_tainted_specified : 1;
+  unsigned FS_tainted_specified : 2;
 
   unsigned FS_tainted_callback_specified : 1;
 
-  unsigned FS_tainted_mirror_specified : 1;
+  unsigned FS_tainted_mirror_specified : 2;
 
-  unsigned FS_tainted_lib_specified : 1;
+  unsigned FS_tainted_lib_specified : 2;
 
   // constexpr-specifier
   unsigned ConstexprSpecifier : 2;
@@ -495,7 +511,7 @@ public:
 	FS_forceinline_specified(false), FS_virtual_specified(false),
 	FS_noreturn_specified(false), Friend_specified(false),
         FS_tainted_specified(false), FS_tainted_callback_specified(false),
-        FS_tainted_mirror_specified(false),FS_tainted_lib_specified(false),
+        FS_tainted_mirror_specified(Mirror_None),FS_tainted_lib_specified(TLIB_None),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         FS_explicit_specifier(), Attrs(attrFactory),
@@ -700,6 +716,15 @@ public:
   CheckedScopeSpecifier getCheckedScopeSpecifier() const {
     return (CheckedScopeSpecifier) FS_checked_specified;
   }
+  TaintedScopeSpecifier getTaintedScopeSpecifier() const {
+    return (TaintedScopeSpecifier) FS_tainted_specified;
+  }
+  MirrorScopeSpecifier getMirrorScopeSpecifier() const {
+    return (MirrorScopeSpecifier) FS_tainted_mirror_specified;
+  }
+  TLIBScopeSpecifier getTLIBScopeSpecifier() const {
+    return (TLIBScopeSpecifier) FS_tainted_lib_specified;
+  }
   SourceLocation getCheckedSpecLoc() const { return FS_checkedLoc; }
 
   bool isForanySpecified() const { return FS_forany_specified; }
@@ -750,9 +775,9 @@ public:
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
     FS_tainted_specified = false;
-    FS_tainted_mirror_specified = false;
+    FS_tainted_mirror_specified = Tainted_None;
     FS_tainted_callback_specified = false;
-    FS_tainted_lib_specified = false;
+    FS_tainted_lib_specified = TLIB_None;
     FS_noreturnLoc = SourceLocation();
     FS_taintedLoc = SourceLocation();
     FS_tainted_callbackLoc = SourceLocation();
@@ -903,8 +928,8 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
-  bool setFunctionSpecTainted(SourceLocation Loc, const char *&PrevSpec,
-                              unsigned &DiagID);
+  bool setFunctionSpecTainted(SourceLocation Loc, TaintedScopeSpecifier TaintedSS,
+                              const char *&PrevSpec, unsigned &DiagID);
   bool setFunctionSpecChecked(SourceLocation Loc, CheckedScopeSpecifier CSS,
                               const char *&PrevSpec, unsigned &DiagID);
   bool setSpecForany(SourceLocation Loc, const char *&PrevSpec,
@@ -991,9 +1016,13 @@ public:
   bool isMissingDeclaratorOk();
   bool setFunctionSpecCallback(SourceLocation Loc, const char *&PrevSpec,
                                unsigned int &DiagID);
-  bool setFunctionSpecMirror(SourceLocation Loc, const char *&PrevSpec,
+  bool setFunctionSpecMirror(SourceLocation Loc,
+                             MirrorScopeSpecifier MirrorSS,
+                             const char *&PrevSpec,
                              unsigned int &DiagID);
-  bool setFunctionSpecTLIB(SourceLocation Loc, const char *&PrevSpec,
+  bool setFunctionSpecTLIB(SourceLocation Loc,
+                           TLIBScopeSpecifier TLIBSS,
+                           const char *&PrevSpec,
                            unsigned int &DiagID);
 };
 

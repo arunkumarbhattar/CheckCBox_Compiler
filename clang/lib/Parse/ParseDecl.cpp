@@ -2016,7 +2016,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
       // We can offer a fixit if it's valid to mark this function as _Mirror
       // and we don't have any other declarators in this declaration.
-      bool Fixit = !DS.setFunctionSpecMirror(Loc, PrevSpec, DiagID);
+      bool Fixit = !DS.setFunctionSpecMirror(Loc, Mirror_Memory, PrevSpec, DiagID);
       MaybeParseGNUAttributes(D, &LateParsedAttrs);
       Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
 
@@ -2056,7 +2056,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
     // We can offer a fixit if it's valid to mark this function as _Tainted
     // and we don't have any other declarators in this declaration.
-    bool Fixit = !DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
+    bool Fixit = !DS.setFunctionSpecTainted(Loc, Tainted_Memory, PrevSpec, DiagID);
     MaybeParseGNUAttributes(D, &LateParsedAttrs);
     Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
 
@@ -2076,7 +2076,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
     // We can offer a fixit if it's valid to mark this function as _TLIB
     // and we don't have any other declarators in this declaration.
-    bool Fixit = !DS.setFunctionSpecTLIB(Loc, PrevSpec, DiagID);
+    bool Fixit = !DS.setFunctionSpecTLIB(Loc, TLIB_Memory, PrevSpec, DiagID);
     MaybeParseGNUAttributes(D, &LateParsedAttrs);
     Fixit &= Tok.isOneOf(tok::semi, tok::l_brace, tok::kw_try);
 
@@ -4000,11 +4000,38 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       break;
 
    case tok::kw__Tainted:
-      if(!getLangOpts().C11)
-        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-      isInvalid = DS.setFunctionSpecTainted(Loc, PrevSpec, DiagID);
-      break;
+    {
+      // Checked C - handle _Tainted declaration specifiers.
+      //
+      // First make sure it is a declaration specifier. _Tainted,
+      // _Tainted _Bounds_only, and _Unchecked are only declaration
+      // specifiers if they aren't followed by a '{' or '['.
 
+      // Look past any optional _Bounds_only modifier.
+      int nextLoc = 1;
+      if (Tok.is(tok::kw__Tainted) && NextToken().is(tok::kw__Bounds_only))
+        nextLoc = 2;
+      if (GetLookAheadToken(nextLoc).is(tok::l_square)) {
+        goto DoneWithDeclSpec;
+      } else if (GetLookAheadToken(nextLoc).is(tok::l_brace)) {
+        // This indicates the beginning of a checked scope or the
+        // body of structure/union in a checked scope.
+        break;
+      } else {
+        TaintedScopeSpecifier TaintedSS = Tainted_None;
+        // Tainted function, it acts as function specifier
+        if (Tok.is(tok::kw__Tainted)) {
+          if (NextToken().is(tok::kw__Bounds_only)) {
+            TaintedSS = Tainted_Bounds;
+            ConsumeToken();
+          } else
+            TaintedSS = Tainted_Memory;
+        }
+        isInvalid = DS.setFunctionSpecTainted(Loc, TaintedSS, PrevSpec, DiagID);
+        break;
+      }
+    }
+    break;
    case tok::kw__Callback:
      if(!getLangOpts().C11)
        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
@@ -4012,16 +4039,72 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
      break;
 
    case tok::kw__Mirror:
-     if(!getLangOpts().C11)
-       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-     isInvalid = DS.setFunctionSpecMirror(Loc, PrevSpec, DiagID);
-     break;
+   {
+     // Checked C - handle _Mirror declaration specifiers.
+     //
+     // First make sure it is a declaration specifier. _Tainted,
+     // _Mirror _Bounds_only are only declaration
+     // specifiers if they aren't followed by a '{' or '['.
+
+     // Look past any optional _Bounds_only modifier.
+     int nextLoc = 1;
+     if (Tok.is(tok::kw__Mirror) && NextToken().is(tok::kw__Bounds_only))
+       nextLoc = 2;
+     if (GetLookAheadToken(nextLoc).is(tok::l_square)) {
+       goto DoneWithDeclSpec;
+     } else if (GetLookAheadToken(nextLoc).is(tok::l_brace)) {
+       // This indicates the beginning of a checked scope or the
+       // body of structure/union in a checked scope.
+       break;
+     } else {
+       MirrorScopeSpecifier MirrorSS = Mirror_None;
+       // Tainted function, it acts as function specifier
+       if (Tok.is(tok::kw__Mirror)) {
+         if (NextToken().is(tok::kw__Bounds_only)) {
+           MirrorSS = Mirror_Bounds;
+           ConsumeToken();
+         } else
+           MirrorSS = Mirror_Memory;
+       }
+       isInvalid = DS.setFunctionSpecMirror(Loc, MirrorSS, PrevSpec, DiagID);
+       break;
+     }
+   }
+   break;
 
    case tok::kw__TLIB:
-     if(!getLangOpts().C11)
-       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-     isInvalid = DS.setFunctionSpecTLIB(Loc, PrevSpec, DiagID);
-     break;
+   {
+     // CheckCBox - handle _TLIB declaration specifiers.
+     //
+     // First make sure it is a declaration specifier. _Tainted,
+     // _TLIB _Bounds_only are only declaration
+     // specifiers if they aren't followed by a '{' or '['.
+
+     // Look past any optional _Bounds_only modifier.
+     int nextLoc = 1;
+     if (Tok.is(tok::kw__TLIB) && NextToken().is(tok::kw__Bounds_only))
+       nextLoc = 2;
+     if (GetLookAheadToken(nextLoc).is(tok::l_square)) {
+       goto DoneWithDeclSpec;
+     } else if (GetLookAheadToken(nextLoc).is(tok::l_brace)) {
+       // This indicates the beginning of a checked scope or the
+       // body of structure/union in a checked scope.
+       break;
+     } else {
+       TLIBScopeSpecifier TLIBSS = TLIB_None;
+       // Tainted function, it acts as function specifier
+       if (Tok.is(tok::kw__TLIB)) {
+         if (NextToken().is(tok::kw__Bounds_only)) {
+           TLIBSS = TLIB_Bounds;
+           ConsumeToken();
+         } else
+           TLIBSS = TLIB_Memory;
+       }
+       isInvalid = DS.setFunctionSpecTLIB(Loc, TLIBSS, PrevSpec, DiagID);
+       break;
+     }
+   }
+   break;
 
     // alignment-specifier
     case tok::kw__Alignas:

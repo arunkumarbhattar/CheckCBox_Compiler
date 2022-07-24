@@ -4625,12 +4625,19 @@ public:
   void ActOnStartOfCompoundStmt(bool IsStmtExpr);
   void ActOnAfterCompoundStatementLeadingPragmas();
   void ActOnFinishOfCompoundStmt();
-  StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                               ArrayRef<Stmt *> Elts, bool isStmtExpr,
-                               CheckedScopeSpecifier WrittenCSS = CSS_None,
-                               SourceLocation CSSLoc = SourceLocation(),
-                               SourceLocation CSMLoc = SourceLocation(),
-                               SourceLocation BNDLoc = SourceLocation());
+
+  StmtResult ActOnCompoundStmt(
+      SourceLocation L, SourceLocation R, ArrayRef<Stmt *> Elts,
+      bool isStmtExpr, CheckedScopeSpecifier WrittenCSS = CSS_None ,
+      SourceLocation CSSLoc = SourceLocation(),
+      TaintedScopeSpecifier WrittenTaintedSS = Tainted_None,
+      SourceLocation TaintedLoc = SourceLocation(),
+      MirrorScopeSpecifier WrittenMirrorSS = Mirror_None,
+      SourceLocation MirrorLoc = SourceLocation(),
+      TLIBScopeSpecifier WrittenTLIBSS = TLIB_None,
+      SourceLocation TLIBLoc = SourceLocation(),
+      SourceLocation CSMLoc = SourceLocation(),
+      SourceLocation BNDLoc = SourceLocation());
 
 private:
   CheckedScopeSpecifier CheckingKind;
@@ -4828,11 +4835,76 @@ public:
     }
   };
 
+  class TaintedScopeRAII {
+    Sema &SemaRef;
+    TaintedScopeSpecifier PrevTaintedKind;
+
+  public:
+    TaintedScopeRAII(Sema &SemaRef, TaintedScopeSpecifier TaintedSS)
+        : SemaRef(SemaRef),
+          PrevTaintedKind(SemaRef.TaintedKind) {
+      if (TaintedSS != Tainted_None)
+        SemaRef.TaintedKind = TaintedSS;
+    }
+
+    TaintedScopeRAII(Sema &S, DeclSpec &DS) :
+                                              TaintedScopeRAII(S, DS.getTaintedScopeSpecifier()) {
+    }
+
+    ~TaintedScopeRAII() {
+      SemaRef.TaintedKind = PrevTaintedKind;
+    }
+  };
+
+  class MirrorScopeRAII {
+    Sema &SemaRef;
+    MirrorScopeSpecifier PrevMirrorKind;
+
+  public:
+    MirrorScopeRAII(Sema &SemaRef, MirrorScopeSpecifier MirrorSS)
+        : SemaRef(SemaRef),
+          PrevMirrorKind(SemaRef.MirrorKind) {
+      if (MirrorSS != Mirror_None)
+        SemaRef.MirrorKind = MirrorSS;
+    }
+
+    MirrorScopeRAII(Sema &S, DeclSpec &DS) :
+                                             MirrorScopeRAII(S, DS.getMirrorScopeSpecifier()) {
+    }
+
+    ~MirrorScopeRAII() {
+      SemaRef.MirrorKind = PrevMirrorKind;
+    }
+  };
+
+  class TLIBScopeRAII {
+    Sema &SemaRef;
+    TLIBScopeSpecifier PrevTLIBKind;
+
+  public:
+    TLIBScopeRAII(Sema &SemaRef, TLIBScopeSpecifier CSS)
+        : SemaRef(SemaRef),
+          PrevTLIBKind(SemaRef.TLIBKind) {
+      if (CSS != TLIB_None)
+        SemaRef.TLIBKind = CSS;
+    }
+
+    TLIBScopeRAII(Sema &S, DeclSpec &DS) :
+                                           TLIBScopeRAII(S, DS.getTLIBScopeSpecifier()) {
+    }
+
+    ~TLIBScopeRAII() {
+      SemaRef.TLIBKind = PrevTLIBKind;
+    }
+  };
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
     CompoundScopeRAII(Sema &S, bool IsStmtExpr = false, 
-                      CheckedScopeSpecifier CSS = CSS_None):
+                      CheckedScopeSpecifier CSS = CSS_None,
+                      TaintedScopeSpecifier TaintedSS = Tainted_None,
+                      MirrorScopeSpecifier MirrorSS = Mirror_None,
+                      TLIBScopeSpecifier TLIBSS = TLIB_None):
        S(S), CheckedProperties(S, CSS) {
       S.ActOnStartOfCompoundStmt(IsStmtExpr);
     }

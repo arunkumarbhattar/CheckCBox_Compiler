@@ -987,6 +987,12 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   // Checked C - process optional checked scope and bundled block information.
   CheckedScopeSpecifier CSS = CSS_None;
   SourceLocation CSSLoc;
+  TaintedScopeSpecifier TaintedSS = Tainted_None;
+  SourceLocation TaintedLoc;
+  MirrorScopeSpecifier MirrorSS = Mirror_None;
+  SourceLocation MirrorLoc;
+  TLIBScopeSpecifier TLIBSS = TLIB_None;
+  SourceLocation TLIBLoc;
   SourceLocation CSMLoc;
   SourceLocation BNDLoc;
 
@@ -1002,7 +1008,26 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   } else if (Tok.is(tok::kw__Unchecked)) {
     CSS = CSS_Unchecked;
     CSSLoc = ConsumeToken();
+  } else if (Tok.is(tok::kw__Tainted)) {
+    TaintedSS = Tainted_Memory;
+    TaintedLoc = ConsumeToken();
+    if (Tok.is(tok::kw__Bounds_only)) {
+      TaintedSS = Tainted_Bounds;
+    }
+  } else if (Tok.is(tok::kw__Mirror)) {
+    MirrorSS = Mirror_Memory;
+    MirrorLoc = ConsumeToken();
+    if (Tok.is(tok::kw__Bounds_only)) {
+      MirrorSS = Mirror_Bounds;
+    }
+  } else if (Tok.is(tok::kw__TLIB)) {
+    TLIBSS = TLIB_Memory;
+    TLIBLoc = ConsumeToken();
+    if (Tok.is(tok::kw__Relax)) {
+      TLIBSS = TLIB_Relax_cast;
+    }
   }
+
 
   assert(Tok.is(tok::l_brace) && "Not a compound stmt!");
   // Enter a scope to hold everything within the compound stmt.  Compound
@@ -1011,7 +1036,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr, CSS, CSSLoc, CSMLoc, BNDLoc);
+  return ParseCompoundStatementBody(isStmtExpr, CSS, CSSLoc,
+                                    TaintedSS, TaintedLoc,
+                                    MirrorSS, MirrorLoc,
+                                    TLIBSS, TLIBLoc,
+                                    CSMLoc, BNDLoc);
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1148,6 +1177,12 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
                                               CheckedScopeSpecifier WrittenCSS,
                                               SourceLocation CSSLoc,
+                                              TaintedScopeSpecifier WrittenTaintedSS,
+                                              SourceLocation TaintedLoc,
+                                              MirrorScopeSpecifier WrittenMirrorSS,
+                                              SourceLocation MirrorLoc,
+                                              TLIBScopeSpecifier WrittenTLIBSS,
+                                              SourceLocation TLIBLoc,
                                               SourceLocation CSMLoc,
                                               SourceLocation BNDLoc) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
@@ -1163,7 +1198,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
   if (T.consumeOpen())
     return StmtError();
 
-  Sema::CompoundScopeRAII CompoundScope(Actions, isStmtExpr, WrittenCSS);
+  Sema::CompoundScopeRAII CompoundScope(Actions, isStmtExpr, WrittenCSS,
+                                        WrittenTaintedSS, WrittenMirrorSS, WrittenTLIBSS);
 
   // Parse any pragmas at the beginning of the compound statement.
   ParseCompoundStatementLeadingPragmas();
@@ -1281,7 +1317,14 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
 
   return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
                                    Stmts, isStmtExpr, WrittenCSS,
-                                   CSSLoc, CSMLoc, BNDLoc);
+                                   CSSLoc,
+                                   WrittenTaintedSS,
+                                   TaintedLoc,
+                                   WrittenMirrorSS,
+                                   MirrorLoc,
+                                   WrittenTLIBSS,
+                                   TLIBLoc,
+                                   CSMLoc, BNDLoc);
 }
 
 /// ParseParenExprOrCondition:

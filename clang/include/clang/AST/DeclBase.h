@@ -582,7 +582,7 @@ public:
   bool setLibDecl(bool I = false) {LIBDecl = I; }
 
   bool isCallbackDecl() const {return CallbackDecl;}
-  bool setCallbackDecl(bool I = false) {CallbackDecl = I;}
+  void setCallbackDecl(bool I = false) {CallbackDecl = I;}
 
   /// Whether *any* (re-)declaration of the entity was used, meaning that
   /// a definition is required.

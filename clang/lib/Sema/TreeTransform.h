@@ -1353,9 +1353,19 @@ public:
                                        bool IsStmtExpr,
                                        CheckedScopeSpecifier WrittenCSS,
                                        SourceLocation CSSLoc,
+                                       TaintedScopeSpecifier WrittenTaintedSS,
+                                       SourceLocation TaintedLoc,
+                                       MirrorScopeSpecifier WrittenMirrorSS,
+                                       SourceLocation MirrorLoc,
+                                       TLIBScopeSpecifier WrittenTLIBSS,
+                                       SourceLocation TLIBLoc,
                                        SourceLocation CSMLoc) {
     return getSema().ActOnCompoundStmt(LBraceLoc, RBraceLoc, Statements,
-                                       IsStmtExpr, WrittenCSS, CSSLoc, CSMLoc);
+                                       IsStmtExpr, WrittenCSS, CSSLoc,
+                                       WrittenTaintedSS, TaintedLoc,
+                                       WrittenMirrorSS, MirrorLoc,
+                                       WrittenTLIBSS, TLIBLoc,
+                                       CSMLoc);
   }
 
   /// Build a new case statement.
@@ -7411,6 +7421,12 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
                                           IsStmtExpr,
                                           S->getWrittenCheckedSpecifier(),
                                           S->getCheckedSpecifierLoc(),
+                                          S->getWrittenTaintedSpecifier(),
+                                          S->getTaintedSpecifierLoc(),
+                                          S->getWrittenMirrorSpecifier(),
+                                          S->getMirrorSpecifierLoc(),
+                                          S->getWrittenTLIBSpecifier(),
+                                          S->getTLIBSpecifierLoc(),
                                           S->getCheckedSpecifierLoc());
 }
 
