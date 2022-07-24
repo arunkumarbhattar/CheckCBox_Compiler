@@ -17,8 +17,8 @@ add_clang_library(clangCheckMate
   AVarGraph.cpp
   ArrayBoundsInferenceConsumer.cpp
   CastPlacement.cpp
-        CheckMate.cpp
-        CheckMateInteractiveData.cpp
+  CheckMate.cpp
+  CheckMateInteractiveData.cpp
   CheckMateStats.cpp
   CheckedRegions.cpp
   ConstraintBuilder.cpp
