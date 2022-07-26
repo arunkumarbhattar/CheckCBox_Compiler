@@ -87,7 +87,9 @@ namespace {
     void CheckStaticCast();
     void CheckDynamicCast();
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
-    void CheckCStyleCast(bool IsCheckedScope, Scope* S=nullptr);
+    void CheckCStyleCast(bool IsCheckedScope, bool IsTaintedScope,
+                         bool IsMirrorScope, bool IsTLIBScope
+                                                         , Scope* S=nullptr);
     void CheckBuiltinBitCast();
     void CheckAddrspaceCast();
     void CheckBoundsCast(tok::TokenKind kind);
@@ -2704,7 +2706,8 @@ Scope* CastOperation::RecursiveScopeResolve(Scope* S){
 }
 
 /// Check the semantics of a C-style cast operation, in C.
-void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
+void CastOperation::CheckCStyleCast(bool IsCheckedScope, bool IsTaintedScope,
+                                    bool IsMirrorScope, bool IsTLIBScope, Scope* S) {
   assert(!Self.getLangOpts().CPlusPlus);
 
   // C-style casts can resolve __unknown_any types.
@@ -2992,7 +2995,8 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
   if(S != nullptr && !S->isFunctionScope())
     S = this->RecursiveScopeResolve(S);
 
-  if(S != nullptr && !(S->isTaintedFunctionScope() || S->isTLIBFunctionScope())) {
+  if(S != nullptr && !((S->isTaintedFunctionScope() || IsTaintedScope)
+                        || (S->isTLIBFunctionScope() || IsTLIBScope))) {
     if (DestType->isTaintedPointerType()) {
       if ((!SrcType->isTaintedPointerType())) {
         Self.Diag(SrcExpr.get()->getExprLoc(),
@@ -3027,8 +3031,8 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
     }
   }
 
-  if(S != nullptr && !(S->isTaintedFunctionScope()) &&
-      (!S->isTLIBFunctionScope())) {
+  if(S != nullptr && !(S->isTaintedFunctionScope() || IsTaintedScope) &&
+      (!(S->isTLIBFunctionScope() || IsTLIBScope))) {
     // Checked C - No C-style casts to unchecked pointer/array type or variadic
     // type in a checked block.
     if (IsCheckedScope) {
@@ -3182,7 +3186,11 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
                                      TypeSourceInfo *CastTypeInfo,
                                      SourceLocation RPLoc,
                                      Expr *CastExpr,
-                                     bool IsCheckedScope, Scope* S) {
+                                     bool IsCheckedScope,
+                                     bool isTaintedScope,
+                                     bool IsMirrorScope,
+                                     bool IsTLIBScope,
+                                     Scope* S) {
   CastOperation Op(*this, CastTypeInfo->getType(), CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = SourceRange(LPLoc, CastExpr->getEndLoc());
@@ -3191,7 +3199,8 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
     Op.CheckCXXCStyleCast(/*FunctionalCast=*/ false,
                           isa<InitListExpr>(CastExpr));
   } else {
-    Op.CheckCStyleCast(IsCheckedScope, S);
+    Op.CheckCStyleCast(IsCheckedScope, isTaintedScope, IsMirrorScope,
+                       IsTLIBScope,S);
   }
 
   if (Op.SrcExpr.isInvalid())

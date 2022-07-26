@@ -6085,20 +6085,21 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   // The Below condition is to prevent tainted functions from having pointer
   // return types that are not tainted
 
-  if ((D.getDeclSpec().isTaintedSpecified()) &&
-      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
-       D.getDeclSpec().getPointerTypeChecked().isValid()))
-  {
-      Diag(D.getDeclSpec().getBeginLoc(),
-         diag::err_tainted_specified_functions_should_have_tainted_pointers);
-  }
+//  if ((D.getDeclSpec().isTaintedSpecified() || IsTaintedScope()) &&
+//      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
+//       D.getDeclSpec().getPointerTypeChecked().isValid()))
+//  {
+//      Diag(D.getDeclSpec().getBeginLoc(),
+//         diag::err_tainted_specified_functions_should_have_tainted_pointers);
+//  }
   // The below condition is to prevent tainted functions from have struct
   //return types that are not tainted
-  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
-  {
-    Diag(D.getDeclSpec().getBeginLoc(),
-         diag::err_tainted_specified_functions_should_have_tainted_structs);
-  }
+//  if ((D.getDeclSpec().isTaintedSpecified()
+//       || IsTaintedScope())  && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+//  {
+//    Diag(D.getDeclSpec().getBeginLoc(),
+//         diag::err_tainted_specified_functions_should_have_tainted_structs);
+//  }
 
   // The Below condition is to prevent _Callback functions from having pointer
   // return types that are not _Callback
@@ -6112,7 +6113,7 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   }
   // The below condition is to prevent Callback functions from have struct
   //return types that are not tainted
-  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+  if (D.getDeclSpec().isCallbackSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
   {
     Diag(D.getDeclSpec().getBeginLoc(),
          diag::err_callback_specified_functions_should_have_tainted_structs);
@@ -6125,7 +6126,11 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   if (getLangOpts().OpenCL)
     setCurrentOpenCLExtensionForDecl(Dcl);
 
-  if (D.getDeclSpec().isTaintedSpecified())
+  if (D.getDeclSpec().isTaintedSpecified()
+      /*
+       * Or if the decl is declared in a tainted function
+       */
+      || IsTaintedScope())
   {
     Dcl->setTaintedDecl(true);
   }
@@ -6133,12 +6138,20 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   {
     Dcl->setCallbackDecl(true);
   }
-  else if (D.getDeclSpec().isTaintedMirrorSpecified())
+  else if ((D.getDeclSpec().isTaintedMirrorSpecified()) || IsMirrorScope())
   {
     Dcl->setMirrorDecl(true);
   }
-
-
+  else if(D.getDeclSpec().isTLIBSpecified() || IsTLIBScope())
+  {
+    Dcl->setLibDecl(true);
+  }
+  else if(D.getDeclSpec().isTaintedStruct ||
+           (D.getDeclSpec().isGenericFunctionOrStruct()
+            && (IsTLIBScope()||IsMirrorScope())))
+  {
+    Dcl->setTaintedDecl(true);
+  }
   return Dcl;
 }
 
@@ -9646,25 +9659,27 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (!NewFD) return nullptr;
 
 
-  if(D.getDeclSpec().isTaintedSpecified())
+
+  if((D.getDeclSpec().isTaintedSpecified()) || IsTaintedScope())
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setTaintedFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isCallbackSpecified())
+  if(D.getDeclSpec().isCallbackSpecified() )
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setCallbackFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isTaintedMirrorSpecified())
+  if(D.getDeclSpec().isTaintedMirrorSpecified() || IsMirrorScope())
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setMirrorFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isTLIBSpecified())
+  if((D.getDeclSpec().isTLIBSpecified()) || IsTLIBScope())
+
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setTLIBFunctionFlag(true);
@@ -10074,7 +10089,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
          * If the FunctionDecl is Tainted,
          * Make sure the argument type signature is legal
          */
-        if(D.getDeclSpec().isTaintedSpecified()){
+        if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope()){
+          NewFD->setTaintedDecl(true);
           if(!CheckTaintedFunctionIntegrity(Param)){
             NewFD->setInvalidDecl();
           }
@@ -10109,6 +10125,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         if (!TD) {
           if (auto *ECD = dyn_cast<EnumConstantDecl>(NonParmDecl))
             TD = cast<EnumDecl>(ECD->getDeclContext());
+
+          if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope())
+            TD->setTaintedDecl(true);
         }
         if (!TD)
           continue;
@@ -10117,6 +10136,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           continue;
         TagDC->removeDecl(TD);
         TD->setDeclContext(NewFD);
+        if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope())
+          TD->setTaintedDecl(true);
         NewFD->addDecl(TD);
 
         // Preserve the lexical DeclContext if it is not the surrounding tag
@@ -10146,6 +10167,18 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           BuildParmVarDeclForTypedef(NewFD, D.getIdentifierLoc(), AI);
       Param->setScopeInfo(0, Params.size());
       Params.push_back(Param);
+      if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope()){
+        NewFD->setTaintedDecl(true);
+        if(!CheckTaintedFunctionIntegrity(Param)){
+          NewFD->setInvalidDecl();
+        }
+      }
+
+      if(D.getDeclSpec().isCallbackSpecified()){
+        if(!CheckCallbackFunctionIntegrity(Param)){
+          NewFD->setInvalidDecl();
+        }
+      }
     }
 
     // Copy the bounds annotations to the parameter.  Make the bounds
@@ -10788,6 +10821,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     QualType PT = Param->getType();
 
+    if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope())
+      (const_cast<ParmVarDecl*>(Param))->setTaintedDecl(true);
+    else if(D.getDeclSpec().isTaintedMirrorSpecified() || IsMirrorScope())
+      (const_cast<ParmVarDecl*>(Param))->setMirrorDecl(true);
+    else if(D.getDeclSpec().isTLIBSpecified() || IsTLIBScope())
+      (const_cast<ParmVarDecl*>(Param))->setLibDecl(true);
+
     // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
     // types.
     if (getLangOpts().OpenCLVersion >= 200 || getLangOpts().OpenCLCPlusPlus) {
@@ -10808,9 +10848,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (unsigned I = 0, E = NewFD->getNumParams(); I != E; ++I) {
     ParmVarDecl *PVD = NewFD->getParamDecl(I);
 
-    if(D.getDeclSpec().isTaintedSpecified())
+    if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope())
       PVD->setTaintedDecl(true);
-    else if(D.getDeclSpec().isTaintedMirrorSpecified())
+    else if(D.getDeclSpec().isTaintedMirrorSpecified() || IsMirrorScope())
       PVD->setMirrorDecl(true);
 
     if (!DiagnoseCheckedDecl(PVD))
@@ -11971,7 +12011,7 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     Diag(NoreturnLoc, diag::note_main_remove_noreturn)
       << FixItHint::CreateRemoval(NoreturnRange);
   }
-  if(DS.isTaintedSpecified()){
+  if(DS.isTaintedSpecified() || IsTaintedScope()){
     SourceLocation TaintedLoc = DS.getTaintedSpecLoc();
     SourceRange TaintedRange(TaintedLoc, getLocForEndOfToken(TaintedLoc));
     Diag(TaintedLoc, diag::ext_tainted_main);
@@ -13603,6 +13643,20 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
   if (VarDecl *Var = dyn_cast<VarDecl>(RealDecl)) {
     QualType Type = Var->getType();
 
+    if(IsTaintedScope())
+    {
+      Var->setTaintedDecl(true);
+    }
+
+    if(IsMirrorScope())
+    {
+      Var->setMirrorDecl(true);
+    }
+
+    if(IsTLIBScope())
+    {
+      Var->setLibDecl(true);
+    }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
       Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
@@ -16821,6 +16875,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
     return NTK_TemplateTemplateArgument;
   switch (TTK) {
   case TTK_Struct:
+  case TTK_Tstruct:
   case TTK_Interface:
   case TTK_Class:
     return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
@@ -18737,7 +18792,8 @@ void Sema::ActOnLastBitfield(SourceLocation DeclLoc,
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        ArrayRef<Decl *> Fields, SourceLocation LBrac,
                        SourceLocation RBrac,
-                       const ParsedAttributesView &Attrs) {
+                       const ParsedAttributesView &Attrs,
+                       bool IsTaintedStruct) {
   assert(EnclosingDecl && "missing record or interface decl");
 
   // If this is an Objective-C @implementation or category and we have
@@ -18780,6 +18836,11 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     // Get the type for the field.
     const Type *FDTy = FD->getType().getTypePtr();
+
+    if(IsTaintedStruct || IsTaintedScope())
+    {
+      FD->setTaintedDecl(true);
+    }
 
     if (!FD->isAnonymousStructOrUnion()) {
       // Remember all fields written by the user.

@@ -3102,7 +3102,8 @@ public:
   // This is used for both record definitions and ObjC interface declarations.
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
                    ArrayRef<Decl *> Fields, SourceLocation LBrac,
-                   SourceLocation RBrac, const ParsedAttributesView &AttrList);
+                   SourceLocation RBrac, const ParsedAttributesView &AttrList,
+                   bool isTaintedStruct = false);
 
   /// ActOnTagStartDefinition - Invoked when we have entered the
   /// scope of a tag's definition (e.g., for an enumeration, class,
@@ -5742,11 +5743,6 @@ public:
   ExprResult ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
                            Declarator &D, ParsedType &Ty,
                            SourceLocation RParenLoc, Expr *CastExpr);
-  ExprResult BuildCStyleCastExpr(SourceLocation LParenLoc,
-                                 TypeSourceInfo *Ty,
-                                 SourceLocation RParenLoc,
-                                 Expr *Op,
-                                 bool isCheckedScope = false, Scope* S = nullptr);
   CastKind PrepareScalarCast(ExprResult &src, QualType destType);
 
   /// Build an altivec or OpenCL literal.
@@ -13689,6 +13685,14 @@ public:
   void DiagnoseUnterminatedTaintedScope();
   void DiagnoseUnterminatedMirrorScope();
   void DiagnoseUnterminatedTLIBScope();
+  ExprResult BuildCStyleCastExpr(SourceLocation LPLoc,
+                                 TypeSourceInfo *CastTypeInfo,
+                                 SourceLocation RPLoc, Expr *CastExpr,
+                                 bool IsCheckedScope = false,
+                                 bool isTaintedScope = false,
+                                 bool IsMirrorScope = false,
+                                 bool IsTLIBScope = false,
+                                 Scope *S = nullptr);
 };
 
 /// RAII object that enters a new expression evaluation context.

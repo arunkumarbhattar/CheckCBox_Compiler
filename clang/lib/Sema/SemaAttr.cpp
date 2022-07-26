@@ -1014,6 +1014,8 @@ void Sema::ActOnPragmaTlibScope(PragmaTlibScopeKind Kind,
   switch (Kind) {
   case TLIB_On: SetTLIBScopeInfo(TLIB_Memory); break;
   case TLIB_RELAX: SetTLIBScopeInfo(TLIB_Relax_cast); break;
+  case TLIB_BoundsOnly:
+    SetTLIBScopeInfo(TLIB_Bounds); break;
   case TLIB_Off: SetTLIBScopeInfo(TLIB_None); break;
   case TLIB_Push: PushTLIBScopeInfo(Loc); break;
   case TLIB_Pop: {

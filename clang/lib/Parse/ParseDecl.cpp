@@ -4682,6 +4682,7 @@ void Parser::ParseStructDeclaration(
     // Check if the tainted Struct (if) is valid or not -->
     if(DS.isTaintedStruct)
     {
+
       if(DS.getPointerTypeChecked().isValid()) {
         Diag((DS.getPointerTypeChecked()), diag::err_tainted_struct_member_ptr);
         DS.SetTypeSpecError();
@@ -4890,7 +4891,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                                      TagDecl->field_end());
 
   Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
-                      T.getOpenLocation(), T.getCloseLocation(), attrs);
+                      T.getOpenLocation(), T.getCloseLocation(),
+                      attrs, TagDecl->isTaintedStruct());
   // Parse the deferred bounds expressions
   ParsingDeclSpec DS(*this);
   ParsingFieldDeclarator DeclaratorsInfo(*this,DS);
