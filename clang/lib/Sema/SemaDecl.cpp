@@ -6085,16 +6085,17 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   // The Below condition is to prevent tainted functions from having pointer
   // return types that are not tainted
 
-  if ((D.getDeclSpec().isTaintedSpecified()) &&
-      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
-       D.getDeclSpec().getPointerTypeChecked().isValid()))
-  {
-      Diag(D.getDeclSpec().getBeginLoc(),
-         diag::err_tainted_specified_functions_should_have_tainted_pointers);
-  }
+//  if ((D.getDeclSpec().isTaintedSpecified() || IsTaintedScope()) &&
+//      (D.getDeclSpec().getPointerTypeGeneric().isValid() ||
+//       D.getDeclSpec().getPointerTypeChecked().isValid()))
+//  {
+//      Diag(D.getDeclSpec().getBeginLoc(),
+//         diag::err_tainted_specified_functions_should_have_tainted_pointers);
+//  }
   // The below condition is to prevent tainted functions from have struct
   //return types that are not tainted
-  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+  if ((D.getDeclSpec().isTaintedSpecified()
+       || IsTaintedScope())  && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
   {
     Diag(D.getDeclSpec().getBeginLoc(),
          diag::err_tainted_specified_functions_should_have_tainted_structs);
@@ -6112,7 +6113,7 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   }
   // The below condition is to prevent Callback functions from have struct
   //return types that are not tainted
-  if (D.getDeclSpec().isTaintedSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
+  if (D.getDeclSpec().isCallbackSpecified() && (D.getDeclSpec().getTypeSpecType() == clang::TST_struct))
   {
     Diag(D.getDeclSpec().getBeginLoc(),
          diag::err_callback_specified_functions_should_have_tainted_structs);
@@ -9646,25 +9647,27 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (!NewFD) return nullptr;
 
 
-  if(D.getDeclSpec().isTaintedSpecified())
+
+  if((D.getDeclSpec().isTaintedSpecified()) || IsTaintedScope())
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setTaintedFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isCallbackSpecified())
+  if(D.getDeclSpec().isCallbackSpecified() )
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setCallbackFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isTaintedMirrorSpecified())
+  if(D.getDeclSpec().isTaintedMirrorSpecified() || IsMirrorScope())
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setMirrorFunctionFlag(true);
   }
 
-  if(D.getDeclSpec().isTLIBSpecified())
+  if((D.getDeclSpec().isTLIBSpecified()) || IsTLIBScope())
+
   {
     //we need to set the Function's exttype class with this attribute
     NewFD->setTLIBFunctionFlag(true);
@@ -10074,7 +10077,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
          * If the FunctionDecl is Tainted,
          * Make sure the argument type signature is legal
          */
-        if(D.getDeclSpec().isTaintedSpecified()){
+        if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope()){
           if(!CheckTaintedFunctionIntegrity(Param)){
             NewFD->setInvalidDecl();
           }
@@ -10808,9 +10811,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (unsigned I = 0, E = NewFD->getNumParams(); I != E; ++I) {
     ParmVarDecl *PVD = NewFD->getParamDecl(I);
 
-    if(D.getDeclSpec().isTaintedSpecified())
+    if(D.getDeclSpec().isTaintedSpecified() || IsTaintedScope())
       PVD->setTaintedDecl(true);
-    else if(D.getDeclSpec().isTaintedMirrorSpecified())
+    else if(D.getDeclSpec().isTaintedMirrorSpecified() || IsMirrorScope())
       PVD->setMirrorDecl(true);
 
     if (!DiagnoseCheckedDecl(PVD))
@@ -11971,7 +11974,7 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     Diag(NoreturnLoc, diag::note_main_remove_noreturn)
       << FixItHint::CreateRemoval(NoreturnRange);
   }
-  if(DS.isTaintedSpecified()){
+  if(DS.isTaintedSpecified() || IsTaintedScope()){
     SourceLocation TaintedLoc = DS.getTaintedSpecLoc();
     SourceRange TaintedRange(TaintedLoc, getLocForEndOfToken(TaintedLoc));
     Diag(TaintedLoc, diag::ext_tainted_main);
@@ -16821,6 +16824,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
     return NTK_TemplateTemplateArgument;
   switch (TTK) {
   case TTK_Struct:
+  case TTK_Tstruct:
   case TTK_Interface:
   case TTK_Class:
     return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;

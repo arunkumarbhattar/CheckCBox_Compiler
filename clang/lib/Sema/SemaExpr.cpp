@@ -6516,8 +6516,12 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Call.isInvalid())
     return Call;
 
-  if ((getCurScope()->isTaintedFunctionScope()
-   || getCurScope()->isMirrorFunctionScope())
+  bool isTaintedFunction = (IsTaintedScope()
+                            || (getCurScope()->isTaintedFunctionScope()));
+  bool isMirrorFunction = (IsMirrorScope()
+                            || (getCurScope()->isMirrorFunctionScope()));
+
+  if ((isTaintedFunction || isMirrorFunction)
    && (!CheckCallExprIntegrityInTaintedScope(Fn, LParenLoc)))
     return Call;
 
@@ -14323,6 +14327,13 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   } else
     kind = CheckCBox_PointerKind::Unchecked;
 
+  if (IsTaintedScope()) {
+    if (op->getType()->isFunctionType())
+      kind = CheckCBox_PointerKind::t_ptr;
+    else
+      kind = CheckCBox_PointerKind::t_array;
+  } else
+    kind = CheckCBox_PointerKind::Unchecked;
   return Context.getPointerType(op->getType(), kind);
 }
 
@@ -14830,8 +14841,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   }
 
   SourceRange SR(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-  if (getCurScope()->isTaintedFunctionScope()
-      || getCurScope()->isMirrorFunctionScope())
+  auto TaintedSS = GetTaintedScopeInfo();
+  auto MirrorSS = GetMirrorScopeInfo();
+  bool isTaintedFunction = (IsTaintedScope()
+                          || (getCurScope()->isTaintedFunctionScope()));
+  bool isMirrorFunction = (IsMirrorScope()
+                         || (getCurScope()->isMirrorFunctionScope()));
+
+if (isTaintedFunction||isMirrorFunction)
      {
           if(!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR))
           return ExprError();
@@ -15487,16 +15504,14 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   ExprObjectKind OK = OK_Ordinary;
   QualType resultType;
   bool CanOverflow = false;
+  auto TaintedSS = GetTaintedScopeInfo();
+  auto MirrorSS = GetMirrorScopeInfo();
+  bool isTaintedFunction = (IsTaintedScope()
+                            || (getCurScope()->isTaintedFunctionScope()));
+  bool isMirrorFunction = (IsMirrorScope()
+                           || (getCurScope()->isMirrorFunctionScope()));
 
-  if((getCurScope()->isTaintedFunctionScope()
-  || getCurScope()->isMirrorFunctionScope())
-  && (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc)))
-  {
-    return ExprError();
-  }
-
-  if (getCurScope()->isTaintedFunctionScope()
-      || getCurScope()->isMirrorFunctionScope())
+  if (isTaintedFunction||isMirrorFunction)
   {
     if (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc))
       return ExprError();

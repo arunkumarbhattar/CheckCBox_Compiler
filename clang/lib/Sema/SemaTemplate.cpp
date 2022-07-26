@@ -1507,7 +1507,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     if (DS.isNoreturnSpecified())
       EmitDiag(DS.getNoreturnSpecLoc());
 
-    if (DS.isTaintedSpecified())
+    if (DS.isTaintedSpecified() || IsTaintedScope())
       EmitDiag(DS.getTaintedSpecLoc());
   };
 

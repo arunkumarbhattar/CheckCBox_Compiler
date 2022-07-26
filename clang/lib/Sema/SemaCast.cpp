@@ -2992,7 +2992,7 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, Scope* S) {
   if(S != nullptr && !S->isFunctionScope())
     S = this->RecursiveScopeResolve(S);
 
-  if(S != nullptr && !(S->isTaintedFunctionScope() || S->isTLIBFunctionScope())) {
+  if(S != nullptr && !((S->isTaintedFunctionScope()) || S->isTLIBFunctionScope())) {
     if (DestType->isTaintedPointerType()) {
       if ((!SrcType->isTaintedPointerType())) {
         Self.Diag(SrcExpr.get()->getExprLoc(),
