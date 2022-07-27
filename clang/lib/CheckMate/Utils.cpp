@@ -136,8 +136,11 @@ clang::CheckCBox_PointerKind getCheckCBox_PointerKind(InteropTypeExpr *ItypeExpr
   if(InnerType->isTaintedPointerNtArrayType()){
     return CheckCBox_PointerKind::t_nt_array;
   }
-  if(InnerType->isTaintedPointerArrayType()){
+  if(InnerType->isTaintedArrayType()){
     return CheckCBox_PointerKind::t_array;
+  }
+  if(InnerType->isTaintedPointerNtArrayType()){
+    return CheckCBox_PointerKind::t_nt_array;
   }
   if(InnerType->isTaintedPointerPtrType()){
     return CheckCBox_PointerKind::t_ptr;

@@ -2059,6 +2059,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     else {
       Decl *D =
           SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
+
+      if(DS.isTaintedSpecified())
+        D->setTaintedDecl(true);
+      if(DS.isTaintedMirrorSpecified())
+        D->setMirrorDecl(true);
+
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
       if (SkipBody.CheckSameAsPrevious &&

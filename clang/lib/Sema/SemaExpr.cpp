@@ -567,6 +567,9 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
           Ty = RewriteBoundsSafeInterfaceTypes(Ty);
           isBoundsSafeInterfaceCast = true;
         }
+        //Tainted Function pointers would never have bounds-safe itype interface
+        // as callback functions can only accept and return tainted types.
+        // That is, callback functions cannot accept or return itypes.
       }
 
     CheckCBox_PointerKind kind = isCheckedScope ?
@@ -2120,6 +2123,13 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   if (IsCheckedScope()) {
     if (Ty->isFunctionNoProtoType()) {
       Diag(NameInfo.getLoc(), diag::err_checked_scope_no_prototype_func);
+      return ExprError();
+    }
+  }
+
+  if (IsTaintedScope()) {
+    if (Ty->isFunctionNoProtoType()) {
+      Diag(NameInfo.getLoc(), diag::err_tainted_scope_no_prototype_func);
       return ExprError();
     }
   }
@@ -14324,20 +14334,30 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   // In an unchecked scope, it continues to produce (T *).
   CheckCBox_PointerKind kind;
   if (IsCheckedScope()) {
-    if (op->getType()->isFunctionType())
-      kind = CheckCBox_PointerKind::Ptr;
+    if (op->getType()->isFunctionType()) {
+       kind = CheckCBox_PointerKind::Ptr;
+    }
     else
       kind = CheckCBox_PointerKind::Array;
   } else
     kind = CheckCBox_PointerKind::Unchecked;
 
   if (IsTaintedScope()) {
-    if (op->getType()->isFunctionType())
-      kind = CheckCBox_PointerKind::t_ptr;
+    if (op->getType()->isFunctionType()) {
+       kind = CheckCBox_PointerKind::t_ptr;
+    }
     else
       kind = CheckCBox_PointerKind::t_array;
   } else
     kind = CheckCBox_PointerKind::Unchecked;
+/*
+ * Irrespective of which scope you are in, if you are dereferencing a callback
+ * fucntion pointer you need to dereference it to a --> tainted pointer
+ */
+
+  if (op->getType()->isFunctionType() && dcl->getAsFunction()->isCallback())
+    kind = CheckCBox_PointerKind::t_ptr;
+
   return Context.getPointerType(op->getType(), kind);
 }
 
@@ -14686,12 +14706,11 @@ bool Sema::CheckUnExprIntegrityInCheckedScope(ExprResult *InputExpr,
   if (IpExpr->getReferencedDeclOfCallee() != NULL)
   {
     if((IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
-         == NULL) && (IpExpr->getReferencedDeclOfCallee()->isTaintedDecl()))
+         == NULL) && (IpExpr->getReferencedDeclOfCallee()->isMirrorDecl()))
     {
       Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
                           << InputExpr->get()->getSourceRange()
-                          << FixItHint::CreateInsertion(OpLoc, "Modify"
-                          " this variable through a _Tainted Function");
+                          << FixItHint::CreateInsertion(OpLoc, "Mark this as const or _Tainted");
       return false;
     }
   }
@@ -14726,8 +14745,7 @@ bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
     if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
       if ((RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
           NULL) && ((!RHSExpr->getReferencedDeclOfCallee()->isTaintedDecl())
-              && !(RHSExpr->getReferencedDeclOfCallee()->isMirrorDecl()
-                  && RHSExpr->getType().isConstQualified()))){
+              && !(RHSExpr->getReferencedDeclOfCallee()->isMirrorDecl()))){
         Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << RHSExpr->getSourceRange()
                                     << FixItHint::CreateInsertion(OpLoc, "Qualify"
                                          " the global variable as _Tainted or "
@@ -14759,26 +14777,25 @@ bool Sema::CheckBinExprIntegrityInCheckedScope(ExprResult *LHS, ExprResult *RHS,
   auto RHSExpr = RHS->get();
   auto LHSExpr = LHS->get();
 
-  if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
-    if ((RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
-         NULL) && ((RHSExpr->getReferencedDeclOfCallee()->isTaintedDecl()))){
-      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << SR
-                       << FixItHint::CreateInsertion(OpLoc, "Consider either Qualifying the "
-                        " this as _Mirror const (faster) or access this through"
-                                    " a _Tainted function");
-      return false;
-    }
-  }
+//  if (RHSExpr->getReferencedDeclOfCallee() != NULL) {
+//    if ((RHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+//         NULL) && ((RHSExpr->getReferencedDeclOfCallee()->isMirrorDecl()))){
+//      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << SR
+//                       << FixItHint::CreateInsertion(OpLoc, "Consider either Qualifying the "
+//                        " this as const or mark it as"
+//                                    " _Tainted");
+//      return false;
+//    }
+//  }
 
-  if (LHSExpr->getReferencedDeclOfCallee() != NULL) {
-    if ((LHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
-         NULL) && ((LHSExpr->getReferencedDeclOfCallee()->isTaintedDecl()))){
-      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << SR
-          << FixItHint::CreateInsertion(OpLoc, "Modify this through a "
-                                               "_Tainted function");
-      return false;
-    }
-  }
+//  if (LHSExpr->getReferencedDeclOfCallee() != NULL) {
+//    if ((LHSExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod() ==
+//         NULL) && ((LHSExpr->getReferencedDeclOfCallee()->isMirrorDecl()))){
+//      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0 << LHSExpr->getSourceRange()
+//          << FixItHint::CreateInsertion(OpLoc, "Mark this as const or _Tainted");
+//      return false;
+//    }
+//  }
 
   return true;
 }
@@ -16372,8 +16389,8 @@ ExprResult Sema::ActOnBoundsTaintedCastExprBounds(
   if (CheckBoundsCastBaseType(E1))
     return ExprError();
 
-  if (!DestTy->isTaintedPointerArrayType()) {
-    Diag(TypeLoc, diag::err_bounds_cast_expected_array_ptr);
+  if (!DestTy->isTaintedPointerType()) {
+    Diag(TypeLoc, diag::err_bounds_cast_expected_tainted_array_ptr);
     return ExprError();
   } else if (Bounds->isElementCount() && DestTy->isVoidPointerType()) {
     Diag(Bounds->getBeginLoc(),

@@ -5353,6 +5353,12 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   if (Tok.is(tok::l_brace) && TUK == Sema::TUK_Definition) {
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
+    if(DS.isTaintedSpecified())
+      D->setTaintedDecl(true);
+
+    if(DS.isTaintedMirrorSpecified())
+      D->setMirrorDecl(true);
+
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&
         !Actions.ActOnDuplicateDefinition(DS, TagDecl, SkipBody)) {

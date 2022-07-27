@@ -7436,6 +7436,13 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     return false;
   }
 
+  if (format_idx >= Args.size()) {
+    (IsTaintedScope() ?
+                      Diag(Loc, diag::err_missing_format_string) :
+                      Diag(Loc, diag::warn_missing_format_string))
+        << Range;
+    return false;
+  }
   const Expr *OrigFormatExpr = Args[format_idx]->IgnoreParenCasts();
 
   // CHECK: format string is not a string literal.
@@ -7485,10 +7492,11 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   // If there are no arguments specified, warn with -Wformat-security, otherwise
   // warn only with -Wformat-nonliteral.
   if (Args.size() == firstDataArg) {
-    (IsCheckedScope() ?
+    ((IsCheckedScope()) || (IsTaintedScope())  ?
      Diag(FormatLoc, diag::err_format_nonliteral_noargs) :
      Diag(FormatLoc, diag::warn_format_nonliteral_noargs))
         << OrigFormatExpr->getSourceRange();
+
     switch (Type) {
     default:
       break;
@@ -7504,7 +7512,7 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
       break;
     }
   } else {
-    (IsCheckedScope() ?
+    ((IsCheckedScope()) || (IsTaintedScope()) ?
      Diag(FormatLoc, diag::err_format_nonliteral) :
      Diag(FormatLoc, diag::warn_format_nonliteral))
         << OrigFormatExpr->getSourceRange();
@@ -7648,7 +7656,7 @@ SourceLocation CheckFormatHandler::getLocationOfByte(const char *x) {
 
 void CheckFormatHandler::HandleIncompleteSpecifier(const char *startSpecifier,
                                                    unsigned specifierLen){
-  EmitFormatDiagnostic((S.IsCheckedScope() ?
+  EmitFormatDiagnostic(((S.IsCheckedScope() || (S.IsTaintedScope())) ?
                         S.PDiag(diag::err_printf_incomplete_specifier) :
                         S.PDiag(diag::warn_printf_incomplete_specifier)),
                        getLocationOfByte(startSpecifier),
@@ -7702,7 +7710,7 @@ void CheckFormatHandler::HandleNonStandardLengthModifier(
   // See if we know how to fix this length modifier.
   Optional<LengthModifier> FixedLM = FS.getCorrectedLengthModifier();
   if (FixedLM) {
-    EmitFormatDiagnostic((S.IsCheckedScope() ?
+    EmitFormatDiagnostic(((S.IsCheckedScope() || (S.IsTaintedScope())) ?
                           S.PDiag(diag::err_format_non_standard) :
                           S.PDiag(diag::warn_format_non_standard))
                              << LM.toString() << 0,
@@ -7715,7 +7723,7 @@ void CheckFormatHandler::HandleNonStandardLengthModifier(
       << FixItHint::CreateReplacement(LMRange, FixedLM->toString());
 
   } else {
-    EmitFormatDiagnostic((S.IsCheckedScope() ?
+    EmitFormatDiagnostic(((S.IsCheckedScope() || (S.IsTaintedScope())) ?
                           S.PDiag(diag::err_format_non_standard) :
                           S.PDiag(diag::warn_format_non_standard))
                              << LM.toString() << 0,

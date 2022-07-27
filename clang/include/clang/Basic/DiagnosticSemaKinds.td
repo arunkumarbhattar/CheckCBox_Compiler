@@ -6614,7 +6614,7 @@ def err_typecheck_sclass_fscope : Error<
 def err_typecheck_globalvar_tfscope : Error<
   "Tainted/Mirror Annotated functions cannot access Un-Qualified Global Storage">;
 def err_typecheck_globalvar_chkscope : Error<
-  "Checked functions cannot Access/Modify Global Storage Marked as _Tainted">;
+  "Checked functions cannot Access/Modify Global Storage Marked as _Mirror">;
 def err_typecheck_tainted_function_callbk : Error<
   "Tainted Annotated functions cannot call functions that are not marked as Callback/Mirror/Tainted">;
 def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
@@ -11537,6 +11537,10 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_checked_scope_no_prototype_func : Error<
     "function without a prototype cannot be used or declared in a "
     "checked scope">;
+
+  def err_tainted_scope_no_prototype_func : Error<
+    "function without a prototype cannot be used or declared in a "
+    "Tainted scope">;
 
   def err_checked_scope_decl_variable_args : Error<
     "%select{parameter|return|local variable|global variable|member}0 "

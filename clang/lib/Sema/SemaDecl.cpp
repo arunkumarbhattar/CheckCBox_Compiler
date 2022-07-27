@@ -18837,9 +18837,14 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     // Get the type for the field.
     const Type *FDTy = FD->getType().getTypePtr();
 
-    if(IsTaintedStruct || IsTaintedScope())
+    if(IsTaintedScope() || EnclosingDecl->isTaintedDecl())
     {
       FD->setTaintedDecl(true);
+    }
+
+    if(IsMirrorScope() || EnclosingDecl->isMirrorDecl())
+    {
+      FD->setMirrorDecl(true);
     }
 
     if (!FD->isAnonymousStructOrUnion()) {
@@ -19758,6 +19763,16 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   if (Enum->isDependentType()) {
     for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
+      if(IsTaintedScope() || EnumDeclX->isTaintedDecl() )
+      {
+        Elements[i]->setTaintedDecl(true);
+      }
+
+      if(IsMirrorScope() || EnumDeclX->isMirrorDecl())
+      {
+        Elements[i]->setMirrorDecl(true);
+      }
+
       EnumConstantDecl *ECD =
         cast_or_null<EnumConstantDecl>(Elements[i]);
       if (!ECD) continue;
@@ -19785,6 +19800,15 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   bool AllElementsInt = true;
 
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
+    if(IsTaintedScope() || EnumDeclX->isTaintedDecl())
+    {
+      Elements[i]->setTaintedDecl(true);
+    }
+
+    if(IsMirrorScope() || EnumDeclX->isMirrorDecl())
+    {
+      Elements[i]->setMirrorDecl(true);
+    }
     EnumConstantDecl *ECD =
       cast_or_null<EnumConstantDecl>(Elements[i]);
     if (!ECD) continue;  // Already issued a diagnostic.
@@ -19902,6 +19926,15 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   // Loop over all of the enumerator constants, changing their types to match
   // the type of the enum if needed.
   for (auto *D : Elements) {
+    if(IsTaintedScope() || EnumDeclX->isTaintedDecl())
+    {
+     D->setTaintedDecl(true);
+    }
+
+    if(IsMirrorScope() || EnumDeclX->isMirrorDecl())
+    {
+      D->setMirrorDecl(true);
+    }
     auto *ECD = cast_or_null<EnumConstantDecl>(D);
     if (!ECD) continue;  // Already issued a diagnostic.
 
@@ -19966,6 +19999,15 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {
+      if(IsTaintedScope() || EnumDeclX->isTaintedDecl())
+      {
+        D->setTaintedDecl(true);
+      }
+
+      if(IsMirrorScope()  || EnumDeclX->isMirrorDecl())
+      {
+        D->setMirrorDecl(true);
+      }
       EnumConstantDecl *ECD = cast_or_null<EnumConstantDecl>(D);
       if (!ECD) continue;  // Already issued a diagnostic.
 
