@@ -378,9 +378,8 @@ public:
     if (_CheckMateOpts.Verbose)
       errs() << "Analyzing function " << D->getName() << "\n";
     if((D->isTainted())
-            || (D->isMirror()) ||
-        (D->isCallback()) ||
-        (D->isTLIB())){
+            || (D->isMirror())
+        ){
       std::cout<<toStringRef(D->getBody()).str();
       CB.storeTaintedFunctionDecl(D);
     }

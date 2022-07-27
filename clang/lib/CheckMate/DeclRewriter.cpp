@@ -29,12 +29,6 @@ end_of_the_end(SourceLocation const & start_of_end, SourceManager & sm){
 
 bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
                                  Rewriter &R, Decl* FD){
-  /*
-   * first fetch the output stream buffer
-   */
-  /*
-   * For now lets just do the below, later we
-   */
 
   std::error_code error_code;
   llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[FD],
@@ -56,7 +50,8 @@ bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
   SourceLocation decl_begin(decl_range.getBegin());
   SourceLocation decl_start_end(decl_range.getEnd());
 
-  SourceLocation decl_end_end(end_of_the_end(decl_start_end, Context.getSourceManager()));
+  SourceLocation decl_end_end(end_of_the_end(decl_start_end,
+                                             Context.getSourceManager()));
   /*
      * Now you can fetch the pointers to the text replacement
      */
@@ -70,6 +65,7 @@ bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
 
   return true;
 }
+
 typedef enum {
   WASM_RT_I32,
   WASM_RT_I64,

@@ -14705,10 +14705,18 @@ bool Sema::CheckUnExprIntegrityInCheckedScope(ExprResult *InputExpr,
   auto IpExpr = InputExpr->get();
   if (IpExpr->getReferencedDeclOfCallee() != NULL)
   {
-    if((IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
-         == NULL) && (IpExpr->getReferencedDeclOfCallee()->isMirrorDecl()))
+    if ((IpExpr->getReferencedDeclOfCallee()->getParentFunctionOrMethod()
+         == NULL) && (IpExpr->getReferencedDeclOfCallee()->isMirrorDecl())
+        /*
+         * We shall make relaxation for function pointers being passed
+         */
+        )
     {
-      Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0
+      if(IpExpr->getType()->isFunctionPointerType())
+      {
+        return true;
+      }
+      Diag(OpLoc, diag::err_typecheck_globalvar_chkscope) << 0
                           << InputExpr->get()->getSourceRange()
                           << FixItHint::CreateInsertion(OpLoc, "Mark this as const or _Tainted");
       return false;

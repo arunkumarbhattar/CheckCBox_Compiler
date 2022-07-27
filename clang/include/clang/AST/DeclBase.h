@@ -386,6 +386,7 @@ protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
       : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
         DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
+        TaintedDecl(false), MirrorDecl(false), LIBDecl(false), CallbackDecl(false),
         Implicit(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -395,6 +396,7 @@ protected:
 
   Decl(Kind DK, EmptyShell Empty)
       : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
+        TaintedDecl(false), MirrorDecl(false), LIBDecl(false), CallbackDecl(false),
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),

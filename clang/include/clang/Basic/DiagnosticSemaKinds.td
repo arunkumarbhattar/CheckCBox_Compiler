@@ -6614,7 +6614,7 @@ def err_typecheck_sclass_fscope : Error<
 def err_typecheck_globalvar_tfscope : Error<
   "Tainted/Mirror Annotated functions cannot access Un-Qualified Global Storage">;
 def err_typecheck_globalvar_chkscope : Error<
-  "Checked functions cannot Access/Modify Global Storage Marked as _Mirror">;
+  "Checked functions cannot Access/Modify Global Storage Marked as _">;
 def err_typecheck_tainted_function_callbk : Error<
   "Tainted Annotated functions cannot call functions that are not marked as Callback/Mirror/Tainted">;
 def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
