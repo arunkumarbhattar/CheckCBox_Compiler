@@ -17,6 +17,7 @@
 #define tnt_array_ptr _TNt_array_ptr
 #define checked _Checked
 #define tainted _Tainted
+#define mirror _Mirror
 #define nt_checked _Nt_checked
 #define unchecked _Unchecked
 #define bounds_only _Bounds_only
@@ -80,6 +81,44 @@
                 ( "__t_vfprintf_chk" , TVFPRINTFCHK);
                 ( "__t_builtin___vfprintf_chk" , TBUILTINVFPRINTFCHK);
                 ( "__t_builtin___vprintf_chk" , TBULTINVPRINTFCHK);
+                ("t_frexp", TFREEXP);
+                ("t_frexpf", TFREEXPF);
+                ("t_frexpl", TFREEXPL);
+                ("t_modf", TMODF);
+                ("t_modff", TMODFF);
+                ("t_modfl", TMODFL);
+                ("t_remquo", TREMQUO);
+                ("t_remquof", TREMQUOF);
+                ("t_remquol", TREMQUOL);
+                ("t_nan", TNAN);
+                ("t_nanf", TNANF);
+                ("t_nanl", TNANL);
+                ("t_isnan", TISNAN);
+                ("t_isinf", TISINF);
+                ("_t_errno", TERRNO);
+                ("t_memcpy", TMEMCPY);
+                ("t_memmove", TMEMMOVE);
+                ("t_memset", TMEMSET);
+                ("t_strcpy", TSTRCPY);
+                ("t_strncpy", TSTRNCPY);
+                ("t_strcat", TSTRCAT);
+("t_strncat", TSTRNCAT);
+                ("t_memcmp", TMEMCMP);
+                ("t_strcmp", TSTRCMP);
+                ("t_strcoll", TSTRCOLL);
+                ("t_strncmp", TSTRNCMP);
+                ("t_strxfrm", TSTRXFRM);
+("t_memchr", TMEMCHR);
+                ("t_strchr", TSTRCHR);
+                ("t_strcspn", TSTRCSPN);
+                ("t_strpbrk", TSTRPBRK);
+                ("t_strrchr", TSTRRCHR);
+                ("t_strspn", TSTRSPN);
+                ("t_strstr", TSTRSTR);
+                ("t_strtok", TSTRTOK);
+                ("t_strerror", TSTRERROR);
+                ("t_strlen", TSTRLEN);
+                ("t_strdup", TSTRDUP);
         ]
 
 }
@@ -98,35 +137,27 @@ rule keyword = parse
                         Lexing.new_line lexbuf;
                         PRAGMA(start_p,end_p)  }
 | ['#']"include"[' ' '\t']*"<stdchecked.h>" { stdchecked := true; CHECKED }
-| ['#']"include"[' ' '\t']*"<stdtainted.h>" { stdcheckcbox := true; CHECKED }
+| ['#']"include"[' ' '\t']*"<stdtainted.h>" { stdcheckcbox := false; CHECKED }
 | '"' { let b = Buffer.create 17 in Buffer.add_char b '"'; read_string b lexbuf }
 | '\'' { let b = Buffer.create 17 in Buffer.add_char b '\''; read_char b lexbuf }
 | "_Itype_for_any" | "_For_any" { brace_depth := Some(0); FORANY }
-| "_Ptr" | "_Array_ptr" | "_Nt_array_ptr" { PTR } 
+| "_Ptr" | "_Array_ptr" | "_Nt_array_ptr" { PTR }
 | "_TPtr" | "_TArray_ptr" | "_TNt_array_ptr" { TPTR }
 | "Tstruct" { TSTRUCT}
 | "_Checked" | "_Unchecked" | "_Nt_checked" { CHECKED }
 | "_Tainted" {TAINTED}
-| ['_' 'A'-'Z' 'a'-'z']['_' 'A'-'Z' 'a'-'z' '0'-'9' '_']* as word
-               {
-                  try
-	       		    let token = Hashtbl.find keyword_table word in
-	       		    Printf.fprintf stderr "****************Token being parsed: %s!\n************************" word;
-	       		    token
-                    with Not_found ->
-                    ID word
-		}
+| "_Mirror" {MIRROR}
 | "_Dynamic_check" { DYNCHECK }
-| "_Assume_bounds_cast" | "_Dynamic_bounds_cast" { ASSUME_CAST }
-| "_Tainted_Assume_bounds_cast" | "_Tainted_Dynamic_bounds_cast" { TASSUME_CAST }
+| "_Assume_bounds_cast" | "_Dynamic_bounds_cast" | "_Tainted_Assume_bounds_cast" | "_Tainted_Dynamic_bounds_cast" {
+ASSUME_CAST }
 (* Shorthands -- could limit only if !stdchecked, but won't work if not directly included *)
 | "ptr" | "array_ptr" | "nt_array_ptr" { if !stdchecked then PTR else ID(Lexing.lexeme lexbuf) }
 | "tptr" | "tarray_ptr" | "tnt_array_ptr" { if !stdcheckcbox then TPTR else ID(Lexing.lexeme lexbuf) }
 | "Tstruct" { if !stdcheckcbox then TSTRUCT else ID(Lexing.lexeme lexbuf) }
 | "checked" | "unchecked" | "nt_checked" {if !stdcheckcbox then CHECKED else ID(Lexing.lexeme lexbuf) }
 | "dynamic_check" { if !stdchecked then DYNCHECK else ID(Lexing.lexeme lexbuf) }
-| "assume_bounds_cast" | "dynamic_bounds_cast" { if !stdchecked then ASSUME_CAST else ID(Lexing.lexeme lexbuf) }
-| "tainted_assume_bounds_cast" | "tainted_dynamic_bounds_cast" { if !stdcheckcbox then TASSUME_CAST else ID(Lexing.lexeme lexbuf) }
+| "assume_bounds_cast" | "dynamic_bounds_cast" | "tainted_assume_bounds_cast" | "tainted_dynamic_bounds_cast"
+{ if !stdchecked then ASSUME_CAST else ID(Lexing.lexeme lexbuf) }
 | pid { PID(Lexing.lexeme lexbuf) }
 | id { ID(Lexing.lexeme lexbuf) }
 | "," { COMMA }

@@ -7,6 +7,7 @@
 %token TSTRUCT
 %token <string> TSTRUCT_str "Tstruct"
 %token TAINTED
+%token MIRROR
 %token TPTR
 %token <int * int> COLONBOUNDS
 %token <int * int> COLONITYPE
@@ -26,7 +27,6 @@
 %token CHECKED
 %token DYNCHECK
 %token ASSUME_CAST
-%token TASSUME_CAST
 (*
         stdlib_tainted.h
 *)
@@ -79,6 +79,45 @@
 %token TBUILTINVFPRINTFCHK
 %token TBULTINVPRINTFCHK
 %token TPRINTF
+%token TFREEXP
+%token TFREEXPF
+%token TFREEXPL
+%token TMODF
+%token TMODFF
+%token TMODFL
+%token TREMQUOF
+%token TREMQUOL
+%token TNAN
+%token TNANF
+%token TNANL
+%token TISNAN
+%token TISINF
+%token TERRNO
+%token TMEMCPY
+%token TMEMMOVE
+%token TMEMSET
+%token TSTRCPY
+%token TSTRNCPY
+%token TSTRCAT
+%token TSTRNCAT
+%token TMEMCMP
+%token TSTRCMP
+%token TSTRCOLL
+%token TSTRNCMP
+%token TSTRXFRM
+%token TMEMCHR
+%token TSTRCHR
+%token TSTRCSPN
+%token TSTRPBRK
+%token TSTRRCHR
+%token TSTRSPN
+%token TSTRTOK
+%token TSTRERROR
+%token TSTRLEN
+%token TSTRDUP
+%token TSTRSTR
+%token TREMQUO
+
 %start <(int*int*string) list> main
 
 %%
@@ -101,8 +140,6 @@ main:
 cast: 
   | ASSUME_CAST LANGLE  i = insideitype RANGLE LPAREN e = expr COMMA insidebounds* RPAREN { "("^i^")"^e } 
   | ASSUME_CAST LANGLE  i = insideitype RANGLE LPAREN e = expr RPAREN {  "("^i^")"^e }
-  | TASSUME_CAST LANGLE  i = insideitype RANGLE LPAREN e = expr COMMA insidebounds* RPAREN { "("^i^")"^e }
-  | TASSUME_CAST LANGLE  i = insideitype RANGLE LPAREN e = expr RPAREN {  "("^i^")"^e }
 
 expr:
 | LPAREN e = exprcomma* RPAREN {  (String.concat "" ("("::e))^")" }
@@ -142,13 +179,74 @@ exprcomma:
         
 instvar:
 | LANGLE insideitype RANGLE  { ($startpos.pos_cnum, $endpos.pos_cnum, "") }
-                        
+
 annot:
 /* add INCLUDE here; remove _checked, drop stdchecked.h (and note it in lexer) */
 | CHECKED { ($startpos.pos_cnum, $endpos.pos_cnum, "") }
 | TAINTED { ($startpos.pos_cnum, $endpos.pos_cnum, "")}
-| TMALLOC LANGLE insidebounds RANGLE { ($startpos.pos_cnum, $endpos.pos_cnum, "malloc")}
+| MIRROR { ($startpos.pos_cnum, $endpos.pos_cnum, "")}
+| TMALLOC LANGLE tmalloc RANGLE { ($startpos.pos_cnum, $endpos.pos_cnum, "malloc")}
 | TSTRUCT { ($startpos.pos_cnum, $endpos.pos_cnum, "struct") }
+| TATOF { ($startpos.pos_cnum, $endpos.pos_cnum, "atof") }
+| TATOI { ($startpos.pos_cnum, $endpos.pos_cnum, "atoi") }
+| TATOLL { ($startpos.pos_cnum, $endpos.pos_cnum, "atoll") }
+| TSTRTOD { ($startpos.pos_cnum, $endpos.pos_cnum, "strtod") }
+| TSTRTOF { ($startpos.pos_cnum, $endpos.pos_cnum, "strtof") }
+| TSTRTOLD { ($startpos.pos_cnum, $endpos.pos_cnum, "strtold") }
+| TSTRTOL { ($startpos.pos_cnum, $endpos.pos_cnum, "strtol") }
+| TSTRTOLL { ($startpos.pos_cnum, $endpos.pos_cnum, "strtoll") }
+| TSTRTOUL { ($startpos.pos_cnum, $endpos.pos_cnum, "strtoul") }
+| TSTRTOULL { ($startpos.pos_cnum, $endpos.pos_cnum, "strtoull") }
+| TALIGNEDALLOC { ($startpos.pos_cnum, $endpos.pos_cnum, "aligned_alloc") }
+| TFREE { ($startpos.pos_cnum, $endpos.pos_cnum, "free") }
+| TGETENV { ($startpos.pos_cnum, $endpos.pos_cnum, "getenv") }
+| TATEXIT { ($startpos.pos_cnum, $endpos.pos_cnum, "atexit") }
+| TATQUICKEXIT { ($startpos.pos_cnum, $endpos.pos_cnum, "atquick_exit") }
+| TSYSTEM { ($startpos.pos_cnum, $endpos.pos_cnum, "system") }
+| TBSEARCH { ($startpos.pos_cnum, $endpos.pos_cnum, "bsearch") }
+| TQSORT { ($startpos.pos_cnum, $endpos.pos_cnum, "qsort") }
+| TMBLEN { ($startpos.pos_cnum, $endpos.pos_cnum, "mblen") }
+| TMBTOWC { ($startpos.pos_cnum, $endpos.pos_cnum, "mbtowc") }
+| TMBSTOWCS { ($startpos.pos_cnum, $endpos.pos_cnum, "mbstowcs") }
+| TPRINTF { ($startpos.pos_cnum, $endpos.pos_cnum, "printf") }
+| TFREEXP { ($startpos.pos_cnum, $endpos.pos_cnum, "frexp") }
+| TFREEXPF { ($startpos.pos_cnum, $endpos.pos_cnum, "frexpf") }
+| TFREEXPL { ($startpos.pos_cnum, $endpos.pos_cnum, "frexpl") }
+| TMODF { ($startpos.pos_cnum, $endpos.pos_cnum, "modf") }
+| TMODFF { ($startpos.pos_cnum, $endpos.pos_cnum, "modff") }
+| TMODFL { ($startpos.pos_cnum, $endpos.pos_cnum, "modfl") }
+| TREMQUO { ($startpos.pos_cnum, $endpos.pos_cnum, "remquo") }
+| TREMQUOF { ($startpos.pos_cnum, $endpos.pos_cnum, "remquof") }
+| TREMQUOL { ($startpos.pos_cnum, $endpos.pos_cnum, "remquol") }
+| TNAN { ($startpos.pos_cnum, $endpos.pos_cnum, "nan") }
+| TNANF { ($startpos.pos_cnum, $endpos.pos_cnum, "nanf") }
+| TNANL { ($startpos.pos_cnum, $endpos.pos_cnum, "nanl") }
+| TISNAN { ($startpos.pos_cnum, $endpos.pos_cnum, "isnan") }
+| TISINF { ($startpos.pos_cnum, $endpos.pos_cnum, "isinf") }
+| TERRNO { ($startpos.pos_cnum, $endpos.pos_cnum, "errno") }
+| TMEMCPY { ($startpos.pos_cnum, $endpos.pos_cnum, "memcpy") }
+| TMEMMOVE { ($startpos.pos_cnum, $endpos.pos_cnum, "memmove") }
+| TMEMSET { ($startpos.pos_cnum, $endpos.pos_cnum, "memset") }
+| TSTRCPY { ($startpos.pos_cnum, $endpos.pos_cnum, "strcpy") }
+| TSTRNCPY { ($startpos.pos_cnum, $endpos.pos_cnum, "strncpy") }
+| TSTRCAT { ($startpos.pos_cnum, $endpos.pos_cnum, "strcat") }
+| TSTRNCAT { ($startpos.pos_cnum, $endpos.pos_cnum, "strncat") }
+| TMEMCMP { ($startpos.pos_cnum, $endpos.pos_cnum, "memcmp") }
+| TSTRCMP { ($startpos.pos_cnum, $endpos.pos_cnum, "strcmp") }
+| TSTRCOLL { ($startpos.pos_cnum, $endpos.pos_cnum, "strcoll") }
+| TSTRNCMP { ($startpos.pos_cnum, $endpos.pos_cnum, "strncmp") }
+| TSTRXFRM { ($startpos.pos_cnum, $endpos.pos_cnum, "strxfrm") }
+| TMEMCHR { ($startpos.pos_cnum, $endpos.pos_cnum, "memchr") }
+| TSTRCHR { ($startpos.pos_cnum, $endpos.pos_cnum, "strchr") }
+| TSTRCSPN { ($startpos.pos_cnum, $endpos.pos_cnum, "strcspn") }
+| TSTRPBRK { ($startpos.pos_cnum, $endpos.pos_cnum, "strpbrk") }
+| TSTRRCHR { ($startpos.pos_cnum, $endpos.pos_cnum, "strrchr") }
+| TSTRSPN { ($startpos.pos_cnum, $endpos.pos_cnum, "strspn") }
+| TSTRSTR { ($startpos.pos_cnum, $endpos.pos_cnum, "strstr") }
+| TSTRTOK { ($startpos.pos_cnum, $endpos.pos_cnum, "strtok") }
+| TSTRERROR { ($startpos.pos_cnum, $endpos.pos_cnum, "strerror") }
+| TSTRLEN { ($startpos.pos_cnum, $endpos.pos_cnum, "strlen") }
+| TSTRDUP { ($startpos.pos_cnum, $endpos.pos_cnum, "strdup") }
 | TSPRINTFCHKCBX {($startpos.pos_cnum, $endpos.pos_cnum, "__sprintf_chkcbx")}
 | TPRINTF {($startpos.pos_cnum, $endpos.pos_cnum, "printf")}
 | p = PRAGMA { let (s,e) = p in (s, e, "") }
@@ -156,7 +254,6 @@ annot:
 | FORANY LPAREN t = ID RPAREN { note_tyvar t; ($startpos.pos_cnum, $endpos.pos_cnum, "") }
 | p = bounds { let (s,_) = p in (s, $endpos.pos_cnum, "") }
 | p = itype fakebounds* { let (s,_) = p in (s, $endpos.pos_cnum, "") }
-
 
 bounds:
 | p = COLONBOUNDS LPAREN insidebounds* RPAREN { p }
@@ -195,7 +292,7 @@ checkedptr:
 | PTR LANGLE fp = fpointer RANGLE 
   { let (ret,params) = fp in String.concat "" [ret; "(*"; ")"; params] }
 | TPTR LANGLE p = checkedptr RANGLE { String.concat "" [p; " *"] }
-| TMALLOC LANGLE tmalloc RANGLE {  String.concat "" [""; ""]}
+| TMALLOC LANGLE insidebounds RANGLE {  String.concat "" [""; ""]}
 | TPTR LANGLE s = tstruct RANGLE {String.concat "" [s; "*"]}
 | TPTR LANGLE s = insideptr RANGLE { String.concat "" [s; " *"]}
 | TPTR LANGLE fp = fpointer RANGLE name = id_or_pid
@@ -245,6 +342,8 @@ insideptr:
 | c = ID annot { let t = if is_tyvar c then "void" else c in t }
 | c = ANY { c }
 | c = ID { let t = if is_tyvar c then "void" else c in t }
+
 id_or_pid:
 | c = ID { c }
 | c = PID { c }
+
