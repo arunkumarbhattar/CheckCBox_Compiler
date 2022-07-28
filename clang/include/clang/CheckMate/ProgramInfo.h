@@ -90,8 +90,9 @@ public:
   std::vector<std::string> Tainted_rewrite_file_vector;
   //the below vector will help in close output stream that are still not closed
   std::vector<llvm::raw_fd_ostream*> tainted_outfiles;
-
+  std::vector<llvm::raw_fd_ostream*> w2c_outfiles;
   std::map<Decl*, std::string> tainted_stream_writer;
+  std::map<Decl*, std::string> w2c_header_stream_writer;
 
   ProgramInfo();
 
