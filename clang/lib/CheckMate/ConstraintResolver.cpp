@@ -78,8 +78,8 @@ void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   FD_source_file_name = resolve_base_name(FD->getASTContext().getSourceManager()
                                               .getFilename(FD->getLocation()).str());
 
-  std::string final_path_with_file_name = tainted_dir_path + FD_source_file_name
-                                          + "_tainted_def.c";
+  std::string final_path_with_file_name = tainted_dir_path + "tainted_"
+                                          + FD_source_file_name;
 
   if(std::find(Info.Tainted_rewrite_file_vector.begin(),
                                             Info.Tainted_rewrite_file_vector.end(),

@@ -24,6 +24,9 @@ public:
 private:
   ProgramInfo &Info;
 
+  char *getFileNameFromPath(const char *path);
+  void fetch_path_from_file_path(std::string &file_path,
+                                 const std::string &fileName);
 };
 
 #endif // LLVM_CLANG_CheckMate_PLANTC4_H
