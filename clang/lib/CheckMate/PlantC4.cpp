@@ -48,7 +48,7 @@ bool PlantC4::ConvertTaintedToVanilla() {
   // Fetch the tainted directory
   Info.getC4PerfStats().startRewritingTime();
 
-  auto ListOfTaintedFiles = Info.Tainted_rewrite_file_vector;
+  auto ListOfTaintedFiles = Info.TaintedRewriteFileVector;
   for(auto TaintedFilePath : ListOfTaintedFiles){
     std::string Filepath = TaintedFilePath;
 

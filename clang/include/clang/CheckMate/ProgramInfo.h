@@ -82,17 +82,33 @@ public:
   typedef std::map<std::string, FVConstraint *> ExternalFunctionMapType;
   typedef std::map<std::string, ExternalFunctionMapType> StaticFunctionMapType;
 
-  std::vector<Decl*>Tainted_Decls;
+  std::vector<Decl*>TaintedDecls;
   /*
    * This is the mapping between the FunctionDecl's actual file name to the
    * tainted file to which its tainted generic C definition will be written
    */
-  std::vector<std::string> Tainted_rewrite_file_vector;
+  std::vector<std::string> TaintedRewriteFileVector;
   //the below vector will help in close output stream that are still not closed
-  std::vector<llvm::raw_fd_ostream*> tainted_outfiles;
-  std::vector<llvm::raw_fd_ostream*> w2c_outfiles;
-  std::map<Decl*, std::string> tainted_stream_writer;
-  std::map<Decl*, std::string> w2c_header_stream_writer;
+  /*
+   * You gotta extend this from being just a vector to a map
+   */
+  std::list<std::string> TaintedOutfiles;
+  std::vector<llvm::raw_fd_ostream*> W2cOutfiles;
+  /*
+   * Stream writers are to map between the Decl and its corresponding file
+   */
+  std::map<Decl*, std::string> TaintedFuncStreamWriter;
+  std::map<Decl*, std::string> TaintedVarDeclStreamWriter;
+  std::map<Decl*, std::string> TaintedStructDeclStreamWriter;
+  /*
+   * Unordered List
+   */
+  std::map<std::string, Decl*> ListOfInstrumentedFiles;
+
+  std::map<Decl*, std::string> W2cHeaderStreamWriter;
+  std::map<Decl*, std::string> TaintMirroredVarDecls;
+  std::map<RecordDecl*, std::string> TaintMirroredVarStructDecls;
+  std::map<TypedefDecl*, std::string> TaintMirroredTypedefDecls;
 
   ProgramInfo();
 

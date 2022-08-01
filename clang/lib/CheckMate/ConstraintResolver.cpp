@@ -58,38 +58,82 @@ inline std::string resolve_base_name(std::string const & path)
 {
   return base_name(path);
 }
+void ConstraintResolver::storeTaintMirroredVarDecl(VarDecl* VD) {
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  auto VdSourceFileName = resolve_base_name(VD->getASTContext().getSourceManager()
+                                           .getFilename(VD->getLocation()).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + VdSourceFileName;
+  Info.TaintMirroredVarDecls[VD] = FinalPathWithFileName;
+
+}
+
+void ConstraintResolver::storeTaintMirroredStructVarDecl(RecordDecl* RD) {
+
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  auto VdSourceFileName = resolve_base_name(RD->getASTContext().getSourceManager()
+                                                .getFilename(RD->getLocation()).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + VdSourceFileName;
+  Info.TaintMirroredVarStructDecls[RD] = FinalPathWithFileName;
+
+}
+
+void ConstraintResolver::storeTaintMirroredTypedefDecl(TypedefDecl* TD) {
+
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  auto VdSourceFileName = resolve_base_name(TD->getASTContext().getSourceManager()
+                                                .getFilename(TD->getLocation()).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + VdSourceFileName;
+  Info.TaintMirroredTypedefDecls[TD] = FinalPathWithFileName;
+
+}
+
 
 void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   Info.storeTaintedDecl(FD);
   /*
    * Check if the map has an entry(filename) corresponding to this FD's source file
    */
-  std::string FD_source_file_name = "";
+  std::string FdSourceFileName = "";
 
   /*
    * This FD belongs to a new file, hence a new file has to be created for
    * this tainted decl
   */
   //fetch the tainted directory path -->
-  std::string tainted_dir_path = _CheckMateOpts.TaintedDefDir;
-  if(tainted_dir_path.find_last_not_of("/\\"))
-    tainted_dir_path += "/";
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
 
-  FD_source_file_name = resolve_base_name(FD->getASTContext().getSourceManager()
+  FdSourceFileName = resolve_base_name(FD->getASTContext().getSourceManager()
                                               .getFilename(FD->getLocation()).str());
 
-  std::string final_path_with_file_name = tainted_dir_path + "tainted_"
-                                          + FD_source_file_name;
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                          + FdSourceFileName;
 
-  if(std::find(Info.Tainted_rewrite_file_vector.begin(),
-                                            Info.Tainted_rewrite_file_vector.end(),
-                final_path_with_file_name.c_str())
-      == Info.Tainted_rewrite_file_vector.end()){
+  if(std::find(Info.TaintedRewriteFileVector.begin(),
+                                            Info.TaintedRewriteFileVector.end(),
+                FinalPathWithFileName.c_str())
+      == Info.TaintedRewriteFileVector.end()){
 
-    Info.Tainted_rewrite_file_vector.push_back(final_path_with_file_name.c_str());
+    Info.TaintedRewriteFileVector.push_back(FinalPathWithFileName.c_str());
   }
 
-  Info.tainted_stream_writer.insert({FD, final_path_with_file_name});
+  Info.TaintedFuncStreamWriter.insert({FD, FinalPathWithFileName});
 }
 
 // Return a set of PVConstraints equivalent to the set given,

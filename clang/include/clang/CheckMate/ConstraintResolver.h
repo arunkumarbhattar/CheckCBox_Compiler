@@ -64,6 +64,11 @@ public:
 
   static bool canFunctionBeSkipped(const std::string &FN);
 
+  void storeTaintMirroredVarDecl(VarDecl *VD);
+
+  void storeTaintMirroredStructVarDecl(RecordDecl *RD);
+
+  void storeTaintMirroredTypedefDecl(TypedefDecl *TD);
 
 private:
   ProgramInfo &Info;
@@ -85,7 +90,6 @@ private:
   static bool snapshotTaintedFunction(Decl* declaration);
 
   bool isNonPtrType(QualType &TE);
-
 };
 
 #endif // LLVM_CLANG_CheckMate_CONSTRAINTRESOLVER_H

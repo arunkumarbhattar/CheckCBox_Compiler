@@ -352,22 +352,47 @@ public:
         CB.constrainLocalAssign(nullptr, G, G->getInit(), Same_to_Same);
       }
     }
+    if(G->hasGlobalStorage() && (G->isTaintedDecl() || G->isMirrorDecl()))
+    {
+      /*
+       * This works like a charm
+       */
+      CB.storeTaintMirroredVarDecl(G);
+      if (_CheckMateOpts.Verbose)
+        errs() << "Analyzing function " << G->getNameAsString() << "\n";
+//          << " " << G->getInit()->getSourceRange().printToString(
+//                           G->getASTContext().getSourceManager())<<"\n";
+    }
     return true;
   }
 
   bool VisitInitListExpr(InitListExpr *E) {
-    if (E->getType()->isStructureType()) {
+    if (E->getType()->isTaintedStructureType()) {
+      /*
+       * Here is where you need to Create a map and insert the record decl
+       */
+      /*
+     * If the variable is marked as _Tainted or _Mirror, it must be copy pasted to the Tainted file
+     *
+     */
+
       E = E->getSemanticForm();
       const RecordDecl *Definition =
           E->getType()->getAsStructureType()->getDecl()->getDefinition();
 
-      unsigned int InitIdx = 0;
-      const auto Fields = Definition->fields();
-      for (auto It = Fields.begin();
-           InitIdx < E->getNumInits() && It != Fields.end(); InitIdx++, It++) {
-        Expr *InitExpr = E->getInit(InitIdx);
-        CB.constrainLocalAssign(nullptr, *It, InitExpr, Same_to_Same, true);
-      }
+      if (Definition->getParentFunctionOrMethod() == nullptr)
+        CB.storeTaintMirroredStructVarDecl(
+            const_cast<RecordDecl *>(Definition));
+      else
+        return true;
+
+//      unsigned int InitIdx = 0;
+//      const auto Fields = Definition->fields();
+//      for (auto It = Fields.begin();
+//           InitIdx < E->getNumInits() && It != Fields.end(); InitIdx++, It++) {
+//        Expr *InitExpr = E->getInit(InitIdx);
+//        CB.constrainLocalAssign(nullptr, *It, InitExpr, Same_to_Same, true);
+//      }
     }
     return true;
   }
@@ -375,12 +400,10 @@ public:
   bool VisitFunctionDecl(FunctionDecl *D) {
     FullSourceLoc FL = Context->getFullLoc(D->getBeginLoc());
 
-    if (_CheckMateOpts.Verbose)
-      errs() << "Analyzing function " << D->getName() << "\n";
-    if((D->isTainted())
-            || (D->isMirror())
-        ){
-      std::cout<<toStringRef(D->getBody()).str();
+
+    if((D->isTainted()) || (D->isMirror())){
+      if (_CheckMateOpts.Verbose)
+        errs() << "Storing Tainted function " << D->getName() << "\n";
       CB.storeTaintedFunctionDecl(D);
     }
 
@@ -404,6 +427,37 @@ public:
     if (_CheckMateOpts.Verbose)
       errs() << "Done analyzing function\n";
 
+    return true;
+  }
+  bool VisitTypedefDecl(TypedefDecl *TD) {
+    // TODO: need to handle here
+    if(TD->isTaintedDecl() || TD->isMirrorDecl())
+    {
+      CB.storeTaintMirroredTypedefDecl(TD);
+      errs() << "Tainted/Mirrored Typedef Decl: "<<TD->getNameAsString()<<"\n";
+    }
+    return true;
+  }
+
+  bool VisitRecordDecl(RecordDecl *Declaration) {
+    if (Declaration->isThisDeclarationADefinition()) {
+      if(Declaration->isTaintedStruct())
+      {
+        /*
+         * Yes this works
+         */
+        CB.storeTaintMirroredStructVarDecl(Declaration);
+        errs()<< "Printing Tstruct"<< Declaration->getName()<<"\n";
+      }
+//      RecordDecl *Definition = Declaration->getDefinition();
+//      assert("Declaration is a definition, but getDefinition() is null?" &&
+//             Definition);
+//      FullSourceLoc FL = Context->getFullLoc(Definition->getBeginLoc());
+//      if (FL.isValid())
+//        for (auto *const D : Definition->fields())
+//          addVariable(D);
+//
+    }
     return true;
   }
 
@@ -439,10 +493,22 @@ public:
     return true;
   }
 
+//  if ((G->isTaintedDecl() || G->isMirrorDecl()))
+//  {
+//    if ((G->getParentFunctionOrMethod() == nullptr))
+//      CB.storeTaintMirroredVarDecl(G);
+//  }
+//  else if (isTaintedStruct(G))
+//  {
+//    if (G->getParentFunctionOrMethod() == nullptr)
+//      CB.storeTaintMirroredStructVarDecl(G);
+//  }
   bool VisitVarDecl(VarDecl *D) {
+
     FullSourceLoc FL = Context->getFullLoc(D->getBeginLoc());
     // ParmVarDecls are skipped here, and are added in ProgramInfo::addVariable
     // as it processes a function
+    // TODO: Need to handle here too
     if (FL.isValid() && !isa<ParmVarDecl>(D))
       addVariable(D);
     return true;

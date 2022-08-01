@@ -673,6 +673,7 @@ const RecordType *Type::getAsStructureType() const {
   if (const auto *RT = dyn_cast<RecordType>(this)) {
     if (RT->getDecl()->isStruct())
       return RT;
+
   }
 
   // If the canonical form of this type isn't the right kind, reject it.

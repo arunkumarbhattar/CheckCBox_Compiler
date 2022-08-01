@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CheckMate/DeclRewriter.h"
-#include "clang/CheckMate/CheckMateGlobalOptions.h"
-#include "clang/CheckMate/RewriteUtils.h"
-#include "clang/CheckMate/Utils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
+#include "clang/CheckMate/CheckMateGlobalOptions.h"
+#include "clang/CheckMate/RewriteUtils.h"
+#include "clang/CheckMate/Utils.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -21,53 +21,182 @@
 using namespace llvm;
 using namespace clang;
 
-SourceLocation
-end_of_the_end(SourceLocation const & start_of_end, SourceManager & sm){
-  LangOptions lopt;
-  return Lexer::getLocForEndOfToken(start_of_end, 0, sm, lopt);
+void eraseSubStr(std::string & MainStr, const std::string & ToErase)
+{
+  // Search for the substring in string
+  size_t pos = MainStr.find(ToErase);
+  if (pos != std::string::npos)
+  {
+    // If found then erase it from string
+    MainStr.erase(pos, ToErase.length());
+  }
 }
 
-bool CopyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
-                                 Rewriter &R, Decl* FD){
+SourceLocation
+endOfTheEnd(SourceLocation const & StartOfEnd, SourceManager & Sm){
+  LangOptions lopt;
+  return Lexer::getLocForEndOfToken(StartOfEnd, 0, Sm, lopt);
+}
 
-  std::error_code error_code;
-  llvm::raw_fd_ostream outFile(Info.tainted_stream_writer[FD],
-                               error_code, llvm::sys::fs::OF_Append);
-  RewriteBuffer RB;
-  if(std::find(Info.tainted_outfiles.begin(),
-                Info.tainted_outfiles.end(),
-                const_cast<llvm::raw_fd_ostream*>(&outFile)) == Info.tainted_outfiles.end()){
-      /*
-       * This is a new file being written, hence Initialize it
-       */
+enum CurrDeclType{
+  CD_VarStructDecl,
+  CD_GenVarDecl,
+  CD_FuncDecl,
+  CD_VarTypeDefDecl,
+  CD_Unknown
+};
 
-    RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
-                    "\n */ \n");
-    RB.write(outFile);
+bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info,
+                                          Rewriter &R, Decl* D = nullptr,
+                                          RecordDecl* RD = nullptr,
+                                          TypedefDecl* TD = nullptr,
+                                          RewriteBuffer* RB = nullptr,
+                                          CurrDeclType CD = CD_Unknown) {
+  std::error_code ErrorCode;
+  std::string TaintedFileAttemptingToBeGenerated = "";
+  bool IsNeedsToBeInitialized = false;
+  if (CD == CD_GenVarDecl) {
+    assert(D !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.TaintMirroredVarDecls[D];
+  }
+  else if (CD == CD_VarStructDecl) {
+    assert(RD !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.TaintMirroredVarStructDecls[RD];
+  }
+  else if (CD == CD_VarTypeDefDecl) {
+    assert(TD !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.TaintMirroredTypedefDecls[TD];
+  }
+  else if (CD == CD_FuncDecl) {
+    assert(D !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.TaintedFuncStreamWriter[D];
   }
 
-  SourceRange decl_range(FD->getSourceRange());
-  SourceLocation decl_begin(decl_range.getBegin());
-  SourceLocation decl_start_end(decl_range.getEnd());
+  llvm::raw_fd_ostream OutFile(TaintedFileAttemptingToBeGenerated, ErrorCode,
+                               llvm::sys::fs::OF_Append);
+  auto findIter = std::find(Info.TaintedOutfiles.begin(),
+                                                Info.TaintedOutfiles.end(),
+                                                TaintedFileAttemptingToBeGenerated);
+  if (findIter ==
+      Info.TaintedOutfiles.end())
+    IsNeedsToBeInitialized = true;
+  if (IsNeedsToBeInitialized == true) {
+    /*
+     * This is a new file being written, hence Initialize it
+     */
 
-  SourceLocation decl_end_end(end_of_the_end(decl_start_end,
+    RB->Initialize("/* This file is Auto-Generated Using CheckCBox Converter.\n Please Do Not Directly Modify."
+                   "\n */ \n");
+    RB->write(OutFile);
+    Info.TaintedOutfiles.push_back(TaintedFileAttemptingToBeGenerated);
+  }
+}
+
+bool copyTaintedStructDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, RecordDecl* RD, RewriteBuffer* RB){
+
+
+
+  SourceRange DeclRange(RD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
+                                        Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const VarString(BuffBegin, BuffEnd);
+  RB->Initialize("\n" + VarString + ";\n");
+  llvm::raw_fd_ostream OutFile(Info.TaintMirroredVarStructDecls[
+                                   RD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  RB->write(OutFile);
+  return true;
+}
+bool copyTaintedTypeDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                     Rewriter &R, TypedefDecl* TD, RewriteBuffer* RB){
+  SourceRange DeclRange(TD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
+                                        Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const VarString(BuffBegin, BuffEnd);
+  RB->Initialize("\n" + VarString + ";\n");
+  llvm::raw_fd_ostream OutFile(Info.TaintMirroredTypedefDecls[TD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  RB->write(OutFile);
+  return true;
+}
+
+bool copyTaintedVarDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                       Rewriter &R, Decl* VD, RewriteBuffer* RB){
+
+
+
+  SourceRange DeclRange(VD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
+                                        Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const VarString(BuffBegin, BuffEnd);
+  RB->Initialize("\n" + VarString + ";\n");
+  llvm::raw_fd_ostream OutFile(Info.TaintMirroredVarDecls[VD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  RB->write(OutFile);
+  return true;
+}
+
+bool copyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, Decl* FD, RewriteBuffer* RB){
+
+  SourceRange DeclRange(FD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
                                              Context.getSourceManager()));
   /*
      * Now you can fetch the pointers to the text replacement
      */
-  const char* buff_begin(Context.getSourceManager().getCharacterData(decl_begin));
-  const char* buff_end(Context.getSourceManager().getCharacterData(decl_end_end));
-  std::string const func_string(buff_begin, buff_end);
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const FuncString(BuffBegin, BuffEnd);
+  llvm::raw_fd_ostream OutFile(Info.TaintedFuncStreamWriter[FD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
   if(FD->getAsFunction()->isThisDeclarationADefinition())
-    RB.Initialize("\n" + func_string + "\n");
+    RB->Initialize("\n" + FuncString + "\n");
   else
-    RB.Initialize("\n" + func_string + ";\n");
+    RB->Initialize("\n" + FuncString + ";\n");
 
-  RB.write(outFile);
-  Info.tainted_outfiles.push_back(&outFile);
-
+  RB->write(OutFile);
+  /*
+   * If this declaration is a definition, this means that this file will
+   * have atleast one tainted w2c instrumentation.
+   */
+  if((FD->getAsFunction()->isThisDeclarationADefinition())
+          && (Info.ListOfInstrumentedFiles.find(Info.TaintedFuncStreamWriter[FD])
+          == Info.ListOfInstrumentedFiles.end()))
+  {
+    Info.ListOfInstrumentedFiles[Info.TaintedFuncStreamWriter[FD]] = FD;
+  }
   return true;
 }
+
 char* getFileNameFromPath(const char* path )
 {
   if( path == NULL )
@@ -96,30 +225,33 @@ bool CopyW2CDefToW2CFile(ASTContext &Context, ProgramInfo &Info,
                                  Rewriter &R, Decl* FD, std::string func_string){
 
   std::error_code error_code;
-  std::string FilePath = Info.tainted_stream_writer[FD];
+  std::string FilePath = Info.TaintedFuncStreamWriter[FD];
+  std::string InstrumentedFileName =
+      getFileNameFromPath(Info.TaintedFuncStreamWriter[FD].c_str());
   fetch_path_from_file_path(FilePath,
                             getFileNameFromPath(FilePath.c_str()));
-  auto Wasm2CFilePath = FilePath + "wasm2c_headers.h";
-                                        llvm::raw_fd_ostream outFile(Wasm2CFilePath,
+  eraseSubStr(InstrumentedFileName, "Tainted");
+  auto Wasm2CFilePath = FilePath + "WASM2C" + InstrumentedFileName;
+                                        llvm::raw_fd_ostream OutFile(Wasm2CFilePath,
                                error_code, llvm::sys::fs::OF_Append);
   RewriteBuffer RB;
-  if(std::find(Info.w2c_outfiles.begin(),
-                Info.w2c_outfiles.end(),
-                const_cast<llvm::raw_fd_ostream*>(&outFile)) == Info.w2c_outfiles.end()){
+  if(std::find(Info.W2cOutfiles.begin(),
+                Info.W2cOutfiles.end(),
+                const_cast<llvm::raw_fd_ostream*>(&OutFile)) == Info.W2cOutfiles.end()){
     /*
        * This is a new file being written, hence Initialize it
        */
 
     RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
                   "\n */ \n");
-    RB.write(outFile);
+    RB.write(OutFile);
   }
 
   RB.Initialize("\n" + func_string + ";\n");
 
-  RB.write(outFile);
+  RB.write(OutFile);
 
-  Info.w2c_outfiles.push_back(&outFile);
+  Info.W2cOutfiles.push_back(&OutFile);
 
   return true;
 }
@@ -460,7 +592,47 @@ bool GenerateW2CDef(ASTContext &Context, ProgramInfo &Info,
 bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                           Rewriter &R)
 {
-  for(auto *TaintedFunctionDecls : Info.Tainted_Decls){
+  /*
+   * First iterate through the list of Tainted Structs and copy them
+   */
+
+  RewriteBuffer RB;
+  for (auto TaintedStructDecls : Info.TaintMirroredVarStructDecls)
+  {
+
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         nullptr,
+                                         TaintedStructDecls.first,
+                                         nullptr,
+                                         &RB, CD_VarStructDecl);
+    copyTaintedStructDefToTaintedFile(Context, Info, R, TaintedStructDecls.first,
+                                   &RB);
+  }
+
+  for (auto TaintedVarDecls : Info.TaintMirroredVarDecls)
+  {
+
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         TaintedVarDecls.first,
+                                         nullptr,
+                                         nullptr,
+                                         &RB, CD_GenVarDecl);
+    copyTaintedVarDefToTaintedFile(Context, Info, R,
+                                   TaintedVarDecls.first,
+                                   &RB);
+  }
+
+  for (auto TaintedTypeDefDecls : Info.TaintMirroredTypedefDecls)
+  {
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         nullptr,
+                                         nullptr,
+                                         TaintedTypeDefDecls.first,&RB, CD_VarTypeDefDecl);
+    copyTaintedTypeDefToTaintedFile(Context, Info, R, TaintedTypeDefDecls.first,
+                                   &RB);
+  }
+
+  for(auto *TaintedFunctionDecls : Info.TaintedDecls){
 
     /*
      *The Tainted function definition must move to a different file in order to
@@ -468,7 +640,13 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
      * Hence before writing anything, copy the entire original function to a different file
     */
 
-    CopyTaintedDefToTaintedFile(Context, Info, R, TaintedFunctionDecls);
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         TaintedFunctionDecls,
+                                         nullptr,
+                                         nullptr,
+                                         &RB, CD_FuncDecl);
+
+    copyTaintedDefToTaintedFile(Context, Info, R, TaintedFunctionDecls, &RB);
     if((!TaintedFunctionDecls->getAsFunction()->isThisDeclarationADefinition()) ||
         (!TaintedFunctionDecls->hasBody()))
     {
@@ -633,6 +811,81 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                               static_cast<VarDecl*>(TaintedFunctionDecls));
     GenerateW2CDef(Context, Info, R, WasmFunctionName,
                    static_cast<VarDecl*>(TaintedFunctionDecls), FuncSignature);
+    }
+    /*
+     * TODO: This Functionality must move to a different function
+     */
+    /*
+     * Now for all the instrumented files, insert to include at the beginning
+     */
+    for (auto InstrumentedFileWithPath : Info.ListOfInstrumentedFiles)
+    {
+      /*
+       * Generate the w2c Header file name from the tainted file name
+       * Instrumented File Name --> FileName.c
+       * Tainted definitions for the above file --> tainted_FileName.c
+       * corresponding w2c header file --> w2c_FileName.c
+       */
+      std::string InstrumentedFile = getFileNameFromPath(
+          InstrumentedFileWithPath.first.c_str());
+      auto FilePath = InstrumentedFileWithPath.first;
+      fetch_path_from_file_path(FilePath, InstrumentedFile);
+      eraseSubStr(InstrumentedFile,
+                  "Tainted");
+      auto W2CFileName = "W2C" + InstrumentedFile;
+
+      auto W2CFileNameWithPath = FilePath + W2CFileName;
+
+      auto InsertLocation = InstrumentedFileWithPath.second->
+          getASTContext().getSourceManager()
+              .getLocForStartOfFile(
+                  InstrumentedFileWithPath.second->
+                  getASTContext().getSourceManager().getFileID(
+                          InstrumentedFileWithPath.second->getBeginLoc()
+                                     ));
+      std::string IncludeStmt = "#include \"" +
+                                W2CFileNameWithPath + "\"\n";
+    R.InsertTextAfter(InsertLocation, IncludeStmt);
+    }
+    /*
+     * TODO: This functionality must move to a Seperate function
+     */
+    /*
+     * Now iterate through all the autogenerated files
+     * If there exists a .h file, then catch the corresponding .c file and
+     * insert an include
+     */
+    for(auto TaintedFileWithPath : Info.TaintedRewriteFileVector)
+    {
+      // first fetch the filename from the path
+      std::string TaintedFileName = getFileNameFromPath(
+          TaintedFileWithPath.c_str());
+      if(TaintedFileName.find_last_of('h'))
+      {
+        /*
+         * This is a autogenerated header file
+         */
+        std::string TaintedHeaderFileName = TaintedFileName;
+        std::string TaintedCFileNameWithPath = TaintedFileWithPath;
+        TaintedCFileNameWithPath.replace(
+            TaintedCFileNameWithPath.size()-1, 1, "c");
+        std::string TaintedPath = TaintedFileWithPath;
+            fetch_path_from_file_path(TaintedPath,
+                                                 TaintedHeaderFileName);
+        /*
+         * Now fetch the begin location of this file
+         */
+        RewriteBuffer RB;
+        std::string IncludeHeaderFileWithPath = TaintedPath + TaintedHeaderFileName;
+        std::string IncludeStmt = "#include \"" +
+                                  IncludeHeaderFileWithPath + "\"\n";
+        std::error_code ErrorCode;
+        llvm::raw_fd_ostream OutFile(TaintedCFileNameWithPath,
+                                     ErrorCode, llvm::sys::fs::OF_Append);
+        OutFile.seek(0);
+        RB.Initialize(IncludeStmt);
+        RB.write(OutFile);
+      }
     }
 }
 
