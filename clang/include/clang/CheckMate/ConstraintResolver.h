@@ -67,8 +67,10 @@ public:
   void storeTaintMirroredVarDecl(VarDecl *VD);
 
   void storeTaintMirroredStructVarDecl(RecordDecl *RD);
-
   void storeTaintMirroredTypedefDecl(TypedefDecl *TD);
+  void storeIncludeStatement(SourceLocation SLC,
+                        SourceManager &SM,
+                        std::string IncludeStmt);
 
 private:
   ProgramInfo &Info;

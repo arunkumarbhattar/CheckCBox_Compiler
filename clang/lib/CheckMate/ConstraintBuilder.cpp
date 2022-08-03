@@ -23,6 +23,170 @@
 using namespace llvm;
 using namespace clang;
 
+class MyASTVisitor : public clang::RecursiveASTVisitor<MyASTVisitor> {
+public:
+  explicit MyASTVisitor(ASTContext *C, ProgramInfo &I)
+      : Context(C), Info(I), CB(Info, Context) {}
+
+  std::string fetchMacroExpanseForDecl(SourceRange SR,
+                                       SourceManager *SM)
+  {
+       auto FullSourceLocation = FullSourceLoc(SR.getBegin(),
+                                            *SM);
+       /*
+        * Now in a loop walk backwards the source until you find the pre-
+        * processor token (#)
+        */
+
+       signed int Counter = 0;
+       auto MacroLoc = FullSourceLocation.getSpellingLoc();
+       char CurrToken = (char)MacroLoc.getCharacterData()[0];
+       auto IntermediateMacroLoc = MacroLoc;
+       while(CurrToken != '#')
+       {
+         Counter = Counter - 1;
+         auto TempLoc = MacroLoc.getSpellingLoc()
+                                 .getLocWithOffset(Counter);
+         IntermediateMacroLoc = FullSourceLoc(TempLoc, *SM);
+         CurrToken = (char)IntermediateMacroLoc.getCharacterData()[0];
+       }
+
+       const auto *Spelling = FullSourceLoc(IntermediateMacroLoc, *SM).getSpellingLoc()
+                           .getCharacterData();
+       /*
+        * Now that you point to the right location fetch the sourceLoc string
+        */
+       /*
+        * Support for multiline macros is a little different
+        * if a escape character is preceeded by a backslash, it means the macro is continued
+        * through the next line
+        *
+        * Hence You basically look for the location that has no preceeding non-space character as
+        * backslash
+        *
+        */
+       bool MultiLineMacroNotFound = true;
+       int pos = 0;
+       int MacroTerminatingPos = std::string(Spelling).find("\n");
+
+       do{
+         pos = std::string(Spelling).find("\n", pos);
+         int Counter = 1;
+         auto PreceedingNonSpaceChar =
+             std::string(Spelling).find("\n", pos)-Counter;
+         while(isSpace(reinterpret_cast<char>(
+                    std::string(Spelling).at(PreceedingNonSpaceChar))))
+         {
+           Counter = Counter - 1;
+           PreceedingNonSpaceChar = std::string(Spelling).find("\n", pos)-Counter;
+         }
+         if (reinterpret_cast<char>(
+                 std::string(Spelling).at(PreceedingNonSpaceChar)) !=
+             '\\')
+        {
+           MacroTerminatingPos = std::string(Spelling).find("\n", pos);
+           MultiLineMacroNotFound = false;
+        }
+        else
+         {
+          pos =  std::string(Spelling).find("\n", pos+1);
+         }
+       }while(MultiLineMacroNotFound);
+
+       return std::string(Spelling).substr(0,
+                                           MacroTerminatingPos);
+  }
+
+  bool VisitCallExpr(clang::CallExpr *callexpr)
+  {
+    auto RefDec = callexpr->getCallee()->getReferencedDeclOfCallee();
+    if( RefDec != NULL && RefDec->getAsFunction() != NULL &&
+        callexpr->getBeginLoc().isMacroID())
+    {
+      std::cout<<"Visiting a MACRO call expression: " <<
+          RefDec->getAsFunction()->getName().str()<<std::endl;
+      std::string IncludeDirective = fetchMacroExpanseForDecl(
+
+          callexpr->getSourceRange(),
+          &(Context->getSourceManager()));
+      CB.storeIncludeStatement(
+          Context->getFullLoc(callexpr->getBeginLoc()).getSpellingLoc(), Context->getSourceManager(),
+          IncludeDirective);
+    }
+    return true;
+  }
+
+  bool VisitUnaryOperator(clang::UnaryOperator* unary)
+  {
+    auto decl = unary->getReferencedDeclOfCallee();
+    if(decl != NULL)
+    {
+      auto Vardecl = dyn_cast<VarDecl>(decl);
+      if(Vardecl->getLocation().isMacroID())
+      {
+        /*
+         * fetch the macro expanse for this Macro
+         */
+        std::string IncludeDirective = fetchMacroExpanseForDecl(
+            Vardecl->getSourceRange(),
+            &(Context->getSourceManager()));
+        std::cout<<"Include directive: "<< IncludeDirective<<std::endl;
+        CB.storeIncludeStatement(
+            Context->getFullLoc(unary->getExprLoc()).getSpellingLoc(), Context->getSourceManager(),
+            IncludeDirective);
+      }
+    }
+    return true;
+  }
+
+  bool VisitBinaryOperator(clang::BinaryOperator *bo)
+  {
+    auto LHSExpr = bo->getLHS();
+    auto RHSExpr = bo->getRHS();
+
+    if((RHSExpr == NULL) || (LHSExpr == NULL))
+      return true;
+
+    auto RhsD = RHSExpr->getReferencedDeclOfCallee();
+    auto LhsD = LHSExpr->getReferencedDeclOfCallee();
+    if (RhsD != NULL) {
+      auto *Vardec = dyn_cast<VarDecl>(RhsD);
+      if(RhsD->getLocation().isMacroID())
+      {
+        std::cout<<"Visiting a Binary expression where your RHS is "
+                  << Vardec->getNameAsString()<<std::endl;
+        std::string IncludeDirective = fetchMacroExpanseForDecl(
+            Vardec->getSourceRange(),
+            &(Context->getSourceManager()));
+        CB.storeIncludeStatement(
+            Context->getFullLoc(RHSExpr->getExprLoc()).getSpellingLoc(), Context->getSourceManager(),
+            IncludeDirective);
+      }
+    }
+
+    if (LhsD != NULL) {
+      auto *Vardec = dyn_cast<VarDecl>(LhsD);
+      if(LhsD->getLocation().isMacroID())
+      {
+        std::cout<<"Visiting a Binary expression where your LHS is "
+                  << Vardec->getNameAsString()<<std::endl;
+        std::string IncludeDirective = fetchMacroExpanseForDecl(
+            Vardec->getSourceRange(),
+            &(Context->getSourceManager()));
+        CB.storeIncludeStatement(
+            Context->getFullLoc(LHSExpr->getExprLoc()).getSpellingLoc(), Context->getSourceManager(),
+            IncludeDirective);
+      }
+    }
+    return true;
+  }
+
+private:
+  ASTContext *Context;
+  ProgramInfo &Info;
+  FunctionDecl *Function;
+  ConstraintResolver CB;
+};
 // This class visits functions and adds constraints to the
 // Constraints instance assigned to it.
 // Each VisitXXX method is responsible for looking inside statements
@@ -33,11 +197,18 @@ public:
       : Context(C), Info(I), Function(FD), CB(Info, Context) {}
 
   // T x = e
+  /*
+   * This basically visits every decl involved in each and every statement
+   */
   bool VisitDeclStmt(DeclStmt *S) {
     // Process inits even for non-pointers because structs and union values
     // can contain pointers
     for (const auto &D : S->decls()) {
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+        if(VD->getLocation().isMacroID())
+        {
+          std::cout<< "This is a Macro: "<< VD->getNameAsString() <<std::endl;
+        }
         Expr *InitE = VD->getInit();
         CB.constrainLocalAssign(S, VD, InitE, Same_to_Same);
       }
@@ -86,6 +257,29 @@ public:
 
   // e(e1,e2,...)
   bool VisitCallExpr(CallExpr *E) {
+    if (E != NULL && E->getReferencedDeclOfCallee() != NULL
+        && E->getReferencedDeclOfCallee()->getAsFunction() != NULL)
+    {
+      auto FD = E->getReferencedDeclOfCallee()->getAsFunction();
+      if(FD->getLocation().isMacroID()) {
+        auto FullSourceLocation =
+            FullSourceLoc(FD->getSourceRange().getBegin(),
+                          FD->getASTContext().getSourceManager());
+        auto MacroLoc =
+            FullSourceLocation.getSpellingLoc().getLocWithOffset(-25);
+        FullSourceLocation =
+            FullSourceLoc(MacroLoc, FD->getASTContext().getSourceManager());
+        auto spellingLoc =
+            FullSourceLocation.getSpellingLoc().getCharacterData();
+        auto refinedSpellingLoc = std::string(spellingLoc).substr(0,
+        std::string(spellingLoc).find("\n"));
+        std::cout<<"Macro in use: "<<refinedSpellingLoc<<std::endl;
+      }
+      else
+      {
+        std::cout<<FD->getNameAsString()<<" is not a Macro"<<std::endl;
+      }
+    }
     PersistentSourceLoc PL = PersistentSourceLoc::mkPSL(E, *Context);
     auto &CS = Info.getConstraints();
     CVarSet FVCons = CB.getCalleeConstraintVars(E);
@@ -253,6 +447,29 @@ public:
     default:
       break;
     }
+    auto E = O->getExprStmt();
+    if (E != NULL && E->getReferencedDeclOfCallee() != NULL)
+    {
+      auto FD = dyn_cast<VarDecl>(E->getReferencedDeclOfCallee());
+      if(FD->getLocation().isMacroID()) {
+        auto FullSourceLocation =
+            FullSourceLoc(FD->getSourceRange().getBegin(),
+                          FD->getASTContext().getSourceManager());
+        auto MacroLoc =
+            FullSourceLocation.getSpellingLoc().getLocWithOffset(-25);
+        FullSourceLocation =
+            FullSourceLoc(MacroLoc, FD->getASTContext().getSourceManager());
+        auto spellingLoc =
+            FullSourceLocation.getSpellingLoc().getCharacterData();
+        auto refinedSpellingLoc = std::string(spellingLoc).substr(0,
+                                                                  std::string(spellingLoc).find("\n"));
+        std::cout<<"Macro in use: "<<refinedSpellingLoc<<std::endl;
+      }
+      else
+      {
+        std::cout<<FD->getNameAsString()<<" is not a Macro"<<std::endl;
+      }
+    }
     return true;
   }
 
@@ -269,6 +486,54 @@ public:
       break;
     default:
       break;
+    }
+    auto R = O->getRHS();
+    if (R != NULL && R->getReferencedDeclOfCallee() != NULL)
+    {
+      auto FD = dyn_cast<VarDecl>(
+          R->getReferencedDeclOfCallee());
+      if(FD->getLocation().isMacroID()) {
+        auto FullSourceLocation =
+            FullSourceLoc(FD->getSourceRange().getBegin(),
+                          FD->getASTContext().getSourceManager());
+        auto MacroLoc =
+            FullSourceLocation.getSpellingLoc().getLocWithOffset(-25);
+        FullSourceLocation =
+            FullSourceLoc(MacroLoc, FD->getASTContext().getSourceManager());
+        auto spellingLoc =
+            FullSourceLocation.getSpellingLoc().getCharacterData();
+        auto refinedSpellingLoc = std::string(spellingLoc).substr(0,
+                                                                  std::string(spellingLoc).find("\n"));
+        std::cout<<"Macro in use: "<<refinedSpellingLoc<<std::endl;
+      }
+      else
+      {
+        std::cout<<FD->getNameAsString()<<" is not a Macro"<<std::endl;
+      }
+    }
+    auto L = O->getLHS();
+    if (L != NULL && L->getReferencedDeclOfCallee() != NULL)
+    {
+      auto FD = dyn_cast<VarDecl>(
+          L->getReferencedDeclOfCallee());
+      if(FD->getLocation().isMacroID()) {
+        auto FullSourceLocation =
+            FullSourceLoc(FD->getSourceRange().getBegin(),
+                          FD->getASTContext().getSourceManager());
+        auto MacroLoc =
+            FullSourceLocation.getSpellingLoc().getLocWithOffset(-25);
+        FullSourceLocation =
+            FullSourceLoc(MacroLoc, FD->getASTContext().getSourceManager());
+        auto spellingLoc =
+            FullSourceLocation.getSpellingLoc().getCharacterData();
+        auto refinedSpellingLoc = std::string(spellingLoc).substr(0,
+                                                                  std::string(spellingLoc).find("\n"));
+        std::cout<<"Macro in use: "<<refinedSpellingLoc<<std::endl;
+      }
+      else
+      {
+        std::cout<<FD->getNameAsString()<<" is not a Macro"<<std::endl;
+      }
     }
     return true;
   }
@@ -575,7 +840,6 @@ void VariableAdderConsumer::HandleTranslationUnit(ASTContext &C) {
 
 void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
   Info.enterCompilationUnit(C);
-  if (_CheckMateOpts.Verbose) {
     SourceManager &SM = C.getSourceManager();
     FileID MainFileId = SM.getMainFileID();
     const FileEntry *FE = SM.getFileEntryForID(MainFileId);
@@ -583,7 +847,6 @@ void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
       errs() << "Analyzing file " << FE->getName() << "\n";
     else
       errs() << "Analyzing\n";
-  }
 
   auto &PStats = Info.getPerfStats();
 
@@ -594,6 +857,7 @@ void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
   ContextSensitiveBoundsKeyVisitor CSBV =
       ContextSensitiveBoundsKeyVisitor(&C, Info, &CSResolver);
   ConstraintGenVisitor GV = ConstraintGenVisitor(&C, Info);
+  MyASTVisitor MyASS = MyASTVisitor(&C, Info);
   TranslationUnitDecl *TUD = C.getTranslationUnitDecl();
   StatsRecorder SR(&C, &Info);
 
@@ -612,6 +876,7 @@ void ConstraintBuilderConsumer::HandleTranslationUnit(ASTContext &C) {
 
   for (const auto &D : TUD->decls()) {
     GV.TraverseDecl(D);
+    MyASS.TraverseDecl(D);
     SR.TraverseDecl(D);
   }
 

@@ -102,6 +102,28 @@ void ConstraintResolver::storeTaintMirroredTypedefDecl(TypedefDecl* TD) {
 
 }
 
+void ConstraintResolver::storeIncludeStatement(SourceLocation SLC,
+                                               SourceManager &SM,
+                                               std::string IncludeStmt) {
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  auto SourceFileName = resolve_base_name(SM.getFilename(SLC).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + SourceFileName;
+  /*
+   * Insert only if IncludeStmt has never been inserted before
+   */
+
+  errs()<<"Inserting macro: " << IncludeStmt<<"\n";
+  if (Info.MapTaintedFile2IncludeStmt.find(IncludeStmt)
+      == Info.MapTaintedFile2IncludeStmt.end()) {
+    Info.MapTaintedFile2IncludeStmt.insert(std::pair<std::string, std::string>(
+        IncludeStmt, FinalPathWithFileName));
+  }
+}
 
 void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   Info.storeTaintedDecl(FD);

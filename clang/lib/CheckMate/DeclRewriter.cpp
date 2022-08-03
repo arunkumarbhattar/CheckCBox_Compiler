@@ -43,6 +43,7 @@ enum CurrDeclType{
   CD_GenVarDecl,
   CD_FuncDecl,
   CD_VarTypeDefDecl,
+  CD_Macro,
   CD_Unknown
 };
 
@@ -51,9 +52,10 @@ bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info
                                           RecordDecl* RD = nullptr,
                                           TypedefDecl* TD = nullptr,
                                           RewriteBuffer* RB = nullptr,
+                                          std::string
+                                              TaintedFileAttemptingToBeGenerated = "",
                                           CurrDeclType CD = CD_Unknown) {
   std::error_code ErrorCode;
-  std::string TaintedFileAttemptingToBeGenerated = "";
   bool IsNeedsToBeInitialized = false;
   if (CD == CD_GenVarDecl) {
     assert(D !=nullptr);
@@ -80,12 +82,12 @@ bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info
   if (findIter ==
       Info.TaintedOutfiles.end())
     IsNeedsToBeInitialized = true;
-  if (IsNeedsToBeInitialized == true) {
+  if (IsNeedsToBeInitialized) {
     /*
      * This is a new file being written, hence Initialize it
      */
 
-    RB->Initialize("/* This file is Auto-Generated Using CheckCBox Converter.\n Please Do Not Directly Modify."
+    RB->Initialize("/* This file is Auto-Generated Using CheckMate.\n Please Do Not Directly Modify."
                    "\n */ \n");
     RB->write(OutFile);
     Info.TaintedOutfiles.push_back(TaintedFileAttemptingToBeGenerated);
@@ -116,6 +118,23 @@ bool copyTaintedStructDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
   RB->write(OutFile);
   return true;
 }
+
+bool copyMacroDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                       Rewriter &R, std::string TaintedFile,
+                               std::string MacroDef,
+                               RewriteBuffer* RB){
+
+
+
+
+  std::error_code ErrorCode;
+  RB->Initialize("\n" + MacroDef + ";\n");
+  llvm::raw_fd_ostream OutFile(TaintedFile,
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  RB->write(OutFile);
+  return true;
+}
+
 bool copyTaintedTypeDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
                                      Rewriter &R, TypedefDecl* TD, RewriteBuffer* RB){
   SourceRange DeclRange(TD->getSourceRange());
@@ -592,11 +611,30 @@ bool GenerateW2CDef(ASTContext &Context, ProgramInfo &Info,
 bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                           Rewriter &R)
 {
+  RewriteBuffer RB;
   /*
-   * First iterate through the list of Tainted Structs and copy them
+   * First Iterate through the Macros and insert them
+   *
    */
 
-  RewriteBuffer RB;
+  for (auto MacroToBeInserted : Info.MapTaintedFile2IncludeStmt)
+  {
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         nullptr,
+                                            nullptr,
+                                         nullptr,
+                                         &RB,
+MacroToBeInserted.second,
+                                         CD_Macro);
+    copyMacroDefToTaintedFile(Context, Info, R, MacroToBeInserted.second,
+                              MacroToBeInserted.first,
+                                      &RB);
+  }
+  /*
+   * iterate through the list of Tainted Structs and copy them
+   */
+
+
   for (auto TaintedStructDecls : Info.TaintMirroredVarStructDecls)
   {
 
@@ -604,7 +642,9 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                          nullptr,
                                          TaintedStructDecls.first,
                                          nullptr,
-                                         &RB, CD_VarStructDecl);
+                                         &RB,
+                                         "",
+                                         CD_VarStructDecl);
     copyTaintedStructDefToTaintedFile(Context, Info, R, TaintedStructDecls.first,
                                    &RB);
   }
@@ -616,7 +656,9 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                          TaintedVarDecls.first,
                                          nullptr,
                                          nullptr,
-                                         &RB, CD_GenVarDecl);
+                                         &RB,
+                                         "",
+                                         CD_GenVarDecl);
     copyTaintedVarDefToTaintedFile(Context, Info, R,
                                    TaintedVarDecls.first,
                                    &RB);
@@ -627,7 +669,9 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     initializeTaintedFileForDeclIfNeeded(Context,Info, R,
                                          nullptr,
                                          nullptr,
-                                         TaintedTypeDefDecls.first,&RB, CD_VarTypeDefDecl);
+                                         TaintedTypeDefDecls.first,&RB,
+                                         "",
+                                         CD_VarTypeDefDecl);
     copyTaintedTypeDefToTaintedFile(Context, Info, R, TaintedTypeDefDecls.first,
                                    &RB);
   }
@@ -644,7 +688,9 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                          TaintedFunctionDecls,
                                          nullptr,
                                          nullptr,
-                                         &RB, CD_FuncDecl);
+                                         &RB,
+                                         "",
+                                         CD_FuncDecl);
 
     copyTaintedDefToTaintedFile(Context, Info, R, TaintedFunctionDecls, &RB);
     if((!TaintedFunctionDecls->getAsFunction()->isThisDeclarationADefinition()) ||
