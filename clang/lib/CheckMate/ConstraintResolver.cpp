@@ -101,7 +101,21 @@ void ConstraintResolver::storeTaintMirroredTypedefDecl(TypedefDecl* TD) {
   Info.TaintMirroredTypedefDecls[TD] = FinalPathWithFileName;
 
 }
+void ConstraintResolver::storeTaintMirroredEnumDecl
+    (EnumDecl* ED) {
 
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  auto VdSourceFileName = resolve_base_name(ED->getASTContext().getSourceManager()
+                                                .getFilename(ED->getLocation()).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + VdSourceFileName;
+  Info.TaintMirroredEnumDecls[ED] = FinalPathWithFileName;
+
+}
 void ConstraintResolver::storeIncludeStatement(SourceLocation SLC,
                                                SourceManager &SM,
                                                std::string IncludeStmt) {

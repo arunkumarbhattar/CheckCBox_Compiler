@@ -44,6 +44,7 @@ enum CurrDeclType{
   CD_FuncDecl,
   CD_VarTypeDefDecl,
   CD_Macro,
+  CD_Enum,
   CD_Unknown
 };
 
@@ -51,6 +52,7 @@ bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info
                                           Rewriter &R, Decl* D = nullptr,
                                           RecordDecl* RD = nullptr,
                                           TypedefDecl* TD = nullptr,
+                                          EnumDecl* ED = nullptr,
                                           RewriteBuffer* RB = nullptr,
                                           std::string
                                               TaintedFileAttemptingToBeGenerated = "",
@@ -68,6 +70,11 @@ bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info
   else if (CD == CD_VarTypeDefDecl) {
     assert(TD !=nullptr);
     TaintedFileAttemptingToBeGenerated = Info.TaintMirroredTypedefDecls[TD];
+  }
+  else if (CD == CD_Enum)
+  {
+    assert(ED !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.TaintMirroredEnumDecls[ED];
   }
   else if (CD == CD_FuncDecl) {
     assert(D !=nullptr);
@@ -151,6 +158,27 @@ bool copyTaintedTypeDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
   std::string const VarString(BuffBegin, BuffEnd);
   RB->Initialize("\n" + VarString + ";\n");
   llvm::raw_fd_ostream OutFile(Info.TaintMirroredTypedefDecls[TD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  RB->write(OutFile);
+  return true;
+}
+
+bool copyTaintedEnumToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                     Rewriter &R, EnumDecl* TD, RewriteBuffer* RB){
+  SourceRange DeclRange(TD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
+                                        Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const VarString(BuffBegin, BuffEnd);
+  RB->Initialize("\n" + VarString + ";\n");
+  llvm::raw_fd_ostream OutFile(Info.TaintMirroredEnumDecls[TD],
                                ErrorCode, llvm::sys::fs::OF_Append);
   RB->write(OutFile);
   return true;
@@ -623,6 +651,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
                                          nullptr,
                                             nullptr,
                                          nullptr,
+                                         nullptr,
                                          &RB,
 MacroToBeInserted.second,
                                          CD_Macro);
@@ -642,6 +671,7 @@ MacroToBeInserted.second,
                                          nullptr,
                                          TaintedStructDecls.first,
                                          nullptr,
+                                         nullptr,
                                          &RB,
                                          "",
                                          CD_VarStructDecl);
@@ -649,11 +679,26 @@ MacroToBeInserted.second,
                                    &RB);
   }
 
+  for (auto TaintedEnumDecls : Info.TaintMirroredEnumDecls)
+  {
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         nullptr,
+                                         nullptr,
+                                         nullptr,
+                                         TaintedEnumDecls.first,&RB,
+                                         "",
+                                         CD_VarTypeDefDecl);
+    copyTaintedEnumToTaintedFile(Context, Info, R, TaintedEnumDecls.first,
+                                    &RB);
+  }
+
+
   for (auto TaintedVarDecls : Info.TaintMirroredVarDecls)
   {
 
     initializeTaintedFileForDeclIfNeeded(Context,Info, R,
                                          TaintedVarDecls.first,
+                                         nullptr,
                                          nullptr,
                                          nullptr,
                                          &RB,
@@ -669,7 +714,9 @@ MacroToBeInserted.second,
     initializeTaintedFileForDeclIfNeeded(Context,Info, R,
                                          nullptr,
                                          nullptr,
-                                         TaintedTypeDefDecls.first,&RB,
+                                         TaintedTypeDefDecls.first,
+                                         nullptr,
+                                         &RB,
                                          "",
                                          CD_VarTypeDefDecl);
     copyTaintedTypeDefToTaintedFile(Context, Info, R, TaintedTypeDefDecls.first,
@@ -686,6 +733,7 @@ MacroToBeInserted.second,
 
     initializeTaintedFileForDeclIfNeeded(Context,Info, R,
                                          TaintedFunctionDecls,
+                                         nullptr,
                                          nullptr,
                                          nullptr,
                                          &RB,

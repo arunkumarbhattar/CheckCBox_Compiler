@@ -1137,6 +1137,12 @@ public:
       }
     }
 
+    void UpdateFlags(Parser *Self, long ScopeFlags)
+    {
+      auto CurScopeFlags = Self->getCurScope()->getFlags();
+      CurScopeFlags = CurScopeFlags | ScopeFlags;
+      Self->EnterScope(CurScopeFlags);
+    }
     // Exit - Exit the scope associated with this object now, rather
     // than waiting until the object is destroyed.
     void Exit() {

@@ -72,6 +72,8 @@ public:
                         SourceManager &SM,
                         std::string IncludeStmt);
 
+  void storeTaintMirroredEnumDecl(EnumDecl *ED);
+
 private:
   ProgramInfo &Info;
   ASTContext *Context;

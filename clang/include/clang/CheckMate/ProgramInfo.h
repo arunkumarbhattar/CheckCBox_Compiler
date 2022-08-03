@@ -109,6 +109,7 @@ public:
   std::map<Decl*, std::string> TaintMirroredVarDecls;
   std::map<RecordDecl*, std::string> TaintMirroredVarStructDecls;
   std::map<TypedefDecl*, std::string> TaintMirroredTypedefDecls;
+  std::map<EnumDecl*, std::string> TaintMirroredEnumDecls;
   std::map<std::string, std::string> MapTaintedFile2IncludeStmt;
 
   ProgramInfo();

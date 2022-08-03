@@ -113,6 +113,7 @@ public:
           Context->getFullLoc(callexpr->getBeginLoc()).getSpellingLoc(), Context->getSourceManager(),
           IncludeDirective);
     }
+
     return true;
   }
 
@@ -696,6 +697,15 @@ public:
     return true;
   }
 
+  bool VisitEnumDecl(EnumDecl *D)
+  {
+    if(D->isTaintedDecl() || D->isMirrorDecl())
+    {
+        CB.storeTaintMirroredEnumDecl(D);
+        errs()<< "Printing Enum"<< D->getName()<<"\n";
+    }
+  }
+
   bool VisitRecordDecl(RecordDecl *Declaration) {
     if (Declaration->isThisDeclarationADefinition()) {
       if(Declaration->isTaintedStruct())
@@ -706,6 +716,7 @@ public:
         CB.storeTaintMirroredStructVarDecl(Declaration);
         errs()<< "Printing Tstruct"<< Declaration->getName()<<"\n";
       }
+
 //      RecordDecl *Definition = Declaration->getDefinition();
 //      assert("Declaration is a definition, but getDefinition() is null?" &&
 //             Definition);
@@ -715,6 +726,7 @@ public:
 //          addVariable(D);
 //
     }
+
     return true;
   }
 

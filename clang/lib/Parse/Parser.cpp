@@ -1401,6 +1401,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                                   ? *TemplateInfo.TemplateParams
                                                   : MultiTemplateParamsArg(),
                                               &SkipBody);
+  BodyScope.UpdateFlags(this,(Res->isTaintedDecl() ?
+                              Scope::TaintedFunctionScope :
+                                           Scope::FnScope)|
+                             (Res->isCallbackDecl()?
+                             Scope::CallbackFunctionScope :
+                                           Scope::FnScope)|
+                             ((Res->isMirrorDecl())?
+                               Scope::MirrorFunctionScope :
+                                           Scope::FnScope)|
+                             ((Res->isLibDecl())?
+                               Scope::TLIBFunctionScope :
+                                           Scope::FnScope));
 
   if (SkipBody.ShouldSkip) {
     SkipFunctionBody();

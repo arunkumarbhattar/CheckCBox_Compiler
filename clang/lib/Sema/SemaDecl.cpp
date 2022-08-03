@@ -3269,6 +3269,28 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
   if (Old->isInvalidDecl())
     return true;
 
+  /*
+   * Merge Decls
+   * This is scenario where Scope specifier attribute is applied to function
+   * prototype, and now you gotta reflect this attribute to the Function
+   * Definition
+   */
+
+  if(Old->getAsFunction()->isTaintedDecl() ||
+      Old->getAsFunction()->isTainted())
+    New->getAsFunction()->setTaintedDecl(true);
+
+  if(Old->getAsFunction()->isMirrorDecl() ||
+      Old->getAsFunction()->isMirror())
+    New->getAsFunction()->setMirrorDecl(true);
+
+  if(Old->getAsFunction()->isLibDecl() ||
+      Old->getAsFunction()->isTLIB())
+    New->getAsFunction()->setLibDecl(true);
+
+  if(Old->getAsFunction()->isCallback() ||
+      Old->getAsFunction()->isCallbackDecl())
+    New->getAsFunction()->setCallbackDecl(true);
   // Disallow redeclaration of some builtins.
   if (!getASTContext().canBuiltinBeRedeclared(Old)) {
     Diag(New->getLocation(), diag::err_builtin_redeclare) << Old->getDeclName();
@@ -3779,6 +3801,18 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     QualType MergedReturn = Context.mergeTypes(OldProto->getReturnType(),
                                                NewProto->getReturnType());
     bool LooseCompatible = !MergedReturn.isNull();
+    if (Old->isTaintedDecl())
+      New->setTaintedDecl(true);
+
+    if(Old->isMirrorDecl())
+      New->setMirrorDecl(true);
+
+    if (Old->isLibDecl())
+      New->setLibDecl(true);
+
+    if(Old->isCallbackDecl())
+      New->setCallbackDecl(true);
+
     for (unsigned Idx = 0, End = Old->getNumParams();
          LooseCompatible && Idx != End; ++Idx) {
       ParmVarDecl *OldParm = Old->getParamDecl(Idx);
