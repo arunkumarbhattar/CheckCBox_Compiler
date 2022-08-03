@@ -122,7 +122,7 @@ public:
     if(decl != NULL)
     {
       auto Vardecl = dyn_cast<VarDecl>(decl);
-      if(Vardecl->getLocation().isMacroID())
+      if(Vardecl != NULL && Vardecl->getLocation().isMacroID())
       {
         /*
          * fetch the macro expanse for this Macro
@@ -151,7 +151,7 @@ public:
     auto LhsD = LHSExpr->getReferencedDeclOfCallee();
     if (RhsD != NULL) {
       auto *Vardec = dyn_cast<VarDecl>(RhsD);
-      if(RhsD->getLocation().isMacroID())
+      if(Vardec != NULL && RhsD->getLocation().isMacroID())
       {
         std::cout<<"Visiting a Binary expression where your RHS is "
                   << Vardec->getNameAsString()<<std::endl;
@@ -166,7 +166,7 @@ public:
 
     if (LhsD != NULL) {
       auto *Vardec = dyn_cast<VarDecl>(LhsD);
-      if(LhsD->getLocation().isMacroID())
+      if(Vardec != NULL && LhsD->getLocation().isMacroID())
       {
         std::cout<<"Visiting a Binary expression where your LHS is "
                   << Vardec->getNameAsString()<<std::endl;
@@ -204,14 +204,6 @@ public:
     // Process inits even for non-pointers because structs and union values
     // can contain pointers
     for (const auto &D : S->decls()) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-        if(VD->getLocation().isMacroID())
-        {
-          std::cout<< "This is a Macro: "<< VD->getNameAsString() <<std::endl;
-        }
-        Expr *InitE = VD->getInit();
-        CB.constrainLocalAssign(S, VD, InitE, Same_to_Same);
-      }
       if(FunctionDecl *FD = dyn_cast<FunctionDecl>(D)){
         std::cout<< FD->getName().str() << std::endl;
         FD->getBody()->dump();
