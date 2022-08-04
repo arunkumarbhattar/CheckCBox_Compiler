@@ -6531,6 +6531,18 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   bool isMirrorFunction = (IsMirrorScope()
                             || (getCurScope()->isMirrorFunctionScope()));
 
+
+  if(isTaintedFunction)
+  {
+    Fn->setTaintedScopeSpecifier(Tainted_Memory);
+  }
+  if(isMirrorFunction) {
+    Fn->setMirrorScopeSpecifier(Mirror_Memory);
+  }
+  if((IsTLIBScope()) || (getCurScope()->isTLIBFunctionScope())) {
+    Fn->setTLIBScopeSpecifier(TLIB_Memory);
+  }
+
   if ((isTaintedFunction || isMirrorFunction)
    && (!CheckCallExprIntegrityInTaintedScope(Fn, LParenLoc)))
     return Call;
@@ -14764,10 +14776,15 @@ bool Sema::CheckBinExprIntegrityInTaintedScope(ExprResult *LHS, ExprResult *RHS,
       }
     }
 
+    /*
+     * Mirror variables can be assigned as long as they are performed in the
+     * Mirrored context
+     */
     if ((LHSExpr->getReferencedDeclOfCallee() != NULL) &&
         (LHSExpr->getReferencedDeclOfCallee()
                      ->getParentFunctionOrMethod() == NULL)
-        && (!LHSExpr->getReferencedDeclOfCallee()->isTaintedDecl())) {
+        && (!LHSExpr->getReferencedDeclOfCallee()->isTaintedDecl())
+        && (LHSExpr->getMirrorScopeSpecifier() != Mirror_Memory)) {
         Diag(OpLoc, diag::err_typecheck_globalvar_tfscope) << 0 << LHSExpr->getSourceRange()
                                     << FixItHint::CreateInsertion(OpLoc, "Qualify"
                                            " the global variable as _Tainted");
@@ -14877,9 +14894,23 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
                           || (getCurScope()->isTaintedFunctionScope()));
   bool isMirrorFunction = (IsMirrorScope()
                          || (getCurScope()->isMirrorFunctionScope()));
+  if(isTaintedFunction)
+  {
+    RHSExpr->setTaintedScopeSpecifier(Tainted_Memory);
+    LHSExpr->setTaintedScopeSpecifier(Tainted_Memory);
+  }
+  if(isMirrorFunction) {
+    RHSExpr->setMirrorScopeSpecifier(Mirror_Memory);
+    LHSExpr->setMirrorScopeSpecifier(Mirror_Memory);
+  }
+  if((IsTLIBScope()) || (getCurScope()->isTLIBFunctionScope())) {
+    RHSExpr->setTLIBScopeSpecifier(TLIB_Memory);
+    LHSExpr->setTLIBScopeSpecifier(TLIB_Memory);
+  }
 
-if (isTaintedFunction||isMirrorFunction)
+  if (isTaintedFunction||isMirrorFunction)
      {
+
           if(!CheckBinExprIntegrityInTaintedScope(&LHS, &RHS, OpLoc, SR))
           return ExprError();
 
@@ -15539,6 +15570,16 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   bool isMirrorFunction = (IsMirrorScope()
                            || (getCurScope()->isMirrorFunctionScope()));
 
+  if(isTaintedFunction)
+  {
+    InputExpr->setTaintedScopeSpecifier(Tainted_Memory);
+  }
+  if(isMirrorFunction) {
+    InputExpr->setMirrorScopeSpecifier(Mirror_Memory);
+  }
+  if((IsTLIBScope()) || (getCurScope()->isTLIBFunctionScope())) {
+    InputExpr->setTLIBScopeSpecifier(TLIB_Memory);
+  }
   if (isTaintedFunction||isMirrorFunction)
   {
     if (!CheckUnExprIntegrityInTaintedScope(&Input, OpLoc))

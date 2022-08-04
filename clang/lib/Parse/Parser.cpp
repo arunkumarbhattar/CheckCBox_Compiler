@@ -1227,7 +1227,10 @@ Parser::ParseDeclarationOrFunctionDefinition(ParsedAttributesWithRange &attrs,
 ///
 Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                       const ParsedTemplateInfo &TemplateInfo,
-                                      LateParsedAttrList *LateParsedAttrs) {
+                                      LateParsedAttrList *LateParsedAttrs,
+                                      TaintedScopeSpecifier TaintedSS,
+                                      MirrorScopeSpecifier MirrorSS,
+                                      TLIBScopeSpecifier TLIBSS) {
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
@@ -1507,7 +1510,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (LateParsedAttrs)
     ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
 
-  return ParseFunctionStatementBody(Res, BodyScope, CSS);
+  return ParseFunctionStatementBody(Res, BodyScope, CSS,
+                                    TaintedSS, MirrorSS, TLIBSS);
 }
 
 void Parser::SkipFunctionBody() {

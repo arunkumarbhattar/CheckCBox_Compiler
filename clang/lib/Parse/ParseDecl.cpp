@@ -2150,8 +2150,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
           Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
           Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
+          /*
+           * ParseFunctionDefinition looks for tainted and other tokens only
+           * after the r-paren. By then we are too late and we cannot find the above tokens
+           * Hence we pass what we know about this scope deep into the funtion
+           * definition, just so that the same is reflected across all of its statements
+           */
           Decl *TheDecl =
-            ParseFunctionDefinition(D, ParsedTemplateInfo(), &LateParsedAttrs);
+            ParseFunctionDefinition(D, ParsedTemplateInfo(), &LateParsedAttrs,
+                                      DS.getTaintedScopeSpecifier(), DS.getMirrorScopeSpecifier(),
+                                      DS.getTLIBScopeSpecifier());
           // If we encountered _For_any make sure we're in Forany scope and exit.
           ExitQuantifiedTypeScope(DS);
           return Actions.ConvertDeclToDeclGroup(TheDecl);
@@ -7209,7 +7217,10 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   } else {
     if (Tok.isNot(tok::r_paren))
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
-                                      EllipsisLoc, D.getDeclSpec().isTaintedSpecified());
+                                      EllipsisLoc,
+                                      D.getDeclSpec().isTaintedSpecified(),
+                                      D.getDeclSpec().isTaintedMirrorSpecified(),
+                                      D.getDeclSpec().isTLIBSpecified());
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7501,7 +7512,8 @@ void Parser::ParseParameterDeclarationClause(
        DeclaratorContext DeclaratorCtx,
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-       SourceLocation &EllipsisLoc, bool isTaintedDeclaration) {
+       SourceLocation &EllipsisLoc, bool isTaintedDeclaration,
+    bool IsMirrorDeclaration, bool isTLIBDeclaration) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7643,6 +7655,25 @@ void Parser::ParseParameterDeclarationClause(
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
       ParmVarDecl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator);
+      /*
+       * If the function is a tainted declaration, all the parameters it accepts
+       * are automatically tainted
+       */
+      if (isTaintedDeclaration)
+      {
+        Param->setTaintedDecl(true);
+      }
+
+      if (IsMirrorDeclaration)
+      {
+        Param->setMirrorDecl(true);
+      }
+
+      if (isTLIBDeclaration)
+      {
+        Param->setLibDecl(true);
+      }
+
       // Handle Checked C where clause, bounds expression or bounds-safe
       // interface type annotation.
       if (getLangOpts().CheckedC) {
