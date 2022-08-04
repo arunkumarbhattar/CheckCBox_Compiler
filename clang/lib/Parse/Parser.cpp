@@ -410,6 +410,12 @@ void Parser::EnterScope(long ScopeFlags) {
   }
 }
 
+void Parser::UpdateNewFlags(long ScopeFlags) {
+  Scope *N = getCurScope();
+  N->setFlags(ScopeFlags);
+  Actions.CurScope = N;
+}
+
 /// ExitScope - Pop a scope off the scope stack.
 void Parser::ExitScope() {
   assert(getCurScope() && "Scope imbalance!");

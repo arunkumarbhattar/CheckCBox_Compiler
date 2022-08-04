@@ -1141,7 +1141,7 @@ public:
     {
       auto CurScopeFlags = Self->getCurScope()->getFlags();
       CurScopeFlags = CurScopeFlags | ScopeFlags;
-      Self->EnterScope(CurScopeFlags);
+      Self->UpdateNewFlags(CurScopeFlags);
     }
     // Exit - Exit the scope associated with this object now, rather
     // than waiting until the object is destroyed.
@@ -3563,6 +3563,7 @@ private:
   void HandlePragmaTlibScope();
   void HandlePragmaTaintedScope();
   void HandlePragmaMirrorScope();
+  void UpdateNewFlags(long ScopeFlags);
 };
 
 }  // end namespace clang
