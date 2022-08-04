@@ -2150,8 +2150,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
           Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
           Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
+          /*
+           * ParseFunctionDefinition looks for tainted and other tokens only
+           * after the r-paren. By then we are too late and we cannot find the above tokens
+           * Hence we pass what we know about this scope deep into the funtion
+           * definition, just so that the same is reflected across all of its statements
+           */
           Decl *TheDecl =
-            ParseFunctionDefinition(D, ParsedTemplateInfo(), &LateParsedAttrs);
+            ParseFunctionDefinition(D, ParsedTemplateInfo(), &LateParsedAttrs,
+                                      DS.getTaintedScopeSpecifier(), DS.getMirrorScopeSpecifier(),
+                                      DS.getTLIBScopeSpecifier());
           // If we encountered _For_any make sure we're in Forany scope and exit.
           ExitQuantifiedTypeScope(DS);
           return Actions.ConvertDeclToDeclGroup(TheDecl);

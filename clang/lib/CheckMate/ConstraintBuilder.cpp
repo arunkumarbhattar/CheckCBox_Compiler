@@ -111,6 +111,20 @@ public:
     return true;
   }
 
+  bool VisitExpr(Expr *S)
+  {
+    if(S->getBeginLoc().isMacroID() && S->getTaintedScopeSpecifier() != clang::Tainted_None)
+    {
+      std::string IncludeDirective = fetchMacroExpanseForDecl(
+          S->getSourceRange(),
+          &(Context->getSourceManager()));
+      CB.storeIncludeStatement(
+          Context->getFullLoc(S->getBeginLoc()).getSpellingLoc(), Context->getSourceManager(),
+          IncludeDirective);
+    }
+    return true;
+  }
+
   bool VisitCallExpr(clang::CallExpr *callexpr)
   {
     auto RefDec = callexpr->getCallee()->getReferencedDeclOfCallee();
@@ -137,7 +151,8 @@ public:
     if(decl != NULL)
     {
       auto Vardecl = dyn_cast<VarDecl>(decl);
-      if(Vardecl != NULL && Vardecl->getLocation().isMacroID() && (unary->getTaintedScopeSpecifier() != clang::Tainted_None))
+      if(Vardecl != NULL && Vardecl->getLocation().isMacroID()
+          && (unary->getTaintedScopeSpecifier() != clang::Tainted_None))
       {
         /*
          * fetch the macro expanse for this Macro
@@ -167,7 +182,7 @@ public:
     if (RhsD != NULL) {
       auto *Vardec = dyn_cast<VarDecl>(RhsD);
       if(Vardec != NULL && RhsD->getLocation().isMacroID() &&
-          RHSExpr->getTaintedScopeSpecifier() != clang::Tainted_None)
+          bo->getTaintedScopeSpecifier() != clang::Tainted_None)
       {
         std::cout<<"Visiting a Binary expression where your RHS is "
                   << Vardec->getNameAsString()<<std::endl;
@@ -267,7 +282,8 @@ public:
   // e(e1,e2,...)
   bool VisitCallExpr(CallExpr *E) {
     if (E != NULL && E->getReferencedDeclOfCallee() != NULL
-        && E->getReferencedDeclOfCallee()->getAsFunction() != NULL)
+        && E->getReferencedDeclOfCallee()->getAsFunction() != NULL
+        && E->getTaintedScopeSpecifier() != clang::Tainted_None)
     {
       auto FD = E->getReferencedDeclOfCallee()->getAsFunction();
       if(FD->getLocation().isMacroID()) {
@@ -457,7 +473,8 @@ public:
       break;
     }
     auto E = O->getExprStmt();
-    if (E != NULL && E->getReferencedDeclOfCallee() != NULL)
+    if (E != NULL && E->getReferencedDeclOfCallee() != NULL
+        && O->getTaintedScopeSpecifier() != clang::Tainted_None)
     {
       auto FD = dyn_cast<VarDecl>(E->getReferencedDeclOfCallee());
       if(FD->getLocation().isMacroID()) {
@@ -496,6 +513,10 @@ public:
     default:
       break;
     }
+
+    if(O->getTaintedScopeSpecifier() == clang::Tainted_None)
+      return true;
+
     auto R = O->getRHS();
     if (R != NULL && R->getReferencedDeclOfCallee() != NULL)
     {
@@ -626,16 +647,12 @@ public:
         CB.constrainLocalAssign(nullptr, G, G->getInit(), Same_to_Same);
       }
     }
+
     if(G->hasGlobalStorage() && (G->isTaintedDecl() || G->isMirrorDecl()))
     {
-      /*
-       * This works like a charm
-       */
       CB.storeTaintMirroredVarDecl(G);
       if (_CheckMateOpts.Verbose)
         errs() << "Analyzing function " << G->getNameAsString() << "\n";
-//          << " " << G->getInit()->getSourceRange().printToString(
-//                           G->getASTContext().getSourceManager())<<"\n";
     }
     return true;
   }

@@ -1659,7 +1659,10 @@ private:
   void SkipFunctionBody();
   Decl *ParseFunctionDefinition(ParsingDeclarator &D,
                  const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
-                 LateParsedAttrList *LateParsedAttrs = nullptr);
+                 LateParsedAttrList *LateParsedAttrs = nullptr,
+                                TaintedScopeSpecifier TaintedSS = Tainted_None,
+                                MirrorScopeSpecifier MirrorSS = Mirror_None,
+                                TLIBScopeSpecifier TLIBSS = TLIB_None);
   void ParseKNRParamDeclarations(Declarator &D);
   // EndLoc is filled with the location of the last token of the simple-asm.
   ExprResult ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc);
@@ -2194,36 +2197,58 @@ private:
                  ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt);
   StmtResult ParseStatementOrDeclaration(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
-      SourceLocation *TrailingElseLoc = nullptr);
+      SourceLocation *TrailingElseLoc = nullptr,
+      TaintedScopeSpecifier WrittenTaintedSS = Tainted_None,
+      MirrorScopeSpecifier WrittenMirrorSS = Mirror_None,
+      TLIBScopeSpecifier WrittenTLIBSS = TLIB_None);
+
   StmtResult ParseStatementOrDeclarationAfterAttributes(
                                          StmtVector &Stmts,
                                          ParsedStmtContext StmtCtx,
                                          SourceLocation *TrailingElseLoc,
-                                         ParsedAttributesWithRange &Attrs);
-  StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
+                                         ParsedAttributesWithRange &Attrs,
+                                  TaintedScopeSpecifier WrittenTaintedSS = Tainted_None,
+                                  MirrorScopeSpecifier WrittenMirrorSS = Mirror_None,
+                                  TLIBScopeSpecifier WrittenTLIBSS = TLIB_None);
+
+  StmtResult ParseExprStatement(ParsedStmtContext StmtCtx,
+                                TaintedScopeSpecifier
+                                    TaintedSS = Tainted_None,
+                                MirrorScopeSpecifier MirrorSS = Mirror_None,
+                                TLIBScopeSpecifier TLIBSS = TLIB_None);
   StmtResult ParseLabeledStatement(ParsedAttributesWithRange &attrs,
                                    ParsedStmtContext StmtCtx);
   StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
                                 bool MissingCase = false,
                                 ExprResult Expr = ExprResult());
   StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
-  StmtResult ParseCompoundStatement(bool isStmtExpr = false);
-  StmtResult ParseCompoundStatement(bool isStmtExpr, long ScopeFlags);
+  StmtResult ParseCompoundStatement(bool isStmtExpr = false, TaintedScopeSpecifier TaintedSS
+                                    = Tainted_None
+                                    ,MirrorScopeSpecifier MirrorSS = Mirror_None,
+                                    TLIBScopeSpecifier TLIBSS = TLIB_None);
+  StmtResult ParseCompoundStatement(bool isStmtExpr, long ScopeFlags, TaintedScopeSpecifier TaintedSS
+                                    = Tainted_None,
+                                    MirrorScopeSpecifier MirrorSS
+                                    = Mirror_None, TLIBScopeSpecifier TLIBSS
+                                    = TLIB_None,
+                                    SourceLocation TaintedLoc = SourceLocation(),
+                                    SourceLocation MirrorLoc = SourceLocation(),
+                                    SourceLocation TLIBLoc = SourceLocation());
   void ParseCompoundStatementLeadingPragmas();
   bool ConsumeNullStmt(StmtVector &Stmts);
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,
                                         CheckedScopeSpecifier WrittenCSS = CSS_None,
-                                        SourceLocation CSSLoc = SourceLocation(),
                                         TaintedScopeSpecifier WrittenTaintedSS
                                         = Tainted_None,
-                                        SourceLocation TaintedLoc
-                                        = SourceLocation(),
                                         MirrorScopeSpecifier WrittenMirrorSS
                                         = Mirror_None,
-                                        SourceLocation MirrorLoc
-                                        = SourceLocation(),
                                         TLIBScopeSpecifier WrittenTLIBSS
                                         = TLIB_None,
+                                        SourceLocation CSSLoc = SourceLocation(),
+                                        SourceLocation TaintedLoc
+                                        = SourceLocation(),
+                                        SourceLocation MirrorLoc
+                                        = SourceLocation(),
                                         SourceLocation TLIBLoc
                                         = SourceLocation(),
                                         SourceLocation CSMLoc = SourceLocation(),
@@ -2476,7 +2501,10 @@ private:
       const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
       ForRangeInit *FRI = nullptr);
   Decl *ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope,
-                                   CheckedScopeSpecifier Kind = CSS_None);
+                                           CheckedScopeSpecifier CSSKind = CSS_None,
+                                           TaintedScopeSpecifier TaintedSSKind = Tainted_None,
+                                           MirrorScopeSpecifier MirrorSSKind = Mirror_None,
+                                           TLIBScopeSpecifier TLIBSSKind = TLIB_None);
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
 
   /// When in code-completion, skip parsing of the function/method body

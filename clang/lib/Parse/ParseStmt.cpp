@@ -94,7 +94,10 @@ StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
 StmtResult
 Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
                                     ParsedStmtContext StmtCtx,
-                                    SourceLocation *TrailingElseLoc) {
+                                    SourceLocation *TrailingElseLoc,
+                                    TaintedScopeSpecifier WrittenTaintedSS,
+                                    MirrorScopeSpecifier WrittenMirrorSS,
+                                    TLIBScopeSpecifier WrittenTLIBSS) {
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -104,7 +107,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
     return StmtError();
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, Attrs);
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, WrittenTaintedSS
+      ,WrittenMirrorSS, WrittenTLIBSS);
   MaybeDestroyTemplateIds();
 
   assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
@@ -151,7 +155,10 @@ private:
 
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
-    SourceLocation *TrailingElseLoc, ParsedAttributesWithRange &Attrs) {
+    SourceLocation *TrailingElseLoc, ParsedAttributesWithRange &Attrs,
+    TaintedScopeSpecifier WrittenTaintedSS,
+    MirrorScopeSpecifier WrittenMirrorSS,
+    TLIBScopeSpecifier WrittenTLIBSS) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -181,17 +188,17 @@ Retry:
     // start of a function or struct declaration.
     Token Next = NextToken();
     if (Next.is(tok::l_brace))
-      return ParseCompoundStatement();
+      return ParseCompoundStatement(false, WrittenTaintedSS, WrittenMirrorSS, WrittenTLIBSS);
     if (Next.is(tok::kw__Bounds_only) &&
         GetLookAheadToken(2).is(tok::l_brace))
-      return ParseCompoundStatement();
+      return ParseCompoundStatement(false, WrittenTaintedSS, WrittenMirrorSS, WrittenTLIBSS);
     goto FallThrough;
   }
 
   case tok::kw__Bundled: {
     Token Next = NextToken();
     if (Next.is(tok::l_brace))
-      return ParseCompoundStatement();
+      return ParseCompoundStatement(false, WrittenTaintedSS, WrittenMirrorSS, WrittenTLIBSS);
     goto FallThrough;
   }
 
@@ -251,7 +258,8 @@ Retry:
       return StmtError();
     }
 
-    return ParseExprStatement(StmtCtx);
+    return ParseExprStatement(StmtCtx, WrittenTaintedSS, WrittenMirrorSS
+                              ,WrittenTLIBSS);
   }
 
   case tok::kw___attribute: {
@@ -493,7 +501,10 @@ Retry:
 }
 
 /// Parse an expression statement.
-StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
+StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx, TaintedScopeSpecifier
+                                      TaintedSS,
+                                      MirrorScopeSpecifier MirrorSS,
+                                      TLIBScopeSpecifier TLIBSS) {
   // If a case keyword is missing, this is where it should be inserted.
   Token OldToken = Tok;
 
@@ -947,9 +958,12 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
                                   SubStmt.get(), getCurScope());
 }
 
-StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
+StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, TaintedScopeSpecifier TaintedSS
+                                                             ,MirrorScopeSpecifier MirrorSS,
+                                          TLIBScopeSpecifier TLIBSS) {
   return ParseCompoundStatement(isStmtExpr,
-                                Scope::DeclScope | Scope::CompoundStmtScope);
+                                Scope::DeclScope | Scope::CompoundStmtScope
+                                , TaintedSS, MirrorSS, TLIBSS);
 }
 
 /// ParseCompoundStatement - Parse a "{}" block.
@@ -983,16 +997,14 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 ///
 /// [CHECKED C] bundled-spec:
 ///            '_Bundled'
-StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
+StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags, TaintedScopeSpecifier TaintedSS
+                                          , MirrorScopeSpecifier MirrorSS, TLIBScopeSpecifier TLIBSS,
+                                          SourceLocation TaintedLoc,
+                                          SourceLocation MirrorLoc,
+                                          SourceLocation TLIBLoc) {
   // Checked C - process optional checked scope and bundled block information.
   CheckedScopeSpecifier CSS = CSS_None;
   SourceLocation CSSLoc;
-  TaintedScopeSpecifier TaintedSS = Tainted_None;
-  SourceLocation TaintedLoc;
-  MirrorScopeSpecifier MirrorSS = Mirror_None;
-  SourceLocation MirrorLoc;
-  TLIBScopeSpecifier TLIBSS = TLIB_None;
-  SourceLocation TLIBLoc;
   SourceLocation CSMLoc;
   SourceLocation BNDLoc;
 
@@ -1008,24 +1020,6 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   } else if (Tok.is(tok::kw__Unchecked)) {
     CSS = CSS_Unchecked;
     CSSLoc = ConsumeToken();
-  } else if (Tok.is(tok::kw__Tainted)) {
-    TaintedSS = Tainted_Memory;
-    TaintedLoc = ConsumeToken();
-    if (Tok.is(tok::kw__Bounds_only)) {
-      TaintedSS = Tainted_Bounds;
-    }
-  } else if (Tok.is(tok::kw__Mirror)) {
-    MirrorSS = Mirror_Memory;
-    MirrorLoc = ConsumeToken();
-    if (Tok.is(tok::kw__Bounds_only)) {
-      MirrorSS = Mirror_Bounds;
-    }
-  } else if (Tok.is(tok::kw__TLIB)) {
-    TLIBSS = TLIB_Memory;
-    TLIBLoc = ConsumeToken();
-    if (Tok.is(tok::kw__Relax)) {
-      TLIBSS = TLIB_Relax_cast;
-    }
   }
 
 
@@ -1036,10 +1030,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, long ScopeFlags) {
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr, CSS, CSSLoc,
-                                    TaintedSS, TaintedLoc,
-                                    MirrorSS, MirrorLoc,
-                                    TLIBSS, TLIBLoc,
+  return ParseCompoundStatementBody(isStmtExpr, CSS,
+                                    TaintedSS,
+                                    MirrorSS,
+                                    TLIBSS,  CSSLoc, TaintedLoc,
+                                    MirrorLoc, TLIBLoc,
                                     CSMLoc, BNDLoc);
 }
 
@@ -1176,12 +1171,12 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
 /// stack.
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
                                               CheckedScopeSpecifier WrittenCSS,
-                                              SourceLocation CSSLoc,
                                               TaintedScopeSpecifier WrittenTaintedSS,
-                                              SourceLocation TaintedLoc,
                                               MirrorScopeSpecifier WrittenMirrorSS,
-                                              SourceLocation MirrorLoc,
                                               TLIBScopeSpecifier WrittenTLIBSS,
+                                              SourceLocation CSSLoc,
+                                              SourceLocation TaintedLoc,
+                                              SourceLocation MirrorLoc,
                                               SourceLocation TLIBLoc,
                                               SourceLocation CSMLoc,
                                               SourceLocation BNDLoc) {
@@ -1253,7 +1248,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
 
     StmtResult R;
     if (Tok.isNot(tok::kw___extension__)) {
-      R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+      R = ParseStatementOrDeclaration(Stmts, SubStmtCtx,nullptr,
+                                      WrittenTaintedSS, WrittenMirrorSS,
+                                      WrittenTLIBSS);
     } else {
       // __extension__ can start declarations and it can also be a unary
       // operator for expressions.  Consume multiple __extension__ markers here
@@ -1314,6 +1311,13 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
 
   if (T.getCloseLocation().isValid())
     CloseLoc = T.getCloseLocation();
+
+  for (auto Statement : Stmts)
+  {
+    Statement->setTaintedScopeSpecifier(WrittenTaintedSS);
+    Statement->setMirrorScopeSpecifier(WrittenMirrorSS);
+    Statement->setTLIBScopeSpecifier(WrittenTLIBSS);
+  }
 
   return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
                                    Stmts, isStmtExpr, WrittenCSS,
@@ -2407,7 +2411,10 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 }
 
 Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope,
-                                         CheckedScopeSpecifier Kind) {
+                                         CheckedScopeSpecifier CSSKind,
+                                         TaintedScopeSpecifier TaintedSSKind,
+                                         MirrorScopeSpecifier MirrorSSKind,
+                                         TLIBScopeSpecifier TLIBSSKind) {
   assert(Tok.is(tok::l_brace));
   SourceLocation LBraceLoc = Tok.getLocation();
 
@@ -2423,7 +2430,10 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope,
   // Do not enter a scope for the brace, as the arguments are in the same scope
   // (the function body) as the body itself.  Instead, just read the statement
   // list and put it into a CompoundStmt for safe keeping.
-  StmtResult FnBody(ParseCompoundStatementBody(/*IsExpr=*/false, Kind));  // TODO: fill in missing information
+  StmtResult FnBody(ParseCompoundStatementBody(/*IsExpr=*/false, CSSKind,
+                                               TaintedSSKind,
+                                               MirrorSSKind,
+                                               TLIBSSKind));  // TODO: fill in missing information
 
   // If the function body could not be parsed, make a bogus compoundstmt.
   if (FnBody.isInvalid()) {
