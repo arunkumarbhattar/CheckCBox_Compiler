@@ -1196,6 +1196,7 @@ bool DeclSpec::setFunctionSpecTainted(SourceLocation Loc,
     switch(FS_tainted_specified)
     {
       case Tainted_None: PrevSpec = ""; break;
+      case Tainted_UnTainted: PrevSpec = ""; break;
       case Tainted_Bounds: PrevSpec = "_Tainted _Bounds_only"; break;
       case Tainted_Memory: PrevSpec = "_Tainted"; break;
     }

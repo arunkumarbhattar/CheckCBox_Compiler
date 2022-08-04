@@ -1093,7 +1093,9 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
 
   // Checked C - mark the current scope as checked or unchecked if necessary.
   Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+  Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+  Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+  Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
   if (DS.hasTagDefinition() && DiagnoseMissingSemiAfterTagDefinition(
@@ -1551,7 +1553,9 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
     // Checked C - mark the current scope as checked or unchecked if necessary.
     Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+    Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+    Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+    Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
     // C99 6.9.1p6: 'each declaration in the declaration list shall have at
     // least one declarator'.
     // NOTE: GCC just makes this an ext-warn.  It's not clear what it does with

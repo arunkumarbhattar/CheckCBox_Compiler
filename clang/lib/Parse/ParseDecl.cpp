@@ -58,6 +58,9 @@ TypeResult Parser::ParseTypeName(SourceRange *Range,
 
   // Checked C - mark the current scope as checked or unchecked if necessary.
   Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
+  Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+  Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+  Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
 
   if (OwnedType)
     *OwnedType = DS.isTypeSpecOwned() ? DS.getRepAsDecl() : nullptr;
@@ -1733,7 +1736,9 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
 
   // Checked C - mark the current scope as checked or unchecked if necessary.
   Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+  Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+  Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+  Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
   if (DS.hasTagDefinition() &&
@@ -2142,7 +2147,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           // Checked C - mark the current scope as checked or unchecked if
           // necessary.
           Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+          Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+          Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+          Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
           Decl *TheDecl =
             ParseFunctionDefinition(D, ParsedTemplateInfo(), &LateParsedAttrs);
           // If we encountered _For_any make sure we're in Forany scope and exit.
@@ -4603,7 +4610,9 @@ void Parser::ParseStructDeclaration(
 
   // Checked C - mark the current scope as checked or unchecked if necessary.
   Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+  Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+  Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+  Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
   // If there are no declarators, this is a free-standing declaration
   // specifier. Let the actions module cope with it.
   if (Tok.is(tok::semi)) {
@@ -7546,7 +7555,9 @@ void Parser::ParseParameterDeclarationClause(
 
     // Checked C - mark the current scope as checked or unchecked if necessary.
     Sema::CheckedScopeRAII CheckedScopeTracker(Actions, DS);
-
+    Sema::TaintedScopeRAII TaintedScopeTracker(Actions, DS);
+    Sema::MirrorScopeRAII MirrorScopeTracker(Actions, DS);
+    Sema::TLIBScopeRAII TLIBScopeTracker(Actions, DS);
     // Parse the declarator.  This is "PrototypeContext" or
     // "LambdaExprParameterContext", because we must accept either
     // 'declarator' or 'abstract-declarator' here.

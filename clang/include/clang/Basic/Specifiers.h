@@ -405,7 +405,7 @@ namespace clang {
     Tainted_None = 0x0,
 
     /// Unchecked
-    Tainted_UnTainted = 0x1,
+    Tainted_Memory = 0x1,
 
     /// Check properties for bounds safety.
     /// Corresponds to _Checked _Bounds_only
@@ -413,7 +413,7 @@ namespace clang {
 
     /// Check properties for bounds safety and preventing type confusion.
     /// Corresponds to _Bounds
-    Tainted_Memory = 0x3
+    Tainted_UnTainted = 0x3
   };
 
   /// Checked C - checked specifiers.  Used for function, structs,

@@ -97,11 +97,25 @@ public:
                                            MacroTerminatingPos);
   }
 
+  bool VisitStmt(Stmt *S)
+  {
+    if(S->getBeginLoc().isMacroID() && S->getTaintedScopeSpecifier() != clang::Tainted_None)
+    {
+      std::string IncludeDirective = fetchMacroExpanseForDecl(
+          S->getSourceRange(),
+          &(Context->getSourceManager()));
+      CB.storeIncludeStatement(
+          Context->getFullLoc(S->getBeginLoc()).getSpellingLoc(), Context->getSourceManager(),
+          IncludeDirective);
+    }
+    return true;
+  }
+
   bool VisitCallExpr(clang::CallExpr *callexpr)
   {
     auto RefDec = callexpr->getCallee()->getReferencedDeclOfCallee();
     if( RefDec != NULL && RefDec->getAsFunction() != NULL &&
-        callexpr->getBeginLoc().isMacroID())
+        callexpr->getBeginLoc().isMacroID() && (callexpr->getTaintedScopeSpecifier() != clang::Tainted_None))
     {
       std::cout<<"Visiting a MACRO call expression: " <<
           RefDec->getAsFunction()->getName().str()<<std::endl;
@@ -123,7 +137,7 @@ public:
     if(decl != NULL)
     {
       auto Vardecl = dyn_cast<VarDecl>(decl);
-      if(Vardecl != NULL && Vardecl->getLocation().isMacroID())
+      if(Vardecl != NULL && Vardecl->getLocation().isMacroID() && (unary->getTaintedScopeSpecifier() != clang::Tainted_None))
       {
         /*
          * fetch the macro expanse for this Macro
@@ -152,7 +166,8 @@ public:
     auto LhsD = LHSExpr->getReferencedDeclOfCallee();
     if (RhsD != NULL) {
       auto *Vardec = dyn_cast<VarDecl>(RhsD);
-      if(Vardec != NULL && RhsD->getLocation().isMacroID())
+      if(Vardec != NULL && RhsD->getLocation().isMacroID() &&
+          RHSExpr->getTaintedScopeSpecifier() != clang::Tainted_None)
       {
         std::cout<<"Visiting a Binary expression where your RHS is "
                   << Vardec->getNameAsString()<<std::endl;
@@ -167,7 +182,8 @@ public:
 
     if (LhsD != NULL) {
       auto *Vardec = dyn_cast<VarDecl>(LhsD);
-      if(Vardec != NULL && LhsD->getLocation().isMacroID())
+      if(Vardec != NULL && LhsD->getLocation().isMacroID() &&
+          LHSExpr->getTaintedScopeSpecifier() != Tainted_None)
       {
         std::cout<<"Visiting a Binary expression where your LHS is "
                   << Vardec->getNameAsString()<<std::endl;

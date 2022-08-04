@@ -2945,6 +2945,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     // Adjust checked scope properties if _Checked or _Unchecked was
     // specified.
     Sema::CheckedScopeRAII CheckedScope(Actions, DS);
+    Sema::TaintedScopeRAII TaintedScope(Actions, DS);
+    Sema::MirrorScopeRAII MirrorScope(Actions, DS);
+    Sema::TLIBScopeRAII TLIBScope(Actions, DS);
     Declarator DeclaratorInfo(DS, DeclaratorContext::TypeName);
     ParseDeclarator(DeclaratorInfo);
     ExitQuantifiedTypeScope(DS);
@@ -3474,7 +3477,9 @@ void Parser::ParseBlockId(SourceLocation CaretLoc) {
   // Adjust checked scope properties if _Checked or _Unchecked was
   // specified.
   Sema::CheckedScopeRAII CheckedScope(Actions, DS);
-
+  Sema::TaintedScopeRAII TaintedScope(Actions, DS);
+  Sema::MirrorScopeRAII MirrorScope(Actions, DS);
+  Sema::TLIBScopeRAII TLIBScope(Actions, DS);
   // Parse the block-declarator.
   Declarator DeclaratorInfo(DS, DeclaratorContext::BlockLiteral);
   DeclaratorInfo.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
