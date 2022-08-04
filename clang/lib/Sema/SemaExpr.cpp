@@ -14354,7 +14354,13 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   } else
     kind = CheckCBox_PointerKind::Unchecked;
 
-  if (IsTaintedScope()) {
+  /*
+   * Callback Functions will always be dereferenced to _TPtr
+   * so as to keep the typechecked happy
+   */
+  if (IsTaintedScope() ||
+      (op->getReferencedDeclOfCallee() != NULL
+                              && op->getReferencedDeclOfCallee()->isCallbackDecl())) {
     if (op->getType()->isFunctionType()) {
        kind = CheckCBox_PointerKind::t_ptr;
     }

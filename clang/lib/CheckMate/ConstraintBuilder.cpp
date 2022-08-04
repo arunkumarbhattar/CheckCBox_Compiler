@@ -732,7 +732,7 @@ public:
 
   bool VisitEnumDecl(EnumDecl *D)
   {
-    if(D->isTaintedDecl() || D->isMirrorDecl())
+    if(D->isTaintedDecl() || D->isMirrorDecl() )
     {
         CB.storeTaintMirroredEnumDecl(D);
         errs()<< "Printing Enum"<< D->getName()<<"\n";

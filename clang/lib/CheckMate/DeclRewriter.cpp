@@ -135,7 +135,11 @@ bool copyMacroDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
 
 
   std::error_code ErrorCode;
-  RB->Initialize("\n" + MacroDef + ";\n");
+  // Undefs will be avoided for now
+  if(MacroDef.find("undef") != std::string::npos)
+    return true;
+
+  RB->Initialize("\n" + MacroDef + "\n");
   llvm::raw_fd_ostream OutFile(TaintedFile,
                                ErrorCode, llvm::sys::fs::OF_Append);
   RB->write(OutFile);
@@ -687,7 +691,7 @@ MacroToBeInserted.second,
                                          nullptr,
                                          TaintedEnumDecls.first,&RB,
                                          "",
-                                         CD_VarTypeDefDecl);
+                                         CD_Enum);
     copyTaintedEnumToTaintedFile(Context, Info, R, TaintedEnumDecls.first,
                                     &RB);
   }
