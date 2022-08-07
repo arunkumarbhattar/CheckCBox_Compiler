@@ -756,6 +756,7 @@ const CVarSet &ProgramInfo::getPersistentConstraintsSet(clang::Expr *E,
 void ProgramInfo::storeTaintedDecl(FunctionDecl* declaration){
   this->TaintedDecls.push_back(declaration);
 }
+
 void ProgramInfo::storePersistentConstraints(clang::Expr *E,
                                              const CVarSet &Vars,
                                              ASTContext *C) {

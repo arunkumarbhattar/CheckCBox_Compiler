@@ -4809,7 +4809,7 @@ public:
      * This is very very risky
      */
     auto FnScope = this->RecursiveScopeResolve(getCurScope());
-    if(FnScope != nullptr && FnScope->isTaintedFunctionScope())
+    if(FnScope != nullptr && (FnScope->isTaintedFunctionScope() || FnScope->isTLIBFunctionScope()))
       return false;
 
     return CheckingKind != CSS_Unchecked;

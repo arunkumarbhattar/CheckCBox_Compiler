@@ -2127,12 +2127,15 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
     }
   }
 
-  if (IsTaintedScope()) {
-    if (Ty->isFunctionNoProtoType()) {
-      Diag(NameInfo.getLoc(), diag::err_tainted_scope_no_prototype_func);
-      return ExprError();
-    }
-  }
+  /*
+   * Something wrong with this
+   */
+//  if (IsTaintedScope()) {
+//    if (Ty->isFunctionNoProtoType()) {
+//      Diag(NameInfo.getLoc(), diag::err_tainted_scope_no_prototype_func);
+//      return ExprError();
+//    }
+//  }
 
   bool RefersToCapturedVariable =
       isa<VarDecl>(D) &&
