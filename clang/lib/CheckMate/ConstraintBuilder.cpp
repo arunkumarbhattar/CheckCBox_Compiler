@@ -321,7 +321,7 @@ public:
 
     Decl *D = E->getCalleeDecl();
     FunctionDecl *TFD = dyn_cast_or_null<FunctionDecl>(D);
-    std::string FuncName = "";
+    std::string FuncName;
     if (auto *DD = dyn_cast_or_null<DeclaratorDecl>(D))
       FuncName = DD->getNameAsString();
 
@@ -650,9 +650,14 @@ public:
 
     if(G->hasGlobalStorage() && (G->isTaintedDecl() || G->isMirrorDecl()))
     {
+      /*
+       * You need to check if this variable has been declared as a typedef or not
+       * If this variable is a typedef, then no need to pass it once again
+       */
       CB.storeTaintMirroredVarDecl(G);
       if (_CheckMateOpts.Verbose)
         errs() << "Analyzing function " << G->getNameAsString() << "\n";
+
     }
     return true;
   }
@@ -696,6 +701,15 @@ public:
       if (_CheckMateOpts.Verbose)
         errs() << "Storing Tainted function " << D->getName() << "\n";
       CB.storeTaintedFunctionDecl(D);
+    }
+
+    if(D->isCallback() && !D->isThisDeclarationADefinition())
+    {
+      /*
+       * For Callbacks We only want the Prototype declaration
+       */
+      errs() << "Storing Callback function " << D->getName() << "\n";
+      CB.storeCallbackFunctionDecl(D);
     }
 
 

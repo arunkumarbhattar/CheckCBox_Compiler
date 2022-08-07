@@ -74,6 +74,8 @@ public:
 
   void storeTaintMirroredEnumDecl(EnumDecl *ED);
 
+  void storeCallbackFunctionDecl(FunctionDecl *FD);
+
 private:
   ProgramInfo &Info;
   ASTContext *Context;

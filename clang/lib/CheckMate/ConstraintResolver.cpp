@@ -144,7 +144,7 @@ void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   /*
    * Check if the map has an entry(filename) corresponding to this FD's source file
    */
-  std::string FdSourceFileName = "";
+  std::string FdSourceFileName;
 
   /*
    * This FD belongs to a new file, hence a new file has to be created for
@@ -170,6 +170,29 @@ void ConstraintResolver::storeTaintedFunctionDecl(FunctionDecl* FD){
   }
 
   Info.TaintedFuncStreamWriter.insert({FD, FinalPathWithFileName});
+}
+
+void ConstraintResolver::storeCallbackFunctionDecl(FunctionDecl* FD){
+  /*
+   * Check if the map has an entry(filename) corresponding to this FD's source file
+   */
+  std::string FdSourceFileName;
+
+  /*
+   * This FD belongs to a new file, hence a new file has to be created for
+   * this tainted decl
+  */
+  //fetch the tainted directory path -->
+  std::string TaintedDirPath = _CheckMateOpts.TaintedDefDir;
+  if(TaintedDirPath.find_last_not_of("/\\"))
+    TaintedDirPath += "/";
+
+  FdSourceFileName = resolve_base_name(FD->getASTContext().getSourceManager()
+                                           .getFilename(FD->getLocation()).str());
+
+  std::string FinalPathWithFileName = TaintedDirPath + "Tainted"
+                                      + FdSourceFileName;
+  Info.CallbackFuncStreamWriter.insert({FD, FinalPathWithFileName});
 }
 
 // Return a set of PVConstraints equivalent to the set given,

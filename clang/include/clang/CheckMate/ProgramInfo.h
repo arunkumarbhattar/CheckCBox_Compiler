@@ -83,6 +83,7 @@ public:
   typedef std::map<std::string, ExternalFunctionMapType> StaticFunctionMapType;
 
   std::vector<Decl*>TaintedDecls;
+
   /*
    * This is the mapping between the FunctionDecl's actual file name to the
    * tainted file to which its tainted generic C definition will be written
@@ -98,6 +99,7 @@ public:
    * Stream writers are to map between the Decl and its corresponding file
    */
   std::map<Decl*, std::string> TaintedFuncStreamWriter;
+  std::map<FunctionDecl*, std::string>CallbackFuncStreamWriter;
   std::map<Decl*, std::string> TaintedVarDeclStreamWriter;
   std::map<Decl*, std::string> TaintedStructDeclStreamWriter;
   /*

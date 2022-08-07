@@ -45,6 +45,7 @@ enum CurrDeclType{
   CD_VarTypeDefDecl,
   CD_Macro,
   CD_Enum,
+  CD_CallbackFuncDecl,
   CD_Unknown
 };
 
@@ -79,6 +80,10 @@ bool initializeTaintedFileForDeclIfNeeded(ASTContext &Context, ProgramInfo &Info
   else if (CD == CD_FuncDecl) {
     assert(D !=nullptr);
     TaintedFileAttemptingToBeGenerated = Info.TaintedFuncStreamWriter[D];
+  }
+  else if (CD == CD_CallbackFuncDecl) {
+    assert(D !=nullptr);
+    TaintedFileAttemptingToBeGenerated = Info.CallbackFuncStreamWriter[D->getAsFunction()];
   }
 
   llvm::raw_fd_ostream OutFile(TaintedFileAttemptingToBeGenerated, ErrorCode,
@@ -248,6 +253,32 @@ bool copyTaintedDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
   return true;
 }
 
+bool copyCallbackDefToTaintedFile(ASTContext &Context, ProgramInfo &Info,
+                                 Rewriter &R, FunctionDecl* FD, RewriteBuffer* RB){
+
+  SourceRange DeclRange(FD->getSourceRange());
+  SourceLocation DeclBegin(DeclRange.getBegin());
+  SourceLocation DeclStartEnd(DeclRange.getEnd());
+  std::error_code ErrorCode;
+  SourceLocation DeclEndEnd(endOfTheEnd(DeclStartEnd,
+                                        Context.getSourceManager()));
+  /*
+     * Now you can fetch the pointers to the text replacement
+     */
+  const char* BuffBegin(Context.getSourceManager().getCharacterData(DeclBegin));
+  const char* BuffEnd(Context.getSourceManager().getCharacterData(DeclEndEnd));
+  std::string const FuncString(BuffBegin, BuffEnd);
+  llvm::raw_fd_ostream OutFile(Info.CallbackFuncStreamWriter[FD],
+                               ErrorCode, llvm::sys::fs::OF_Append);
+  if(FD->getAsFunction()->isThisDeclarationADefinition())
+    RB->Initialize("\n" + FuncString + "\n");
+  else
+    RB->Initialize("\n" + FuncString + ";\n");
+
+  RB->write(OutFile);
+  return true;
+}
+
 char* getFileNameFromPath(const char* path )
 {
   if( path == NULL )
@@ -283,7 +314,8 @@ bool CopyW2CDefToW2CFile(ASTContext &Context, ProgramInfo &Info,
                             getFileNameFromPath(FilePath.c_str()));
   eraseSubStr(InstrumentedFileName, "Tainted");
   auto Wasm2CFilePath = FilePath + "WASM2C" + InstrumentedFileName;
-                                        llvm::raw_fd_ostream OutFile(Wasm2CFilePath,
+  Wasm2CFilePath[Wasm2CFilePath.size()-1] = 'h';
+  llvm::raw_fd_ostream OutFile(Wasm2CFilePath,
                                error_code, llvm::sys::fs::OF_Append);
   RewriteBuffer RB;
   if(std::find(Info.W2cOutfiles.begin(),
@@ -295,14 +327,32 @@ bool CopyW2CDefToW2CFile(ASTContext &Context, ProgramInfo &Info,
 
     RB.Initialize("/* This file is Auto-Generated Using CheckCBox Converter. Please Do Not Directly Modify."
                   "\n */ \n");
+    RB.Initialize("#pragma TLIB_SCOPE push\n"
+                  "#pragma TLIB_SCOPE on");
     RB.write(OutFile);
   }
 
   RB.Initialize("\n" + func_string + ";\n");
 
   RB.write(OutFile);
-
+/*
+ * Nice technique to see if the current element is last element
+  for (auto& elem : item_vector) {
+    if (&elem != &item_vector.back()) printf(", ");
+    // ...
+  }
+*/
+  if(FD == Info.TaintedDecls.back())
+  {
+    /*
+     * Close the pragma as we are at the end of the Tainted file
+     */
+    RB.Initialize("#pragma TLIB_SCOPE pop");
+    RB.write(OutFile);
+  }
   Info.W2cOutfiles.push_back(&OutFile);
+
+
 
   return true;
 }
@@ -396,7 +446,7 @@ std::vector<int> ReturnRetParamObject(ASTContext &Context, ProgramInfo &Info,
   } wasm_rt_type_t;
   */
 
-  std::string ArgString = "";
+  std::string ArgString;
   std::vector<int> ret_param_entries;
   /*
    * First check the return type
@@ -430,7 +480,7 @@ std::string ReturnRetParamType(ASTContext &Context, ProgramInfo &Info,
   } wasm_rt_type_t;
   */
 
-  std::string ArgString = "";
+  std::string ArgString;
   std::vector<std::string> RetParamEntries;
   /*
    * First check the return type
@@ -493,11 +543,11 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
 
   std::string TrampolineFuncName = CallbackFuncName + "_trampoline";
 
-  std::string Params = "";
+  std::string Params;
 
-  std::string Body = "";
+  std::string Body;
 
-  std::string Function = "";
+  std::string Function;
   //variable declarations (NOTE: must be inserted with ; and \n trailing characters)
   std::vector<std::string> VarDecls;
   /*
@@ -528,12 +578,18 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
   /*
    * Check if function returns a pointer
    */
-  std::string CallContent = "";
+  std::string CallContent;
   if(FPT->getReturnType()->isTaintedPointerType()){
-    CallContent =  CallContent + "\treturn " + "c_fetch_pointer_offset(\n" + CallbackFuncName;
+    CallContent =  CallContent + "\treturn " +
+                  "(" + tyToStr(FPT->getReturnType().getTypePtr(), "")
+                  + ")" + "c_fetch_pointer_from_offset (\n" + CallbackFuncName;
   }
   else
-    CallContent = CallContent + "\treturn " + CallbackFuncName;
+    CallContent = CallContent +
+                  "\treturn " +
+                  "(" + tyToStr(FPT->getReturnType().getTypePtr(), "")
+                  + ")" +
+                  CallbackFuncName;
 
   /*
    * Now pass the converted arguments as parameters
@@ -544,17 +600,27 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
     auto CallbackFuncParam = FPT->getParamType(i);
     if(CallbackFuncParam->isTaintedPointerType())
     {
+      /*
+       * You have to enter some sort of a reverse cast operation in here
+       */
       CallContent =  CallContent +
-                     "c_fetch_pointer_offset(" + "arg_" + itostr(i+1) + ")";
+                     "(" + tyToStr(CallbackFuncParam.getTypePtr(), "") + ") "
+                    + "c_fetch_pointer_offset(" + "arg_" + itostr(i+1) + ")";
     }
     else
     {
-      CallContent += "arg_" + itostr(i+1);
+      CallContent = CallContent +
+                     "(" + tyToStr(CallbackFuncParam.getTypePtr(), "")
+                     + ") " + "arg_" + itostr(i+1);
     }
     if( i < FPT->getNumParams()-1)
       CallContent += ",\n";
   }
-  CallContent += ");";
+
+  if(FPT->getReturnType()->isTaintedPointerType())
+    CallContent += "));";
+  else
+    CallContent += ");";
 
   Body = Body + CallContent + "\n}\n";
   /*
@@ -594,9 +660,9 @@ bool GenerateW2CDef(ASTContext &Context, ProgramInfo &Info,
   std::string ReturnType = "\n" + WasmEnumToString(
                                       static_cast<wasm_rt_type_t>(FuncSignature[0]));
 
-  std::string FuncParams = "";
+  std::string FuncParams;
 
-  std::string Function = "";
+  std::string Function;
   //variable declarations (NOTE: must be inserted with ; and \n trailing characters)
 
   /*
@@ -727,6 +793,20 @@ MacroToBeInserted.second,
                                    &RB);
   }
 
+  for (auto CallbackFunctionDecls : Info.CallbackFuncStreamWriter)
+  {
+
+    initializeTaintedFileForDeclIfNeeded(Context,Info, R,
+                                         CallbackFunctionDecls.first,
+                                         nullptr,
+                                         nullptr,
+                                         nullptr,
+                                         &RB,
+                                         "",
+                                         CD_CallbackFuncDecl);
+
+    copyCallbackDefToTaintedFile(Context, Info, R, CallbackFunctionDecls.first, &RB);
+  }
   for(auto *TaintedFunctionDecls : Info.TaintedDecls){
 
     /*
@@ -789,11 +869,12 @@ MacroToBeInserted.second,
     // append this with the w2c_ extension
     std::string WasmFunctionName = "w2c_"+FunctionName;
     //now generate the return type -->
-    std::string ReturnArg = "";
+    std::string ReturnArg;
     std::vector<std::string> VarDecls ;
+    auto RetType = TaintedFunctionDecls->getAsFunction()->getReturnType();
 
     bool IsTaintedPointerReturn = false;
-    if(TaintedFunctionDecls->getAsFunction()->getReturnType()->isTaintedPointerType()){
+    if(RetType->isTaintedPointerType()){
       ReturnArg = "c_fetch_pointer_from_offset(";
       IsTaintedPointerReturn = true;
       //now we generate appropriate cast because returned pointer is of tainted type -->
@@ -802,7 +883,7 @@ MacroToBeInserted.second,
     }
 
     //now generate the parameter list in form of a string -->
-    std::string FinalParamString = "";
+    std::string FinalParamString;
     std::vector<std::string> SetOfParams;
     /*
      * The first argument to the tainted function call will always be a
@@ -894,13 +975,31 @@ MacroToBeInserted.second,
     //by here you must have a proper final_param_string -->
 
     // Now append it to required items and form the final call -->
-    std::string FinalBoardingCall = "";
+    std::string FinalBoardingCall;
     for (auto InitDecl : VarDecls)
     {
       FinalBoardingCall += InitDecl;
     }
-    FinalBoardingCall += "\n\n return " +ReturnArg + WasmFunctionName+ "(" + FinalParamString + ");\n";
+    /*
+     * If the Tainted function returns a Tainted pointer, there must be an extra
+     * rparen, else single rparen
+     */
+    /*
+     * Perform Return Cast
+     *
+     */
+    std::string TypeStr;
+    std::string RetCastStr = tyToStr(RetType.getTypePtr(), TypeStr);
+    if (!RetType->isTaintedPointerType()) {
+      FinalBoardingCall += "\n\n return (" + RetCastStr + ")" + ReturnArg +
+                           WasmFunctionName + "(" +
+                           FinalParamString + ");\n";
+    }
+    else {
 
+      FinalBoardingCall += "\n\n return (" + RetCastStr + ")" + ReturnArg +
+                           WasmFunctionName + "(" + FinalParamString + "));\n";
+    }
     R.InsertTextAfter(TaintedFunctionDecls->getBody()->getEndLoc(), FinalBoardingCall);
     /*
      * Generate the prototype for the w2c function name and store it somewhere
@@ -910,6 +1009,8 @@ MacroToBeInserted.second,
     GenerateW2CDef(Context, Info, R, WasmFunctionName,
                    static_cast<VarDecl*>(TaintedFunctionDecls), FuncSignature);
     }
+
+
     /*
      * TODO: This Functionality must move to a different function
      */
@@ -930,7 +1031,8 @@ MacroToBeInserted.second,
       fetch_path_from_file_path(FilePath, InstrumentedFile);
       eraseSubStr(InstrumentedFile,
                   "Tainted");
-      auto W2CFileName = "W2C" + InstrumentedFile;
+      auto W2CFileName = "WASM2C" + InstrumentedFile;
+      W2CFileName[W2CFileName.size()-1] = 'h';
 
       auto W2CFileNameWithPath = FilePath + W2CFileName;
 
@@ -974,7 +1076,7 @@ MacroToBeInserted.second,
          * Now fetch the begin location of this file
          */
         RewriteBuffer RB;
-        std::string IncludeHeaderFileWithPath = TaintedPath + TaintedHeaderFileName;
+        std::string IncludeHeaderFileWithPath = TaintedHeaderFileName;
         std::string IncludeStmt = "#include \"" +
                                   IncludeHeaderFileWithPath + "\"\n";
         std::error_code ErrorCode;
