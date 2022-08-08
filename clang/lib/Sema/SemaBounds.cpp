@@ -3707,7 +3707,11 @@ namespace {
           continue;
 
         ArgBounds = S.CheckNonModifyingBounds(ArgBounds, Arg);
-        if (ArgBounds->isUnknown()) {
+        /*
+         * These bounds checks must be relaxed in Tainted and TLIB Scope
+         */
+        if (ArgBounds->isUnknown() && (E->getTaintedScopeSpecifier() == clang::Tainted_None
+                                       && E->getTLIBScopeSpecifier() == clang::TLIB_None)) {
           S.Diag(Arg->getBeginLoc(),
                   diag::err_expected_bounds_for_argument) << (i + 1) <<
             Arg->getSourceRange();

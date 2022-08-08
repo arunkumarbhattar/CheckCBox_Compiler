@@ -66,7 +66,6 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
-#include "llvm/Transforms/Instrumentation/TaintedInvokeInSandbox.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -213,11 +212,6 @@ static void addAddDiscriminatorsPass(const PassManagerBuilder &Builder,
 static void addBoundsCheckingPass(const PassManagerBuilder &Builder,
                                   legacy::PassManagerBase &PM) {
   PM.add(createBoundsCheckingLegacyPass());
-}
-
-static void addTaintedInvokeInSandboxPass(const PassManagerBuilder &Builder,
-                               legacy::PassManagerBase &PM){
-  PM.add(createTaintedInvokeInSandboxLegacyPass());
 }
 
 static SanitizerCoverageOptions
@@ -721,11 +715,6 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addBoundsCheckingPass);
   }
-
-  PMBuilder.addExtension(PassManagerBuilder::EP_ScalarOptimizerLate,
-                         addTaintedInvokeInSandboxPass);
-  PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
-                         addTaintedInvokeInSandboxPass);
 
   if (CodeGenOpts.SanitizeCoverageType ||
       CodeGenOpts.SanitizeCoverageIndirectCalls ||
@@ -1259,12 +1248,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
           [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
             FPM.addPass(BoundsCheckingPass());
           });
-
-    PB.registerPipelineStartEPCallback(
-        [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(TaintedInvokeInSandboxPass()));
-        });
-
 
     if (CodeGenOpts.SanitizeCoverageType ||
         CodeGenOpts.SanitizeCoverageIndirectCalls ||

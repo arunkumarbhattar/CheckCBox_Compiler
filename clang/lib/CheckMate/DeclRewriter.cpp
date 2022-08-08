@@ -581,14 +581,11 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
   std::string CallContent;
   if(FPT->getReturnType()->isTaintedPointerType()){
     CallContent =  CallContent + "\treturn " +
-                  "(" + tyToStr(FPT->getReturnType().getTypePtr(), "")
-                  + ")" + "c_fetch_pointer_from_offset (\n" + CallbackFuncName;
+                    "c_fetch_pointer_offset ((void*)\n" + CallbackFuncName;
   }
   else
     CallContent = CallContent +
                   "\treturn " +
-                  "(" + tyToStr(FPT->getReturnType().getTypePtr(), "")
-                  + ")" +
                   CallbackFuncName;
 
   /*
