@@ -567,7 +567,7 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
     if(I < FuncSignature.size() - 1)
       Params = Params + ",\n";
     else
-      Params = Params + ") ";
+      Params = Params + ") _Unchecked";
   }
 
   /*
@@ -623,6 +623,7 @@ const clang::FunctionProtoType *FPT = Pt->getPointeeType()->getAs<clang::Functio
   /*
    * Now generate the final function string
    */
+  Function += "_TLIB ";
   Function += ReturnType;
   Function = Function + " " + TrampolineFuncName;
   Function += Params;
@@ -667,25 +668,18 @@ bool GenerateW2CDef(ASTContext &Context, ProgramInfo &Info,
    * params block
    *
    */
+  FuncParams = FuncParams + " (void* sandbox ";
   for(int I = 1; I < FuncSignature.size(); I++){
-    if(I == 1) {
-      /*
-       * Unlike for callback trampolines, wasm2c definitions mandate first
-       * argument to be void* (sandbox pointer offset)
-       */
-      FuncParams = FuncParams + " (void* sandbox, ";
-    }
+
     FuncParams = FuncParams + WasmEnumToString(
                           static_cast<wasm_rt_type_t>(FuncSignature[I]));
     // Insert the name of the arg
     std::string ArgName = "arg_"+ itostr(I);
     FuncParams = FuncParams + " " + ArgName;
     // Insert comma
-    if(I < FuncSignature.size() - 1)
-      FuncParams = FuncParams + ",\n";
-    else
-      FuncParams = FuncParams + ") ";
+      FuncParams =  ", " + FuncParams + "\n";
   }
+  FuncParams = FuncParams + ") ";
 
   /*
    * Now generate the final function string
@@ -1037,6 +1031,7 @@ MacroToBeInserted.second,
                                      ));
       std::string IncludeStmt = "#include \"" +
                                 W2CFileNameWithPath + "\"\n";
+      IncludeStmt += "#include <checkcbox_extensions.h>\n";
     R.InsertTextAfter(InsertLocation, IncludeStmt);
     }
     /*
