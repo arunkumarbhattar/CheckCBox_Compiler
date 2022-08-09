@@ -2500,6 +2500,13 @@ namespace {
       ProofResult Result = ProveBoundsDeclValidity(ExpectedArgBounds, ArgBounds, Cause, &EquivExprs, FreeVars);
       if (Result != ProofResult::True) {
         // Which diagnostic message to print?
+        /*
+         * If this expression is in a TLIB or Tainted Scope, no errors
+         */
+        if(Result == ProofResult::False && TestFailure(Cause, ProofFailure::HasFreeVariables))
+        {
+          printf("hello world");
+        }
         unsigned DiagId =
             (Result == ProofResult::False)
                 ? (TestFailure(Cause, ProofFailure::HasFreeVariables)
@@ -3685,6 +3692,12 @@ namespace {
         if (ParamType->isUncheckedPointerType() && !IsBoundsSafeInterfaceAssignment(ParamType, E->getArg(i))) {
           continue;
         }
+
+        if (Arg->getTaintedScopeSpecifier() != clang::Tainted_None
+           || Arg->getTLIBScopeSpecifier() != clang::TLIB_None)
+        {
+          continue;
+        }
         // We want to check the argument expression implies the desired parameter bounds.
         // To compute the desired parameter bounds, we substitute the arguments for
         // parameters in the parameter bounds expression.
@@ -3710,8 +3723,7 @@ namespace {
         /*
          * These bounds checks must be relaxed in Tainted and TLIB Scope
          */
-        if (ArgBounds->isUnknown() && (E->getTaintedScopeSpecifier() == clang::Tainted_None
-                                       && E->getTLIBScopeSpecifier() == clang::TLIB_None)) {
+        if (ArgBounds->isUnknown()) {
           S.Diag(Arg->getBeginLoc(),
                   diag::err_expected_bounds_for_argument) << (i + 1) <<
             Arg->getSourceRange();
