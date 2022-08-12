@@ -11,11 +11,7 @@
 
 #include "clang/CheckMate/RewriteUtils.h"
 #include "clang/CheckMate/CheckMateGlobalOptions.h"
-#include "clang/CheckMate/CastPlacement.h"
-#include "clang/CheckMate/CheckedRegions.h"
 #include "clang/CheckMate/DeclRewriter.h"
-#include "clang/CheckMate/LowerBoundAssignment.h"
-#include "clang/CheckMate/TypeVariableAnalysis.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 
@@ -75,33 +71,6 @@ std::string mkStringForDeclWithUnchangedType(MultiDeclMemberDecl *MMD,
 
   // OK, we have to use mkString.
   QualType DType = getTypeOfMultiDeclMember(MMD);
-  if (isPtrOrArrayType(DType)) {
-    CVarOption CVO =
-        (isa<TypedefDecl>(MMD)
-             ? Info.lookupTypedef(PersistentSourceLoc::mkPSL(MMD, Context))
-             : Info.getVariable(MMD, &Context));
-    assert(CVO.hasValue() &&
-           "Missing ConstraintVariable for unchanged multi-decl member");
-    // A function currently can't be a multi-decl member, so this should always
-    // be a PointerVariableConstraint.
-    PVConstraint *PVC = cast<PointerVariableConstraint>(&CVO.getValue());
-    // Currently, we benefit from the ItypesForExtern handling in
-    // mkStringForPVDecl in one very unusual case: an unchanged multi-decl
-    // member with a renamed TagDecl and an existing implicit itype coming from
-    // a bounds annotation will keep the itype and not be changed to a fully
-    // checked type. DeclRewriter::buildItypeDecl will detect the base type
-    // rename and generate the unchecked side using mkString instead of
-    // Decl::print in order to pick up the new name.
-    //
-    // As long as CheckMate lacks real support for itypes on variables, this is
-    // probably the behavior we want with -itypes-for-extern. If we don't care
-    // about this case, we could alternatively inline the few lines of
-    // mkStringForPVDecl that would still be relevant.
-//    RewrittenDecl RD = mkStringForPVDecl(MMD, PVC, Info);
-//    assert(RD.SupplementaryDecl.empty());
-    // return RD.Type + RD.IType;
-    return "";
-  }
 
   // If the type is not a pointer or array, then it should just equal the base
   // type except for top-level qualifiers, and it can't have itypes or bounds.
@@ -415,104 +384,12 @@ private:
   Rewriter &Writer;
 
   void rewriteType(Expr *E, SourceRange &Range) {
-    auto &PState = Info.getPerfStats();
-    if (!Info.hasPersistentConstraints(E, Context))
-      return;
-    const CVarSet &CVSingleton = Info.getPersistentConstraintsSet(E, Context);
-    if (CVSingleton.empty())
-      return;
-
-    // Macros wil sometimes cause a single expression to have multiple
-    // constraint variables. These should have been constrained to wild, so
-    // there shouldn't be any rewriting required.
-    const EnvironmentMap &Vars = Info.getConstraints().getVariables();
-    assert(CVSingleton.size() == 1 ||
-           llvm::none_of(CVSingleton, [&Vars](ConstraintVariable *CV) {
-             return CV->anyChanges(Vars);
-           }));
-
-    for (auto *CV : CVSingleton)
-      // Replace the original type with this new one if the type has changed.
-      if (CV->anyChanges(Vars)) {
-        rewriteSourceRange(Writer, Range,
-                           CV->mkString(Info.getConstraints(),
-                                        MKSTRING_OPTS(EmitName = false)));
-        PState.incrementNumFixedCasts();
-      }
   }
 };
 
 // Adds type parameters to calls to alloc functions.
 // The basic assumption this makes is that an alloc function will be surrounded
 // by a cast expression giving its type when used as a type other than void*.
-class TypeArgumentAdder : public clang::RecursiveASTVisitor<TypeArgumentAdder> {
-public:
-  explicit TypeArgumentAdder(ASTContext *C, ProgramInfo &I, Rewriter &R)
-      : Context(C), Info(I), Writer(R) {}
-
-  bool VisitCallExpr(CallExpr *CE) {
-    if (auto *FD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl())) {
-      // If the function call already has type arguments, we'll trust that
-      // they're correct and not add anything else.
-      if (typeArgsProvided(CE))
-        return true;
-
-      // If the function is not generic, we have nothing to do.
-      // This could happen even if it has type param binding if we
-      // reset generics because of wildness
-      if (Info.getFuncConstraint(FD,Context)->getGenericParams() == 0 &&
-          !FD->isItypeGenericFunction())
-        return true;
-
-      if (Info.hasTypeParamBindings(CE, Context)) {
-        // Construct a string containing concatenation of all type arguments for
-        // the function call.
-        std::string TypeParamString;
-        bool AllInconsistent = true;
-        for (auto Entry : Info.getTypeParamBindings(CE, Context))
-          if (Entry.second.isConsistent()) {
-            AllInconsistent = false;
-            std::string TyStr = Entry.second.getConstraint(
-                Info.getConstraints().getVariables()
-              )->mkString(Info.getConstraints(), MKSTRING_OPTS(
-                EmitName = false, EmitPointee = true));
-            if (TyStr.back() == ' ')
-              TyStr.pop_back();
-            TypeParamString += TyStr + ",";
-          } else {
-            // If it's null, then the type variable was not used consistently,
-            // so we can only put void here instead of useful type.
-            TypeParamString += "void,";
-          }
-        TypeParamString.pop_back();
-
-        // don't rewrite to malloc<void>(...), etc, just do malloc(...)
-        if (!AllInconsistent) {
-          SourceLocation TypeParamLoc = getTypeArgLocation(CE);
-          Writer.InsertTextAfter(TypeParamLoc, "<" + TypeParamString + ">");
-        }
-      }
-    }
-    return true;
-  }
-
-private:
-  ASTContext *Context;
-  ProgramInfo &Info;
-  Rewriter &Writer;
-
-  // Attempt to find the right spot to insert the type arguments. This should be
-  // directly after the name of the function being called.
-  SourceLocation getTypeArgLocation(CallExpr *Call) {
-    Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Callee)) {
-      size_t NameLength = DRE->getNameInfo().getAsString().length();
-      return Call->getBeginLoc().getLocWithOffset(NameLength);
-    }
-    llvm_unreachable("Could find SourceLocation for type arguments!");
-  }
-};
-
 SourceRange BodyReplacement::getSourceRange(SourceManager &SM) const {
   return getDeclSourceRangeWithAnnotations(getDecl(),
                                            /*IncludeInitializer=*/false);
@@ -658,58 +535,13 @@ void RewriteConsumer::emitRootCauseDiagnostics(ASTContext &Context) {
   clang::DiagnosticsEngine &DE = Context.getDiagnostics();
   unsigned ID = DE.getCustomDiagID(
       DiagnosticsEngine::Warning, "Root cause for %0 unchecked pointer%s0: %1");
-  auto I = Info.getInterimConstraintState();
   SourceManager &SM = Context.getSourceManager();
-  for (auto &WReason : I.RootWildAtomsWithReason) {
-    // Avoid emitting the same diagnostic message twice.
-    const PersistentSourceLoc& PSL = WReason.second.getLocation();
 
-    if (PSL.valid() &&
-        EmittedDiagnostics.find(PSL) == EmittedDiagnostics.end()) {
-      // Convert the file/line/column triple into a clang::SourceLocation that
-      // can be used with the DiagnosticsEngine.
-      llvm::ErrorOr<const clang::FileEntry *> File =
-          SM.getFileManager().getFile(PSL.getFileName());
-      if (!File.getError()) {
-        SourceLocation SL =
-            SM.translateFileLineCol(*File, PSL.getLineNo(), PSL.getColSNo());
-        // Limit emitted root causes to those that effect at least one pointer.
-        // Alternatively, don't filter causes if -warn-all-root-cause is passed.
-        int PtrCount = I.getNumPtrsAffected(WReason.first);
-        if (_CheckMateOpts.WarnAllRootCause || PtrCount > 0) {
-          // SL is invalid when the File is not in the current translation unit.
-          if (SL.isValid()) {
-            EmittedDiagnostics.insert(PSL);
-            DE.Report(SL, ID) << PtrCount << WReason.second.getReason();
-          }
-          // if notes have sources in other files, these files may not
-          // be in the same TU and will not be displayed. At the initial
-          // time of this comment, that was expected to be very rare.
-          // see https://github.com/correctcomputation/checkedc-clang/pull/708#discussion_r716903129
-          // for a discussion
-          for (auto &Note : WReason.second.additionalNotes()) {
-            PersistentSourceLoc NPSL = Note.Location;
-            llvm::ErrorOr<const clang::FileEntry *> NFile =
-                SM.getFileManager().getFile(NPSL.getFileName());
-            if (!NFile.getError()) {
-              SourceLocation NSL = SM.translateFileLineCol(
-                  *NFile, NPSL.getLineNo(), NPSL.getColSNo());
-              if (NSL.isValid()) {
-                unsigned NID = DE.getCustomDiagID(DiagnosticsEngine::Note, "%0");
-                DE.Report(NSL, NID) << Note.Reason;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+
 }
 
 void RewriteConsumer::HandleTranslationUnit(ASTContext &Context) {
   Info.enterCompilationUnit(Context);
-
-  Info.getPerfStats().startRewritingTime();
 
   if (_CheckMateOpts.WarnRootCause)
     emitRootCauseDiagnostics(Context);
@@ -720,41 +552,13 @@ void RewriteConsumer::HandleTranslationUnit(ASTContext &Context) {
 
   // Take care of some other rewriting tasks
   std::set<llvm::FoldingSetNodeID> Seen;
-  std::map<llvm::FoldingSetNodeID, AnnotationNeeded> NodeMap;
-  CheckedRegionFinder CRF(&Context, R, Info, Seen, NodeMap,
-                          _CheckMateOpts.WarnRootCause);
-  CheckedRegionAdder CRA(&Context, R, NodeMap, Info);
-  CastLocatorVisitor CLV(&Context);
-  CastPlacementVisitor ECPV(&Context, Info, R, CLV.getExprsWithCast());
-  TypeExprRewriter TER(&Context, Info, R);
-  TypeArgumentAdder TPA(&Context, Info, R);
-  LowerBoundAssignmentUpdater AU(&Context, Info, R);
   TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
   for (const auto &D : TUD->decls()) {
-    if (_CheckMateOpts.AddCheckedRegions) {
-      // Adding checked regions enabled?
-      // TODO: Should checked region finding happen somewhere else? This is
-      //       supposed to be rewriting.
-      CRF.TraverseDecl(D);
-      CRA.TraverseDecl(D);
-    }
-    TER.TraverseDecl(D);
-    // Cast placement must happen after type expression rewriting (i.e. cast and
-    // compound literal) so that casts to unchecked pointer on itype function
-    // calls can override rewritings of casts to checked types.
-    // The cast locator must also run before the cast placement visitor so that
-    // the cast placement visitor is aware of all existing cast expressions.
-    CLV.TraverseDecl(D);
-    ECPV.TraverseDecl(D);
-    TPA.TraverseDecl(D);
-    AU.TraverseDecl(D);
+
   }
 
   // Output files.
   emit(R, Context, StdoutModeEmittedMainFile);
-
-  Info.getPerfStats().endRewritingTime();
-
   Info.exitCompilationUnit();
 
   return;

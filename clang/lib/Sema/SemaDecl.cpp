@@ -10745,9 +10745,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   MarkUnusedFileScopedDecl(NewFD);
 
+  SourceRange RTRange = NewFD->getReturnTypeSourceRange();
   if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isPointerType()) &&
       (!NewFD->getReturnType()->isTaintedPointerType())){
-    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
+
     if(NewFD->isTainted()) {
       Diag(D.getIdentifierLoc(),
            diag::err_tainted_specified_functions_should_have_tainted_pointers)
@@ -10765,8 +10766,17 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     D.setInvalidType();
   }
 
+  if(NewFD->isTainted() && NewFD->isStatic())
+  {
+    Diag(D.getIdentifierLoc(),
+         diag::err_tainted_specified_functions_static)
+        << (RTRange.isValid()
+                ? FixItHint::CreateReplacement(RTRange, "Remove static")
+                : FixItHint());
+    D.setInvalidType();
+  }
+
   if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isStructureType())){
-    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
     if(NewFD->isTainted()) {
       Diag(D.getIdentifierLoc(),
            diag::err_tainted_specified_functions_should_have_tainted_structs)
@@ -10786,7 +10796,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   if ((NewFD->isTainted() || NewFD->isCallback()) && (NewFD->getReturnType()->isPointerType()) &&
       (NewFD->getReturnType()->isFunctionType())){
-    SourceRange RTRange = NewFD->getReturnTypeSourceRange();
     if(NewFD->isTainted()) {
       Diag(D.getIdentifierLoc(),
            diag::err_tainted_function_can_only_have_callback_func_ptrs_ret)
@@ -10816,8 +10825,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     // OpenCL v1.2, s6.9 -- Kernels can only have return type void.
     if (!NewFD->getReturnType()->isVoidType()) {
-
-      SourceRange RTRange = NewFD->getReturnTypeSourceRange();
       Diag(D.getIdentifierLoc(), diag::err_expected_kernel_void_return_type)
           << (RTRange.isValid() ? FixItHint::CreateReplacement(RTRange, "void")
                                 : FixItHint());

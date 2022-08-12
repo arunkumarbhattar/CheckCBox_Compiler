@@ -9510,6 +9510,8 @@ def err_incompatible_tainted_pointer_2_unchecked_assignment : Error<
   "Tainted-pointers cannot point to Unchecked-pointers">;
 def err_tainted_specified_functions_should_have_tainted_pointers : Error<
   "Functions marked as Tainted can only accept/return pointers of Tainted Type">;
+def err_tainted_specified_functions_static : Error<
+"Tainted Functions can not be static as their internal SBX definition \n is defined in another Static Library">;
 def err_tainted_specified_functions_should_have_tainted_structs : Error<
    "Functions marked as Tainted can only accept/return structs of Tainted Type">;
 def err_tainted_function_can_only_have_callback_func_ptrs : Error<

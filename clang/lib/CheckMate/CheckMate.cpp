@@ -12,9 +12,7 @@
 
 #include "clang/CheckMate/CheckMate.h"
 #include "clang/CheckMate/CheckMateGlobalOptions.h"
-#include "clang/CheckMate/ArrayBoundsInferenceConsumer.h"
 #include "clang/CheckMate/ConstraintBuilder.h"
-#include "clang/CheckMate/IntermediateToolHook.h"
 #include "clang/CheckMate/RewriteUtils.h"
 #include "clang/CheckMate/PlantC4.h"
 #include "clang/Frontend/ASTConsumers.h"
@@ -261,43 +259,6 @@ private:
   }
 };
 
-void dumpConstraintOutputJson(const std::string &PostfixStr,
-                              ProgramInfo &Info) {
-  if (_CheckMateOpts.DumpIntermediate) {
-    std::string FilePath = _CheckMateOpts.ConstraintOutputJson + PostfixStr + ".json";
-    errs() << "Writing json output to:" << FilePath << "\n";
-    std::error_code Ec;
-    llvm::raw_fd_ostream OutputJson(FilePath, Ec);
-    if (!OutputJson.has_error()) {
-      Info.dumpJson(OutputJson);
-      OutputJson.close();
-    } else {
-      Info.dumpJson(llvm::errs());
-    }
-  }
-}
-
-//Note: There is no real logic or contraints that we are looking to solve for CheckMate,
-// Hence this definition can be safely commented out
-void runSolver(ProgramInfo &Info, std::set<std::string> &SourceFiles) {
-  Constraints &CS = Info.getConstraints();//The Constraints Object Must contain all the _Tainted Functions that we look for Instrumenting
-
-  if (_CheckMateOpts.Verbose) {
-    errs() << "Trying to capture Constraint Variables for all functions\n";
-  }
-
-  // Sanity check.
-  assert(CS.checkInitialEnvSanity() && "Invalid initial environment. ");
-
-  dumpConstraintOutputJson(INITIAL_OUTPUT_SUFFIX, Info);
-
-  clock_t StartTime = clock();
-  CS.solve();
-  if (_CheckMateOpts.Verbose) {
-    errs() << "Solver time:" << getTimeSpentInSeconds(StartTime) << "\n";
-  }
-}
-
 
 std::unique_ptr<_CheckMateInterface>
 _CheckMateInterface::create(const struct _CheckMateOptions &CCopt,
@@ -423,7 +384,6 @@ _CheckMateInterface::_CheckMateInterface(const struct _CheckMateOptions &CCopt,
 
   CurrCompDB = CompDB;
 
-  GlobalProgramInfo.getPerfStats().startTotalTime();
 }
 
 _CheckMateInterface::~_CheckMateInterface() {
@@ -506,13 +466,7 @@ bool _CheckMateInterface::buildInitialConstraints() {
 
   std::lock_guard<std::mutex> Lock(InterfaceMutex);
 
-  if (!GlobalProgramInfo.link()) {
-    errs() << "Linking failed!\n";
-    HadNonDiagnosticError = true;
-    return isSuccessfulSoFar(); // False, of course, but follow the pattern.
-  }
-
-  // 2. Gather constraints.
+  // 1. Gather constraints.
   ConstraintBuilderConsumer CB =
       ConstraintBuilderConsumer(GlobalProgramInfo, nullptr);
   for (auto &TU : ASTs)
@@ -525,130 +479,13 @@ bool _CheckMateInterface::buildInitialConstraints() {
   return isSuccessfulSoFar();
 }
 
-
-
-bool _CheckMateInterface::solveConstraints() {
-  std::lock_guard<std::mutex> Lock(InterfaceMutex);
-  assert(ConstraintsBuilt && "Constraints not yet built. We need to call "
-                             "build constraint before trying to solve them.");
-  // 3. Solve constraints.
-  if (_CheckMateOpts.Verbose)
-    errs() << "Solving constraints\n";
-
-  if (_CheckMateOpts.DumpIntermediate)
-    GlobalProgramInfo.dump();
-
-  auto &PStats = GlobalProgramInfo.getPerfStats();
-
-  PStats.startConstraintSolverTime();
-  runSolver(GlobalProgramInfo, FilePaths);
-  PStats.endConstraintSolverTime();
-
-  if (_CheckMateOpts.Verbose)
-    errs() << "Constraints solved\n";
-
-  if (_CheckMateOpts.WarnRootCause)
-    GlobalProgramInfo.computeInterimConstraintState(FilePaths);
-
-  if (_CheckMateOpts.DumpIntermediate)
-    dumpConstraintOutputJson(FINAL_OUTPUT_SUFFIX, GlobalProgramInfo);
-
-  if (_CheckMateOpts.AllTypes) {
-    // Add declared bounds for all constant sized arrays. This needs to happen
-    // after constraint solving because the bound added depends on whether the
-    // array is NTARR or ARR.
-    GlobalProgramInfo.getABoundsInfo().addConstantArrayBounds(
-        GlobalProgramInfo);
-
-    if (_CheckMateOpts.DebugArrSolver)
-      GlobalProgramInfo.getABoundsInfo().dumpAVarGraph(
-          "arr_bounds_initial.dot");
-
-    // Infer lower bounds for pointers that are not valid lower bounds.
-    // The result of this inference is required for length inference, so
-    // this call must be before the subsequent call to performFlowAnalysis.
-    GlobalProgramInfo.getABoundsInfo().inferLowerBounds(&GlobalProgramInfo);
-
-    // Propagate initial data-flow information for Array pointers from
-    // bounds declarations.
-    GlobalProgramInfo.getABoundsInfo().performFlowAnalysis(&GlobalProgramInfo);
-
-    // 4. Infer the bounds based on calls to malloc and calloc
-    AllocBasedBoundsInference ABBI =
-        AllocBasedBoundsInference(GlobalProgramInfo, nullptr);
-    for (auto &TU : ASTs)
-      ABBI.HandleTranslationUnit(TU->getASTContext());
-    if (!isSuccessfulSoFar())
-      return false;
-
-    // Propagate the information from allocator bounds.
-    GlobalProgramInfo.getABoundsInfo().performFlowAnalysis(&GlobalProgramInfo);
-  }
-
-  // 5. Run intermediate tool hook to run visitors that need to be executed
-  // after constraint solving but before rewriting.
-  IntermediateToolHook ITH = IntermediateToolHook(GlobalProgramInfo, nullptr);
-  for (auto &TU : ASTs)
-    ITH.HandleTranslationUnit(TU->getASTContext());
-  if (!isSuccessfulSoFar())
-    return false;
-
-  if (_CheckMateOpts.AllTypes) {
-    // Propagate data-flow information for Array pointers.
-    GlobalProgramInfo.getABoundsInfo().performFlowAnalysis(&GlobalProgramInfo);
-
-    /*if (DebugArrSolver)
-      GlobalProgramInfo.getABoundsInfo().dumpAVarGraph(
-          "arr_bounds_final.dot");*/
-    //}
-
-    /*if (DumpStats) {
-    GlobalProgramInfo.printStats(FilePaths, llvm::errs(), true);
-    GlobalProgramInfo.computeInterimConstraintState(FilePaths);
-    std::error_code Ec;
-    llvm::raw_fd_ostream OutputJson(StatsOutputJson, Ec);
-    if (!OutputJson.has_error()) {
-      GlobalProgramInfo.printStats(FilePaths, OutputJson, false, true);
-      OutputJson.close();
-    }
-    std::string AggregateStats = StatsOutputJson + ".aggregate.json";
-    llvm::raw_fd_ostream AggrJson(AggregateStats, Ec);
-    if (!AggrJson.has_error()) {
-      GlobalProgramInfo.printAggregateStats(FilePaths, AggrJson);
-      AggrJson.close();
-    }
-
-    llvm::raw_fd_ostream WildPtrInfo(WildPtrInfoJson, Ec);
-    if (!WildPtrInfo.has_error()) {
-      GlobalProgramInfo.getInterimConstraintState().printStats(WildPtrInfo);
-      WildPtrInfo.close();
-    }
-
-    llvm::raw_fd_ostream PerWildPtrInfo(PerWildPtrInfoJson, Ec);
-    if (!PerWildPtrInfo.has_error()) {
-      GlobalProgramInfo.getInterimConstraintState().printRootCauseStats(
-          PerWildPtrInfo, GlobalProgramInfo.getConstraints());
-      PerWildPtrInfo.close();
-    }
-  }*/
-    /*
-
-
- */
-
-    return isSuccessfulSoFar();
-  }
-}
   bool _CheckMateInterface::writeAllConvertedFilesToDisk() {
   std::lock_guard<std::mutex> Lock(InterfaceMutex);
 
-  // 6. Rewrite the input files.
+  // 3. Rewrite the input files.
   RewriteConsumer RC = RewriteConsumer(GlobalProgramInfo);
   for (auto &TU : ASTs)
     RC.HandleTranslationUnit(TU->getASTContext());
-
-  GlobalProgramInfo.getPerfStats().endTotalTime();
-  GlobalProgramInfo.getPerfStats().startTotalTime();
   return isSuccessfulSoFar();
 }
 
@@ -659,45 +496,4 @@ bool _CheckMateInterface::PlaceC4Charges() {
   return C4Planted.ConvertTaintedToVanilla();
 }
 
-  bool _CheckMateInterface::dumpStats() {
-  /*
-  if (_CheckMateOpts.AllTypes && _CheckMateOpts.DebugArrSolver) {
-    GlobalProgramInfo.getABoundsInfo().dumpAVarGraph("arr_bounds_final.dot");
-  }
-*/
 
-  if (_CheckMateOpts.DumpStats) {
-    GlobalProgramInfo.printStats(FilePaths, llvm::errs(), true);
-    GlobalProgramInfo.computeInterimConstraintState(FilePaths);
-    std::error_code Ec;
-    llvm::raw_fd_ostream OutputJson(_CheckMateOpts.StatsOutputJson, Ec);
-    if (!OutputJson.has_error()) {
-      GlobalProgramInfo.printStats(FilePaths, OutputJson, false, true);
-      OutputJson.close();
-    }
-    std::string AggregateStats = _CheckMateOpts.StatsOutputJson + ".aggregate.json";
-    llvm::raw_fd_ostream AggrJson(AggregateStats, Ec);
-    if (!AggrJson.has_error()) {
-      GlobalProgramInfo.printAggregateStats(FilePaths, AggrJson);
-      AggrJson.close();
-    }
-
-    llvm::raw_fd_ostream WildPtrInfo(_CheckMateOpts.WildPtrInfoJson, Ec);
-    if (!WildPtrInfo.has_error()) {
-      GlobalProgramInfo.getInterimConstraintState().printStats(WildPtrInfo);
-      WildPtrInfo.close();
-    }
-
-    llvm::raw_fd_ostream PerWildPtrInfo(_CheckMateOpts.PerWildPtrInfoJson, Ec);
-    if (!PerWildPtrInfo.has_error()) {
-      GlobalProgramInfo.getInterimConstraintState().printRootCauseStats(
-          PerWildPtrInfo, GlobalProgramInfo.getConstraints());
-      PerWildPtrInfo.close();
-    }
-  }
-  return isSuccessfulSoFar();
-}
-
-ConstraintsInfo &_CheckMateInterface::getWildPtrsInfo() {
-  return GlobalProgramInfo.getInterimConstraintState();
-}

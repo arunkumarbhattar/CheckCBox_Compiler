@@ -95,8 +95,5 @@ protected:
   // Get existing itype string from constraint variables.
   //std::string getExistingIType(ConstraintVariable *DeclC);
 
-  RewrittenBody buildBodyVar(const FVComponentVariable *CV,
-                             DeclaratorDecl *Decl, std::string UseName,
-                             bool StaticFunc);
 };
 #endif // LLVM_CLANG_CheckMate_DECLREWRITER_H

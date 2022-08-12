@@ -12,7 +12,6 @@
 #define LLVM_CLANG_CheckMate_CONSTRAINTBUILDER_H
 
 #include "clang/CheckMate/ProgramInfo.h"
-#include "clang/CheckMate/TypeVariableAnalysis.h"
 #include "clang/AST/ASTConsumer.h"
 
 // First step in generating initial constraints is to collect functions

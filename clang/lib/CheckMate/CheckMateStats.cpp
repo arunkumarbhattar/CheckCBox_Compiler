@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CheckMate/CheckMateStats.h"
-#include "clang/CheckMate/ProgramInfo.h"
 #include "clang/CheckMate/Utils.h"
 #include <time.h>
 
@@ -116,67 +115,3 @@ void PerformanceStats::printPerformanceStats(llvm::raw_ostream &O,
   }
 }
 
-// Record Checked/Unchecked regions.
-bool StatsRecorder::VisitCompoundStmt(clang::CompoundStmt *S) {
-  auto &PStats = Info->getPerfStats();
-  if (S != nullptr) {
-    auto PSL = PersistentSourceLoc::mkPSL(S, *Context);
-    if (PSL.valid() && canWrite(PSL.getFileName())) {
-      switch (S->getWrittenCheckedSpecifier()) {
-      case CSS_None:
-        // Do nothing
-        break;
-      case CSS_Unchecked:
-        PStats.incrementNumUnCheckedRegions();
-        break;
-      case CSS_Memory:
-      case CSS_Bounds:
-        PStats.incrementNumCheckedRegions();
-        break;
-      }
-    }
-  }
-  return true;
-}
-
-// Record itype declarations.
-bool StatsRecorder::VisitDecl(clang::Decl *D) {
-  auto &PStats = Info->getPerfStats();
-  if (D != nullptr) {
-    auto PSL = PersistentSourceLoc::mkPSL(D, *Context);
-    if (PSL.valid() && canWrite(PSL.getFileName())) {
-      if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
-        if (DD->hasInteropTypeExpr()) {
-          PStats.incrementNumITypes();
-        }
-      }
-    }
-  }
-  return true;
-}
-
-// Record checked to wild casts.
-bool StatsRecorder::VisitCStyleCastExpr(clang::CStyleCastExpr *C) {
-  auto &PStats = Info->getPerfStats();
-  if (C != nullptr) {
-    auto PSL = PersistentSourceLoc::mkPSL(C, *Context);
-    if (PSL.valid() && canWrite(PSL.getFileName())) {
-      QualType SrcT = C->getSubExpr()->getType();
-      QualType DstT = C->getType();
-      if (SrcT->isCheckedPointerType() && !DstT->isCheckedPointerType())
-        PStats.incrementNumWildCasts();
-    }
-  }
-  return true;
-}
-
-// Record bounds casts.
-bool StatsRecorder::VisitBoundsCastExpr(clang::BoundsCastExpr *B) {
-  auto &PStats = Info->getPerfStats();
-  if (B != nullptr) {
-    auto PSL = PersistentSourceLoc::mkPSL(B, *Context);
-    if (PSL.valid() && canWrite(PSL.getFileName()))
-      PStats.incrementNumAssumeBounds();
-  }
-  return true;
-}

@@ -12,9 +12,6 @@
 #ifndef LLVM_CLANG_CheckMate_STRUCTINIT_H
 #define LLVM_CLANG_CheckMate_STRUCTINIT_H
 
-#include "clang/CheckMate/CheckMateGlobalOptions.h"
-#include "clang/CheckMate/ArrayBoundsInferenceConsumer.h"
-#include "clang/CheckMate/CheckedRegions.h"
 #include "clang/CheckMate/ConstraintResolver.h"
 #include "clang/CheckMate/MappingVisitor.h"
 #include "clang/CheckMate/RewriteUtils.h"

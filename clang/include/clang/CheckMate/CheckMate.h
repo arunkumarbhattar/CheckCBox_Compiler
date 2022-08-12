@@ -15,7 +15,6 @@
 #ifndef LLVM_CLANG_CheckMate_CheckMate_H
 #define LLVM_CLANG_CheckMate_CheckMate_H
 
-#include "clang/CheckMate/CheckMateInteractiveData.h"
 #include "clang/CheckMate/PersistentSourceLoc.h"
 #include "clang/CheckMate/ProgramInfo.h"
 #include "clang/Tooling/CommonOptionsParser.h"
@@ -58,25 +57,6 @@ public:
 
   // Build initial constraints.
   bool buildInitialConstraints();
-
-  // Constraint Solving.
-  bool solveConstraints();
-
-  // Interactivity.
-
-  // Get all the WILD pointers and corresponding reason why they became WILD.
-  ConstraintsInfo &getWildPtrsInfo();
-
-  // Given a constraint key make the corresponding constraint var
-  // to be non-WILD.
-  bool makeSinglePtrNonWild(ConstraintKey TargetPtr);
-
-  // Make the provided pointer non-WILD and also make all the
-  // pointers, which are wild because of the same reason, as non-wild
-  // as well.
-  bool invalidateWildReasonGlobally(ConstraintKey PtrKey);
-
-  // Rewriting.
 
   // Write all converted versions of the files in the source file list
   // to disk

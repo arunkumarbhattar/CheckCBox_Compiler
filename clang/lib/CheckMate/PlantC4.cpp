@@ -11,7 +11,6 @@
 
 #include "clang/CheckMate/PlantC4.h"
 #include "clang/CheckMate/CheckMateGlobalOptions.h"
-#include "clang/CheckMate/TypeVariableAnalysis.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -45,9 +44,6 @@ void PlantC4::fetch_path_from_file_path(std::string & file_path, const std::stri
 
 bool PlantC4::ConvertTaintedToVanilla() {
 
-  // Fetch the tainted directory
-  Info.getC4PerfStats().startRewritingTime();
-
   auto ListOfTaintedFiles = Info.TaintedRewriteFileVector;
   for(auto TaintedFilePath : ListOfTaintedFiles){
     std::string Filepath = TaintedFilePath;
@@ -70,7 +66,5 @@ bool PlantC4::ConvertTaintedToVanilla() {
     std::system(Command.c_str());
 
   }
-
-  Info.getC4PerfStats().endRewritingTime();
   return true;
 }

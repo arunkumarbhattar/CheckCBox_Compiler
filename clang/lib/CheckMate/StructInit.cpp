@@ -30,28 +30,8 @@ bool TStructVariableInitializer::hasCheckedMembers(DeclaratorDecl *DD) {
     if (RecordsWithCPointers.find(Definition) != RecordsWithCPointers.end())
       return true;
 
-    for (auto *const D : Definition->fields()) {
-      if (D->getType()->isPointerType() || D->getType()->isArrayType()) {
-        CVarOption CV = I.getVariable(D, Context);
-        if (CV.hasValue()) {
-          PVConstraint *PV = dyn_cast<PVConstraint>(&CV.getValue());
-          if (PV && PV->isSolutionChecked(I.getConstraints().getVariables())) {
-            // Ok this contains a pointer that is checked. Store it.
-            // So you basically store the struct definitions (which is basically a Record Decl)
-            // which have C pointer members into a RecordsWithCPointers Structure for future conversion.
-            RecordsWithCPointers.insert(Definition);
-            return true;
-          }
-        }
-      } else if (hasCheckedMembers(D)) {
-        // A field of a structure can be another structure. If the inner
-        // structure would need an initializer, we have to put it on the outer.
-        RecordsWithCPointers.insert(Definition);
-        return true;
-      }
-    }
+    return false;
   }
-  return false;
 }
 
 //So you would basically do something like this for Resolving TStructs -->

@@ -97,12 +97,6 @@ class StatsRecorder : public clang::RecursiveASTVisitor<StatsRecorder> {
 public:
   explicit StatsRecorder(clang::ASTContext *C, ProgramInfo *I)
       : Context(C), Info(I) {}
-
-  bool VisitCompoundStmt(clang::CompoundStmt *S);
-  bool VisitDecl(clang::Decl *D);
-  bool VisitCStyleCastExpr(clang::CStyleCastExpr *C);
-  bool VisitBoundsCastExpr(clang::BoundsCastExpr *B);
-
 private:
   clang::ASTContext *Context;
   ProgramInfo *Info;
