@@ -466,7 +466,7 @@ int main(int argc, const char **argv) {
     errs() << "Failure occurred while detonating C4 on converted files.\n";
     return _CheckMateInterface.determineExitCode();
   }
-  
+
   // Even if all passes succeeded, we could still have a diagnostic verification
   // failure.
   return _CheckMateInterface.determineExitCode();

@@ -7,6 +7,7 @@
 %token TSTRUCT
 %token <string> TSTRUCT_str "Tstruct"
 %token TAINTED
+%token CALLBACK
 %token MIRROR
 %token TPTR
 %token <int * int> COLONBOUNDS
@@ -95,7 +96,13 @@
 %token TISINF
 %token TERRNO
 %token TERRNOLOCATION
-%token CALLBACK
+%token TFREAD
+%token TFCLOSE
+%token TFOPEN
+%token TFSEEK
+%token TFTELL
+%token TREWIND
+%token TFERROR
 %token TMEMCPY
 %token TMEMMOVE
 %token TMEMSET
@@ -120,7 +127,6 @@
 %token TSTRDUP
 %token TSTRSTR
 %token TREMQUO
-
 %start <(int*int*string) list> main
 
 %%
@@ -173,6 +179,9 @@ trealloc:
 tmemcpy:
 | TMEMCPY LANGLE tmemcpy RANGLE {  String.concat "" [""; ""] }
 
+tfread:
+| TFREAD  LANGLE tfread RANGLE {  String.concat "" [""; ""] }
+
 exprcomma:
 | LPAREN e = exprcomma* RPAREN { (String.concat "" ("("::e))^")" }
 | c = ANY s = exprcomma { String.concat "" [c; s]}
@@ -196,6 +205,14 @@ annot:
 /* add INCLUDE here; remove _checked, drop stdchecked.h (and note it in lexer) */
 | CHECKED { ($startpos.pos_cnum, $endpos.pos_cnum, "") }
 | TAINTED { ($startpos.pos_cnum, $endpos.pos_cnum, "")}
+| CALLBACK { ($startpos.pos_cnum, $endpos.pos_cnum, "")}
+| TFCLOSE { ($startpos.pos_cnum, $endpos.pos_cnum, "fclose")}
+| TFREAD { ($startpos.pos_cnum, $endpos.pos_cnum, "fread")}
+| TFOPEN { ($startpos.pos_cnum, $endpos.pos_cnum, "fopen")}
+| TFSEEK { ($startpos.pos_cnum, $endpos.pos_cnum, "fseek")}
+| TFTELL { ($startpos.pos_cnum, $endpos.pos_cnum, "ftell")}
+| TREWIND { ($startpos.pos_cnum, $endpos.pos_cnum, "rewind")}
+| TFERROR { ($startpos.pos_cnum, $endpos.pos_cnum, "ferror")}
 | MIRROR { ($startpos.pos_cnum, $endpos.pos_cnum, "")}
 | TMALLOC LANGLE tmalloc RANGLE { ($startpos.pos_cnum, $endpos.pos_cnum, "malloc")}
 | TMEMCPY { ($startpos.pos_cnum, $endpos.pos_cnum, "memcpy") }
@@ -313,6 +330,7 @@ checkedptr:
 | TFREE LANGLE insidebounds RANGLE {  String.concat "" ["free"; ""]}
 | TREALLOC LANGLE insidebounds RANGLE {  String.concat "realloc" [""; ""]}
 | TMEMCPY LANGLE insidebounds RANGLE {  String.concat "memcpy" [""; ""]}
+| TFREAD LANGLE insidebounds RANGLE {  String.concat "fread" [""; ""]}
 | TPTR LANGLE s = tstruct RANGLE {String.concat "" [s; "*"]}
 | TPTR LANGLE s = insideptr RANGLE { String.concat "" [s; " *"]}
 | TPTR LANGLE fp = fpointer RANGLE name = id_or_pid
