@@ -329,6 +329,23 @@ bool CopyW2CDefToW2CFile(ASTContext &Context, ProgramInfo &Info,
                   "\n */ \n");
     RB.Initialize("#pragma TLIB_SCOPE push\n"
                   "#pragma TLIB_SCOPE on\n");
+    std::string SandboxUtilFuncitons = "\n"
+                                       "int c_isPointerToTaintedMem(void* pointer);\n"
+                                       "\n"
+                                       "void* c_fetch_pointer_from_offset(const unsigned long pointer_offset);\n"
+                                       "\n"
+                                       "int c_isTaintedPointerToTaintedMem(void* pointer);\n"
+                                       "\n"
+                                       "void* c_fetch_sandbox_address();\n"
+                                       "\n"
+                                       "unsigned int c_fetch_pointer_offset(void* pointer);\n"
+                                       "\n"
+                                       "unsigned long c_fetch_sandbox_heap_address();\n"
+                                       "\n"
+                                       "void* c_fetch_function_pointer(const char* const function_name);\n"
+                                       "\n"
+                                       "unsigned long c_fetch_function_pointer_offset(const char* const function_name);\n";
+    RB.Initialize(SandboxUtilFuncitons);
     RB.write(OutFile);
   }
 
@@ -671,13 +688,16 @@ bool GenerateW2CDef(ASTContext &Context, ProgramInfo &Info,
   FuncParams = FuncParams + " (void* sandbox ";
   for(int I = 1; I < FuncSignature.size(); I++){
 
+    if (I == 1)
+      FuncParams += ", \n";
     FuncParams = FuncParams + WasmEnumToString(
                                   static_cast<wasm_rt_type_t>(FuncSignature[I]));
     // Insert the name of the arg
     std::string ArgName = "arg_"+ itostr(I);
     FuncParams = FuncParams + " " + ArgName;
     // Insert comma
-    FuncParams =  ", " + FuncParams + "\n";
+    if( I != FuncSignature.size()-1)
+      FuncParams =  FuncParams + ", " + "\n";
   }
   FuncParams = FuncParams + ") ";
 
