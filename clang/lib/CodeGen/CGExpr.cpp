@@ -2881,8 +2881,10 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL)
+    if(TaintedPtrFromOffset != NULL) {
         Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+        LV.setAddress(Addr);
+    }
     EmitDynamicNonNullCheck(Addr, BaseTy);
     EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
                            nullptr);
@@ -4199,11 +4201,12 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
     BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
-    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL) {
-        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
-        BaseLV.setAddress(Addr);
-    }
+//TODO: EXPERIMENTAL. NOT SURE IF THIS NEEDS TO BE OR NOT
+    //    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+//    if(TaintedPtrFromOffset != NULL) {
+//        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+//        BaseLV.setAddress(Addr);
+//    }
     EmitDynamicNonNullCheck(Addr, BaseTy);
 
     // We only check the Base LValue, as we assume that any field is definitely
