@@ -84,6 +84,20 @@ static bool shouldEmitTaintedPtrMemoryCheck(const CodeGenModule &CGM,
   return true;
 
 }
+
+static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                            const QualType BaseTy) {
+    if(!CGM.getLangOpts().CheckedC)
+        return false;
+    //if(!CGM.getLangOpts().TaintedC)
+    //return false;
+
+    if(!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType()))
+        return false;
+
+    return true;
+
+}
 void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
                                               const QualType BaseTy) {
   if (!shouldEmitNonNullCheck(CGM, BaseTy))
@@ -96,16 +110,15 @@ void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
   EmitDynamicCheckBlocks(ConditionVal);
 }
 
-void CodeGenFunction::EmitTaintedPtrMemoryCheck(const Address BaseAddr,
+Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
                                                 const QualType BaseTy){
-  if(!shouldEmitTaintedPtrMemoryCheck(CGM, BaseTy))
-    return;
+    if(!shouldEmitTaintedPtrDerefAdaptor
+            (CGM, BaseTy))
+        return NULL;
 
-  ++NumDynamicChecksTainted;
-  Value *ConditionVal = Builder.CreateIsTaintedPtr(BaseAddr.getPointer(),
-                                                   "_Dynamic_check.tainted_pointer");
+    ++NumDynamicChecksTainted;
 
-    EmitDynamicCheckBlocks(ConditionVal);
+    return EmitDynamicTaintedPtrAdaptorBlock(BaseAddr, BaseTy);
 }
 
 void CodeGenFunction::EmitDynamicNonNullCheck(Value *Val,
@@ -402,6 +415,39 @@ void CodeGenFunction::EmitDynamicCheckBlocks(Value *Condition) {
   Builder.SetInsertPoint(DyCkSuccess);
 }
 
+Value*
+CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
+                                                   const QualType BaseTy) {
+
+    ++NumDynamicChecksTainted;
+
+    // Emits code as follows:
+    //
+    // %entry:
+    //   ... (prior code)
+    // %0 = base_addr
+    // %1 = ptrtoint base_ty* %0 to i32
+    // %conv = sext i32 %1 to i64 THis instruction can be made to be avoided
+    // %call = call i8* @c_fetch_pointer_from_offset(i64 %conv)
+    // %LHS = bitcast i8* %call to base_ty*
+
+    Value *OffsetVal =
+            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt64Ty(
+                    BaseAddr.getPointer()->getContext()));
+
+    Value* PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
+
+    /*
+     * Now bitcast the returned pointer to the actual type of the pointer for use
+     */
+    Value *ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
+                                                     "_Dynamic_check.tainted_pointer");
+
+    EmitDynamicCheckBlocks(ConditionVal);
+    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, BaseAddr.getType());
+
+    return CastedPointer;
+}
 BasicBlock *CodeGenFunction::EmitDynamicCheckFailedBlock() {
   // Save current insert point
   BasicBlock *Begin = Builder.GetInsertBlock();

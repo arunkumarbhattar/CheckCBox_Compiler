@@ -3197,8 +3197,6 @@ public:
 
   void EmitExplicitDynamicCheck(const Expr *Condition);
   void EmitDynamicNonNullCheck(const Address BaseAddr, const QualType BaseTy);
-  void EmitTaintedPtrMemoryCheck(const Address BaseAddr,
-                                 const QualType BaseTy);
   void EmitDynamicNonNullCheck(llvm::Value *Val, const QualType BaseTy);
   void EmitDynamicOverflowCheck(const Address BaseAddr, const QualType BaseTy,
                                 const Address PtrAddr);
@@ -4750,6 +4748,11 @@ private:
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
+
+    llvm::Value * EmitTaintedPtrDerefAdaptor(const Address BaseAddr, const QualType BaseTy);
+
+    llvm::Value * EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr, const QualType BaseTy);
+
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

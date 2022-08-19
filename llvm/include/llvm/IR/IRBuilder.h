@@ -2658,6 +2658,8 @@ public:
                                       Value *OffsetValue = nullptr);
   CallInst *CreateTaintedPtrMemCheck(IRBuilderBase *Builder, Value *Src);
   CallInst *CreateTaintedPtrMemCheck(Value *Src);
+
+    CallInst *CreateTaintedOffset2Ptr(Value *Offset);
 };
 
 /// This provides a uniform API for creating instructions and inserting

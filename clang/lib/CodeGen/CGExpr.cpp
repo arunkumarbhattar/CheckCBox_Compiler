@@ -2880,8 +2880,10 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL)
+        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
                            nullptr);
     // We should not generate __weak write barrier on indirect reference
@@ -3741,9 +3743,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue LHS = EmitLValue(E->getBase());
     auto *Idx = EmitIdxAfterBase(/*Promote*/false);
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
-    EmitDynamicNonNullCheck(LHS.getAddress(*this), BaseTy);
-    EmitTaintedPtrMemoryCheck(LHS.getAddress(*this), BaseTy);
-    LValue LV = LValue::MakeVectorElt(LHS.getAddress(*this), Idx,
+    EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
+    Address Addr = LHS.getAddress(*this);
+    if(TaintedPtrFromOffset != NULL) {
+        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+    }
+    EmitDynamicNonNullCheck(Addr, BaseTy);
+    LValue LV = LValue::MakeVectorElt(Addr, Idx,
       E->getBase()->getType(), LHS.getBaseInfo(), TBAAAccessInfo());
 
     EmitDynamicBoundsCheck(LV.getVectorAddress(), E->getBoundsExpr(),
@@ -3759,8 +3766,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue LV = EmitLValue(E->getBase());
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     Address Addr = EmitExtVectorElementLValue(LV);
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL) {
+        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+        LV.setAddress(Addr);
+    }
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     QualType EltType = LV.getType()->castAs<VectorType>()->getElementType();
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, EltType, /*inbounds*/ true,
                                  SignedIndices, E->getExprLoc());
@@ -3782,8 +3793,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // the VLA bounds.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL)
+      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     // The element count here is the total number of non-VLA elements.
     llvm::Value *numElements = getVLASize(vla).NumElts;
 
@@ -3813,8 +3826,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         llvm::ConstantInt::get(Idx->getType(), InterfaceSize.getQuantity());
 
     llvm::Value *ScaledIdx = Builder.CreateMul(Idx, InterfaceSizeVal);
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL)
+       Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     // We don't necessarily build correct LLVM struct types for ObjC
     // interfaces, so we can't rely on GEP to do this scaling
     // correctly, so we need to cast to i8*.  FIXME: is this actually
@@ -3852,7 +3867,6 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     /*
      * Ideally the below would make no sense because there are no tainted array types
      */
-    //EmitTaintedPtrMemoryCheck(ArrayLV.getAddress(*this), BaseTy);
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
     Addr = emitArraySubscriptGEP(
@@ -3866,8 +3880,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL)
+      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -4183,9 +4199,13 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
     BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
-
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    if(TaintedPtrFromOffset != NULL) {
+        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+        BaseLV.setAddress(Addr);
+    }
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    EmitTaintedPtrMemoryCheck(Addr, BaseTy);
+
     // We only check the Base LValue, as we assume that any field is definitely
     // within the size of the struct. This may not be the case with a "flexible
     // array member" (6.7.2.1.18), but this member is an array, so is either
@@ -4322,6 +4342,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
                                  .withCVRQualifiers(base.getVRQualifiers())
                                  .isVolatileQualified();
     Address Addr = base.getAddress(*this);
+    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, base.getType());
+    if(TaintedPtrFromOffset != NULL)
+        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     unsigned Idx = RL.getLLVMFieldNo(field);
     const RecordDecl *rec = field->getParent();
     if (!UseVolatile) {
@@ -4443,6 +4466,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       addr = emitPreserveStructAccess(*this, base, addr, field);
   }
 
+  auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
+  if(InstrumentedVal != NULL)
+        addr = Address(InstrumentedVal, addr.getAlignment());
   // If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
     LValue RefLVal =
@@ -4460,6 +4486,10 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // for both unions and structs.  A union needs a bitcast, a struct element
   // will need a bitcast if the LLVM type laid out doesn't match the desired
   // type.
+  /*
+   * Right before the element bit cast, we will call Emit the Tainted offset to pointer
+   * instrumentation
+   */
   addr = Builder.CreateElementBitCast(
       addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
 

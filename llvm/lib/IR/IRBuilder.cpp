@@ -334,8 +334,15 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
  static CallInst *CreateTaintedPtrMemCheckInternal(IRBuilderBase *Builder, Value *Src){
  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
  Value *Ops[] = {Src};
- auto Decl = Intrinsic::SandboxTaintedMemCheckFunction(M);
+ auto *Decl = Intrinsic::SandboxTaintedMemCheckFunction(M);
  return createCallHelper(Decl, Ops, Builder);
+}
+
+static CallInst *createTaintedOffset2Ptr(IRBuilderBase *Builder, Value *Offset){
+    Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+    Value *Ops[] = {Offset};
+    auto *Decl = Intrinsic::Offset2Pointer(M);
+    return createCallHelper(Decl, Ops, Builder);
 }
 
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
@@ -389,6 +396,17 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
     }
     return CreateTaintedPtrMemCheckInternal(this, Src);
 }
+
+CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
+    //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
+    if(Offset->getType() != Type::getInt64Ty(this->getContext()))
+    {
+        //cast it to void pointer
+        Offset = CreateBitCast(Offset,Type::getInt64Ty(this->getContext()));
+    }
+    return createTaintedOffset2Ptr(this, Offset);
+}
+
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
   auto ID =
       IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;
