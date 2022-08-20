@@ -4460,6 +4460,26 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       addr = Builder.CreateElementBitCast(
           addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
   } else {
+      /*
+       * Before we GEP to the field, the Tainted structure pointer (in its nasty offset form)
+       * must be instrumented by our Deref Adaptor before it can be used by GEP.
+       * This gadget instrumentation is NOT for the field, its for the structure housing the field
+       */
+      /*
+       * Step 1: You gotta create a temporary structure that is exactly similar to the actual structure
+       * (RecordDecl) except that, all its "pointer" members are of type unsigned long
+       *
+       * Step 2: do Your Tainted Struct Ptr Deref Adaptor operation on this temporary structure
+       *
+       * Step 3: insert operations that cast and assign each of the Structs Pointer fields
+       * from temporary pointer to final pointer.
+       *
+       * Step 4: delete the final pointer
+       */
+   auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr,
+        field->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
+    if(InstrumentedVal != NULL)
+        addr = Address(InstrumentedVal, addr.getAlignment());
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
       // For structs, we GEP to the field that the record layout suggests.
@@ -4469,9 +4489,14 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       addr = emitPreserveStructAccess(*this, base, addr, field);
   }
 
-  auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
-  if(InstrumentedVal != NULL)
-        addr = Address(InstrumentedVal, addr.getAlignment());
+ /*
+  * The reason why I remove this --> If there is just a simple pointer asssignment and there is NO dereference
+  * involved, then I dont want to add all the instrumentation in between pointer assignments. Makes no sense.
+  *
+  */
+//  auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
+//  if(InstrumentedVal != NULL)
+//        addr = Address(InstrumentedVal, addr.getAlignment());
   // If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
     LValue RefLVal =

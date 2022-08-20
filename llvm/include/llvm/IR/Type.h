@@ -75,7 +75,8 @@ public:
     StructTyID,        ///< Structures
     ArrayTyID,         ///< Arrays
     FixedVectorTyID,   ///< Fixed width SIMD vector type
-    ScalableVectorTyID ///< Scalable SIMD vector type
+    ScalableVectorTyID, ///< Scalable SIMD vector type
+    TaintedPointerTyID ///< Pointer But 4 Bytes wide.
   };
 
 private:
