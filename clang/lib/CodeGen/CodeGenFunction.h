@@ -641,6 +641,8 @@ public:
   };
   FPOptions CurFPFeatures;
 
+    llvm::Value * EmitTaintedPtrDerefAdaptor(const Address BaseAddr, const QualType BaseTy);
+
 public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
   /// rethrows.
@@ -4748,8 +4750,6 @@ private:
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
-
-    llvm::Value * EmitTaintedPtrDerefAdaptor(const Address BaseAddr, const QualType BaseTy);
 
     llvm::Value * EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr, const QualType BaseTy);
 
