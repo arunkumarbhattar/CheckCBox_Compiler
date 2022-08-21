@@ -230,6 +230,10 @@ public:
   StructType(const StructType &) = delete;
   StructType &operator=(const StructType &) = delete;
 
+  /*
+   * This is to indicate if the current Tstruct is Decoyed or not
+   *
+   */
   /// This creates an identified struct.
   static StructType *create(LLVMContext &Context, StringRef Name);
   static StructType *create(LLVMContext &Context);
@@ -266,10 +270,6 @@ public:
     SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return llvm::StructType::get(Ctx, StructFields);
   }
-
-  /// Return the type with the specified name, or null if there is none by that
-  /// name.
-  static StructType *getTypeByName(LLVMContext &C, StringRef Name);
 
   bool isPacked() const { return (getSubclassData() & SCDB_Packed) != 0; }
 
@@ -341,10 +341,18 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeID() == StructTyID;
   }
+  /// Return the type with the specified name, or null if there is none by that
+  /// name.
+  StructType *getTypeByName(LLVMContext &C, StringRef Name);
 };
 
 StringRef Type::getStructName() const {
   return cast<StructType>(this)->getName();
+}
+
+Type* Type::GetTypeByName(LLVMContext &C, StringRef Name)
+{
+  cast<Type>(cast<StructType>(this)->getTypeByName(C, Name));
 }
 
 unsigned Type::getStructNumElements() const {

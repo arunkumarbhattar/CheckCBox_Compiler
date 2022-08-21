@@ -39,6 +39,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <sstream>
 using namespace clang;
 using namespace CodeGen;
 
@@ -4473,6 +4474,32 @@ public:
 
 } // namespace
 
+llvm::Type* CodeGenFunction::ChangeStructName(llvm::Type* StructType)
+{
+  std::string ModifiedName = "";
+  if(StructType->isPointerTy())
+  {
+    std::string StructName = StructType->
+                             getPointerElementType()->getStructName().str();
+    auto start = StructName.find('.');
+    std::string actualName = StructName.substr(start+1);
+    actualName = "Spl_"+ actualName;
+    ModifiedName = std::string("Tstruct." + actualName);
+  }
+  else
+  {
+    std::string StructName = StructType->
+                             getStructName().str();
+    auto start = StructName.find('.');
+    std::string actualName = StructName.substr(start+1);
+    actualName = "Spl_"+ actualName;
+    ModifiedName = std::string("Tstruct." + actualName);
+  }
+  if(!ModifiedName.empty())
+    return StructType->GetTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
+  else
+    return NULL;
+}
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -4489,6 +4516,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   const ABIArgInfo &RetAI = CallInfo.getReturnInfo();
 
   llvm::FunctionType *IRFuncTy = getTypes().GetFunctionType(CallInfo);
+
+  llvm::Type* DecoyType = NULL;
+  if (RetTy->isTaintedStructureType() || (RetTy->isTaintedPointerType() &&
+                                          RetTy->getPointeeType()->isTaintedStructureType()))
+    DecoyType = ChangeStructName(IRFuncTy->getReturnType());
+  /*
+   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.SplName
+   */
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {

@@ -432,7 +432,7 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
     // %LHS = bitcast i8* %call to base_ty*
 
     Value *OffsetVal =
-            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt64Ty(
+            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt32Ty(
                     BaseAddr.getPointer()->getContext()));
 
     Value* PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
@@ -444,7 +444,13 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
                                                      "_Dynamic_check.tainted_pointer");
 
     EmitDynamicCheckBlocks(ConditionVal);
-    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, BaseAddr.getType());
+
+    llvm::Type * BitCastType = BaseAddr.getType();
+    if (BaseTy->isTaintedStructureType() || (BaseTy->isTaintedPointerType() &&
+                     BaseTy->getPointeeType()->isTaintedStructureType()))
+      BitCastType = ChangeStructName(BaseAddr.getType());
+
+    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, BitCastType);
 
     return CastedPointer;
 }

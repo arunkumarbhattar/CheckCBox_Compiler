@@ -75,9 +75,9 @@ public:
     StructTyID,        ///< Structures
     ArrayTyID,         ///< Arrays
     FixedVectorTyID,   ///< Fixed width SIMD vector type
-    ScalableVectorTyID, ///< Scalable SIMD vector type
-    TaintedPointerTyID ///< Pointer But 4 Bytes wide.
+    ScalableVectorTyID ///< Scalable SIMD vector type
   };
+  llvm::Type *GetTypeByName(LLVMContext &C, StringRef Name);
 
 private:
   /// This refers to the LLVMContext in which this type was uniqued.

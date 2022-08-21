@@ -399,10 +399,10 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
 
 CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
     //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
-    if(Offset->getType() != Type::getInt64Ty(this->getContext()))
+    if(Offset->getType() != Type::getInt32Ty(this->getContext()))
     {
-        //cast it to void pointer
-        Offset = CreateBitCast(Offset,Type::getInt64Ty(this->getContext()));
+        //cast it to uint32 pointer
+        Offset = CreateBitCast(Offset,Type::getInt32Ty(this->getContext()));
     }
     return createTaintedOffset2Ptr(this, Offset);
 }
