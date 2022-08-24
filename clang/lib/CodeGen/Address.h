@@ -67,6 +67,9 @@ public:
     assert(isValid());
     return Alignment;
   }
+  void setAlignment(int Val) {
+      Alignment.SetQuantity(Val);
+  }
 };
 
 /// A specialization of Address that requires the address to be an

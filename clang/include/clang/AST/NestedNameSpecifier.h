@@ -21,6 +21,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Compiler.h"
+#include <clang/Basic/SourceLocation.h>
 #include <cstdint>
 #include <cstdlib>
 #include <utility>

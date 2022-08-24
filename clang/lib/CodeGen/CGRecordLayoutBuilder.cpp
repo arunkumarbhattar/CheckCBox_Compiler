@@ -370,18 +370,59 @@ void CGRecordLowering::lowerUnion() {
 }
 
 void CGRecordLowering::accumulateFields() {
+    std::stack<CharUnits> ASTOffsetsForStruct;
+    std::stack<CharUnits> LLVMOffsetsForStruct;
   for (RecordDecl::field_iterator Field = D->field_begin(),
+               Prev =  D->field_begin(),
                                   FieldEnd = D->field_end();
     Field != FieldEnd;) {
+      /*
+       * For field offsets, we accept Field offsets (as they are based on 8 byte tainted pointers)
+       * So we have to create a temporary structure that will hold the offset computed so far
+       */
     if (Field->isBitField()) {
       RecordDecl::field_iterator Start = Field;
       // Iterate to gather the list of bitfields.
       for (++Field; Field != FieldEnd && Field->isBitField(); ++Field);
       accumulateBitFields(Start, Field);
     } else if (!Field->isZeroSize(Context)) {
-      Members.push_back(MemberInfo(
-          bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
-          getStorageType(*Field), *Field));
+        /*
+         * Now to compute the LLVM offset
+         * Current LLVM offset would be -->
+         * if Current field is a tainted field --> CurrentOffsetGrowth = (CurrentAstOffset - PreviousAstOffset)/2
+         * CurrentLLVMOffset = PreviousLLVMOffset + CurrentOffsetGrowth
+         *
+         * if Current Field is NOT tainted field --> CurrentOffsetGrowth = (CurrentAstOffset - PreviousAstOffset)
+         * CurrentLLVMOffset = PreviousLLVMOffset + CurrentOffsetGrowth
+         */
+//        CharUnits CurrASTCharUnits = bitsToCharUnits(getFieldBitOffset(*Field));
+//        CharUnits CurrLLVMCharUnits = CurrASTCharUnits;
+//        long CurrLLVMCharUnitsOffset = CurrASTCharUnits.getQuantity();
+//        if(!ASTOffsetsForStruct.empty()) {
+//            CharUnits PrevASTCharUnitsOffset = ASTOffsetsForStruct.top();
+//            long CurrentOffsetGrowth = CurrASTCharUnits.getQuantity() - PrevASTCharUnitsOffset.getQuantity();
+//            /*
+//             * if current field is tainted pointer, growth must be halved
+//             */
+//
+//            if (Field->getType()->isTaintedPointerType())
+//                CurrentOffsetGrowth = CurrentOffsetGrowth;
+//
+//            CharUnits PrevLLVMCharUnitsOffset = LLVMOffsetsForStruct.top();
+//            CurrLLVMCharUnitsOffset = PrevLLVMCharUnitsOffset.getQuantity() + CurrentOffsetGrowth;
+//        }
+//        else{
+//            if(Field->getType()->isTaintedPointerType())
+//                CurrLLVMCharUnits.SetQuantity(CurrASTCharUnits.getQuantity());
+//        }
+//        CurrLLVMCharUnits.SetQuantity(CurrLLVMCharUnitsOffset);
+//        ASTOffsetsForStruct.push(CurrASTCharUnits);
+//        LLVMOffsetsForStruct.push(CurrLLVMCharUnits);
+        auto StorageType = getStorageType(*Field);
+          Members.push_back(MemberInfo(
+            bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
+          StorageType, *Field));
+          Prev = Field;
       ++Field;
     } else {
       ++Field;
@@ -957,11 +998,17 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
       continue;
 
     // For non-bit-fields, just check that the LLVM struct offset matches the
+    /*
+     * for the case of Tainted Structs, this assert is to be disregarded as
+     * LLVM struct offset may differ from AST struct offset
+     */
     // AST offset.
     if (!FD->isBitField()) {
       unsigned FieldNo = RL->getLLVMFieldNo(FD);
-      assert(AST_RL.getFieldOffset(i) == SL->getElementOffsetInBits(FieldNo) &&
-             "Invalid field offset!");
+      if (!D->isTaintedStruct()) {
+          assert(AST_RL.getFieldOffset(i) == SL->getElementOffsetInBits(FieldNo) &&
+                 "Invalid field offset!");
+      }
       continue;
     }
 

@@ -1268,7 +1268,7 @@ Function* Intrinsic::SandboxTaintedMemCheckFunction(Module *M){
 
 Function* Intrinsic::Offset2Pointer(Module *M){
     Type* RetVOIDPtr = const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
-    Type *I32Ty = Type::getInt64Ty(M->getContext());
+    Type *I32Ty = Type::getInt32Ty(M->getContext());
     return cast<Function>(M->getOrInsertFunction("c_fetch_pointer_from_offset",
                                                  RetVOIDPtr, I32Ty).getCallee());
 }

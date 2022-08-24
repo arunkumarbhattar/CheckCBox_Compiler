@@ -667,6 +667,9 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::LabelTyID:
     return TypeSize::Fixed(getPointerSizeInBits(0));
   case Type::PointerTyID:
+    if(Ty->isTaintedPointerTy())
+      return  TypeSize::Fixed(32);
+    else
     return TypeSize::Fixed(getPointerSizeInBits(Ty->getPointerAddressSpace()));
   case Type::ArrayTyID: {
     ArrayType *ATy = cast<ArrayType>(Ty);

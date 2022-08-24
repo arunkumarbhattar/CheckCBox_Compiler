@@ -922,7 +922,9 @@ void ModuleBitcodeWriter::writeTypeTable() {
       Code = bitc::TYPE_CODE_INTEGER;
       TypeVals.push_back(cast<IntegerType>(T)->getBitWidth());
       break;
-    case Type::PointerTyID: {
+    case Type::PointerTyID:
+    case Type::TaintedPointerTyID:
+    {
       PointerType *PTy = cast<PointerType>(T);
       // POINTER: [pointee type, address space]
       Code = bitc::TYPE_CODE_POINTER;

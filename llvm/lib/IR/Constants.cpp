@@ -371,6 +371,7 @@ Constant *Constant::getNullValue(Type *Ty) {
                            APFloat(APFloat::PPCDoubleDouble(),
                                    APInt::getNullValue(128)));
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::StructTyID:
   case Type::ArrayTyID:

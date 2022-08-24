@@ -2195,6 +2195,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     AS = getTargetAddressSpace(cast<PointerType>(T)->getPointeeType());
     Width = Target->getPointerWidth(AS);
     Align = Target->getPointerAlign(AS);
+    if (T->getCanonicalTypeInternal()->isTaintedPointerType())
+    {
+      Width = 32;
+      Align = 32;
+    }
     break;
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);

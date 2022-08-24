@@ -84,7 +84,9 @@ static char getTypeID(Type *Ty) {
     }
   case Type::FloatTyID:   return 'F';
   case Type::DoubleTyID:  return 'D';
-  case Type::PointerTyID: return 'P';
+  case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
+      return 'P';
   case Type::FunctionTyID:return 'M';
   case Type::StructTyID:  return 'T';
   case Type::ArrayTyID:   return 'A';
@@ -132,7 +134,9 @@ static ffi_type *ffiTypeFor(Type *Ty) {
       }
     case Type::FloatTyID:   return &ffi_type_float;
     case Type::DoubleTyID:  return &ffi_type_double;
-    case Type::PointerTyID: return &ffi_type_pointer;
+    case Type::PointerTyID:
+    case Type::TaintedPointerTyID:
+        return &ffi_type_pointer;
     default: break;
   }
   // TODO: Support other types such as StructTyID, ArrayTyID, OpaqueTyID, etc.
@@ -176,7 +180,8 @@ static void *ffiValueFor(Type *Ty, const GenericValue &AV,
       *DoublePtr = AV.DoubleVal;
       return ArgDataPtr;
     }
-    case Type::PointerTyID: {
+    case Type::PointerTyID:
+    case Type::TaintedPointerTyID:{
       void **PtrPtr = (void **) ArgDataPtr;
       *PtrPtr = GVTOP(AV);
       return ArgDataPtr;
@@ -244,7 +249,9 @@ static bool ffiInvoke(RawFunc Fn, Function *F, ArrayRef<GenericValue> ArgVals,
         break;
       case Type::FloatTyID:   Result.FloatVal   = *(float *) ret.data(); break;
       case Type::DoubleTyID:  Result.DoubleVal  = *(double*) ret.data(); break;
-      case Type::PointerTyID: Result.PointerVal = *(void **) ret.data(); break;
+      case Type::PointerTyID:
+      case Type::TaintedPointerTyID:
+          Result.PointerVal = *(void **) ret.data(); break;
       default: break;
     }
     return true;

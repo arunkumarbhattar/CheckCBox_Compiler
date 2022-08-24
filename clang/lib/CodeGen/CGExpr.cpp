@@ -97,7 +97,6 @@ Address CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
         *this, V, getASTAllocaAddressSpace(), LangAS::Default,
         Ty->getPointerTo(DestAddrSpace), /*non-null*/ true);
   }
-
   return Address(V, Align);
 }
 
@@ -139,17 +138,24 @@ void CodeGenFunction::InitTempAlloca(Address Var, llvm::Value *Init) {
 
 Address CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
+  if(Ty->isTaintedPointerType())
+      Align.SetAlign(4);
   return CreateTempAlloca(ConvertType(Ty), Align, Name);
 }
 
 Address CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
                                        Address *Alloca) {
   // FIXME: Should we prefer the preferred type alignment here?
-  return CreateMemTemp(Ty, getContext().getTypeAlignInChars(Ty), Name, Alloca);
+ CharUnits Align = getContext().getTypeAlignInChars(Ty);
+ if(Ty->isTaintedPointerType())
+        Align.SetAlign(4);
+  return CreateMemTemp(Ty, Align, Name, Alloca);
 }
 
 Address CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                        const Twine &Name, Address *Alloca) {
+  if(Ty->isTaintedPointerType())
+        Align.SetAlign(4);
   Address Result = CreateTempAlloca(ConvertTypeForMem(Ty), Align, Name,
                                     /*ArraySize=*/nullptr, Alloca);
 
@@ -167,6 +173,8 @@ Address CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
 
 Address CodeGenFunction::CreateMemTempWithoutCast(QualType Ty, CharUnits Align,
                                                   const Twine &Name) {
+    if(Ty->isTaintedPointerType())
+        Align.SetAlign(4);
   return CreateTempAllocaWithoutCast(ConvertTypeForMem(Ty), Align, Name);
 }
 
@@ -1173,7 +1181,9 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
   // Otherwise, use the alignment of the type.
   CharUnits Align =
       CGM.getNaturalPointeeTypeAlignment(E->getType(), BaseInfo, TBAAInfo);
-  return Address(EmitScalarExpr(E), Align);
+
+    auto Addr_ret = Address(EmitScalarExpr(E), Align);
+    return Addr_ret;
 }
 
 llvm::Value *CodeGenFunction::EmitNonNullRValueCheck(RValue RV, QualType T) {
@@ -4345,6 +4355,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
                                  .withCVRQualifiers(base.getVRQualifiers())
                                  .isVolatileQualified();
     Address Addr = base.getAddress(*this);
+    if(base.getType()->isTaintedPointerType())
+       Addr.setAlignment(4);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, base.getType());
     if(TaintedPtrFromOffset != NULL)
         Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
@@ -4423,6 +4435,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   }
 
   Address addr = base.getAddress(*this);
+  if(field->getType()->isTaintedPointerType())
+      addr.setAlignment(4);
   if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         ClassDef->isDynamicClass()) {

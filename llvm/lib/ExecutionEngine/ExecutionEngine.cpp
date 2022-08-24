@@ -764,6 +764,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
           GV.IntVal = APInt::doubleToBits(GV.DoubleVal);
           break;
         case Type::PointerTyID:
+        case Type::TaintedPointerTyID:
           assert(DestTy->isPointerTy() && "Invalid bitcast");
           break; // getConstantValue(Op0)  above already converted it
       }
@@ -896,6 +897,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     Result.IntVal = cast<ConstantInt>(C)->getValue();
     break;
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     while (auto *A = dyn_cast<GlobalAlias>(C)) {
       C = A->getAliasee();
     }
@@ -1036,6 +1038,7 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
     memcpy(Ptr, Val.IntVal.getRawData(), 10);
     break;
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     // Ensure 64 bit target pointers are fully initialized on 32 bit hosts.
     if (StoreBytes != sizeof(PointerTy))
       memset(&(Ptr->PointerVal), 0, StoreBytes);
@@ -1083,6 +1086,7 @@ void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
     Result.DoubleVal = *((double*)Ptr);
     break;
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     Result.PointerVal = *((PointerTy*)Ptr);
     break;
   case Type::X86_FP80TyID: {

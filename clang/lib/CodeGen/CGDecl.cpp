@@ -266,7 +266,10 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
-  GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
+   auto DeclAlignment = getContext().getDeclAlign(&D);
+   if(D.getType()->isTaintedPointerType())
+       DeclAlignment.SetAlign(4);
+  GV->setAlignment(DeclAlignment.getAsAlign());
 
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -317,7 +320,6 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     CGOpenMPRuntime::DisableAutoDeclareTargetRAII NoDeclTarget(*this);
     (void)GetAddrOfGlobal(GD);
   }
-
   return Addr;
 }
 
@@ -397,6 +399,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // bodies, e.g. with complete and base constructors.
   llvm::Constant *addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
   CharUnits alignment = getContext().getDeclAlign(&D);
+  if (D.getType()->isTaintedPointerType())
+      alignment.SetAlign(4);
 
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
@@ -1131,6 +1135,9 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
         getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
         Constant, Name, InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
     GV->setAlignment(Align.getAsAlign());
+    Align.SetQuantity(4);
+    if(D.getType()->isTaintedPointerType())
+        GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
   } else if (CacheEntry->getAlignment() < Align.getQuantity()) {
@@ -1145,6 +1152,8 @@ static Address createUnnamedGlobalForMemcpyFrom(CodeGenModule &CGM,
                                                 CGBuilderTy &Builder,
                                                 llvm::Constant *Constant,
                                                 CharUnits Align) {
+    if(D.getType()->isTaintedPointerType())
+        Align.SetAlign(4);
   Address SrcPtr = CGM.createUnnamedGlobalFrom(D, Constant, Align);
   llvm::Type *BP = llvm::PointerType::getInt8PtrTy(CGM.getLLVMContext(),
                                                    SrcPtr.getAddressSpace());
@@ -1414,7 +1423,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   emission.IsEscapingByRef = isEscapingByRef;
 
   CharUnits alignment = getContext().getDeclAlign(&D);
-
+  if(D.getType()->isTaintedPointerType())
+      alignment.SetAlign(4);
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
@@ -1504,6 +1514,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     } else {
       CharUnits allocaAlignment;
+      if (D.getType()->isTaintedPointerType())
+          allocaAlignment.SetAlign(4);
       llvm::Type *allocaTy;
       if (isEscapingByRef) {
         auto &byrefInfo = getBlockByrefInfo(&D);
@@ -1520,6 +1532,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       address = CreateTempAlloca(allocaTy, allocaAlignment, D.getName(),
                                  /*ArraySize=*/nullptr, &AllocaAddr);
 
+      if(allocaTy->isTaintedPointerTy())
+          address.setAlignment(4);
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
       // the catch parameter starts in the catchpad instruction, and we can't
       // insert code in those basic blocks.
@@ -2490,15 +2504,19 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
       DeclPtr = OpenMPLocalAddr;
     } else {
+        auto alignment = getContext().getDeclAlign(&D);
+        if(Ty->isTaintedPointerType())
+            alignment.SetAlign(4);
       // Otherwise, create a temporary to hold the value.
-      DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
+      DeclPtr = CreateMemTemp(Ty, alignment,
                               D.getName() + ".addr");
     }
     DoStore = true;
   }
 
   llvm::Value *ArgVal = (DoStore ? Arg.getDirectValue() : nullptr);
-
+  if(Ty->isTaintedPointerType())
+      DeclPtr.setAlignment(4);
   LValue lv = MakeAddrLValue(DeclPtr, Ty);
   if (IsScalar) {
     Qualifiers qs = Ty.getQualifiers();

@@ -4906,7 +4906,9 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   SmallVector<Decl *, 32> FieldDecls(TagDecl->field_begin(),
                                      TagDecl->field_end());
-
+/*
+ * Alignment of fields inside a Tstruct are aligned different for Tainted Pointers
+ */
   Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
                       T.getOpenLocation(), T.getCloseLocation(),
                       attrs, TagDecl->isTaintedStruct());

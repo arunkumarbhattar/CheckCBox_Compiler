@@ -63,7 +63,9 @@ namespace clang {
       static CharUnits fromQuantity(QuantityType Quantity) {
         return CharUnits(Quantity);
       }
-
+      void SetQuantity(int Val){
+          Quantity = Val;
+      }
       // Compound assignment.
       CharUnits& operator+= (const CharUnits &Other) {
         Quantity += Other.Quantity;
@@ -182,6 +184,7 @@ namespace clang {
       /// Beware llvm::Align assumes power of two 8-bit bytes.
       llvm::Align getAsAlign() const { return llvm::Align(Quantity); }
 
+      void SetAlign(int Val) { Quantity = Val; }
       /// alignTo - Returns the next integer (mod 2**64) that is
       /// greater than or equal to this quantity and is a multiple of \p Align.
       /// Align must be non-zero.

@@ -184,7 +184,8 @@ static void executeFRemInst(GenericValue &Dest, GenericValue Src1,
 // running on a 32-bit target, otherwise the upper 32 bits might mess up
 // comparisons if they contain garbage.
 #define IMPLEMENT_POINTER_ICMP(OP) \
-   case Type::PointerTyID: \
+   case Type::PointerTyID:         \
+   case Type::TaintedPointerTyID:\
       Dest.IntVal = APInt(1,(void*)(intptr_t)Src1.PointerVal OP \
                             (void*)(intptr_t)Src2.PointerVal); \
       break;
@@ -1959,6 +1960,7 @@ void Interpreter::visitExtractValueInst(ExtractValueInst &I) {
       Dest.AggregateVal = pSrc->AggregateVal;
     break;
     case Type::PointerTyID:
+    case Type::TaintedPointerTyID:
       Dest.PointerVal = pSrc->PointerVal;
     break;
   }
@@ -2007,6 +2009,7 @@ void Interpreter::visitInsertValueInst(InsertValueInst &I) {
       pDest->AggregateVal = Src2.AggregateVal;
     break;
     case Type::PointerTyID:
+    case Type::TaintedPointerTyID:
       pDest->PointerVal = Src2.PointerVal;
     break;
   }

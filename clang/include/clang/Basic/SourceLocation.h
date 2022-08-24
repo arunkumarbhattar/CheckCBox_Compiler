@@ -374,9 +374,9 @@ public:
       : SourceLocation(Loc), SrcMgr(&SM) {}
 
   bool hasManager() const {
-      bool hasSrcMgr =  SrcMgr != nullptr;
-      assert(hasSrcMgr == isValid() && "FullSourceLoc has location but no manager");
-      return hasSrcMgr;
+    bool hasSrcMgr =  SrcMgr != nullptr;
+    assert(hasSrcMgr == isValid() && "FullSourceLoc has location but no manager");
+    return hasSrcMgr;
   }
 
   /// \pre This FullSourceLoc has an associated SourceManager.
@@ -450,7 +450,7 @@ public:
   friend bool
   operator==(const FullSourceLoc &LHS, const FullSourceLoc &RHS) {
     return LHS.getRawEncoding() == RHS.getRawEncoding() &&
-          LHS.SrcMgr == RHS.SrcMgr;
+           LHS.SrcMgr == RHS.SrcMgr;
   }
 
   friend bool
@@ -463,66 +463,66 @@ public:
 
 namespace llvm {
 
-  /// Define DenseMapInfo so that FileID's can be used as keys in DenseMap and
-  /// DenseSets.
-  template <>
-  struct DenseMapInfo<clang::FileID> {
-    static clang::FileID getEmptyKey() {
-      return {};
-    }
+/// Define DenseMapInfo so that FileID's can be used as keys in DenseMap and
+/// DenseSets.
+template <>
+struct DenseMapInfo<clang::FileID> {
+  static clang::FileID getEmptyKey() {
+    return {};
+  }
 
-    static clang::FileID getTombstoneKey() {
-      return clang::FileID::getSentinel();
-    }
+  static clang::FileID getTombstoneKey() {
+    return clang::FileID::getSentinel();
+  }
 
-    static unsigned getHashValue(clang::FileID S) {
-      return S.getHashValue();
-    }
+  static unsigned getHashValue(clang::FileID S) {
+    return S.getHashValue();
+  }
 
-    static bool isEqual(clang::FileID LHS, clang::FileID RHS) {
-      return LHS == RHS;
-    }
-  };
+  static bool isEqual(clang::FileID LHS, clang::FileID RHS) {
+    return LHS == RHS;
+  }
+};
 
-  /// Define DenseMapInfo so that SourceLocation's can be used as keys in
-  /// DenseMap and DenseSet. This trait class is eqivalent to
-  /// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
-  template <> struct DenseMapInfo<clang::SourceLocation> {
-    static clang::SourceLocation getEmptyKey() {
-      return clang::SourceLocation::getFromRawEncoding(~0U);
-    }
+/// Define DenseMapInfo so that SourceLocation's can be used as keys in
+/// DenseMap and DenseSet. This trait class is eqivalent to
+/// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
+template <> struct DenseMapInfo<clang::SourceLocation> {
+  static clang::SourceLocation getEmptyKey() {
+    return clang::SourceLocation::getFromRawEncoding(~0U);
+  }
 
-    static clang::SourceLocation getTombstoneKey() {
-      return clang::SourceLocation::getFromRawEncoding(~0U - 1);
-    }
+  static clang::SourceLocation getTombstoneKey() {
+    return clang::SourceLocation::getFromRawEncoding(~0U - 1);
+  }
 
-    static unsigned getHashValue(clang::SourceLocation Loc) {
-      return Loc.getHashValue();
-    }
+  static unsigned getHashValue(clang::SourceLocation Loc) {
+    return Loc.getHashValue();
+  }
 
-    static bool isEqual(clang::SourceLocation LHS, clang::SourceLocation RHS) {
-      return LHS == RHS;
-    }
-  };
+  static bool isEqual(clang::SourceLocation LHS, clang::SourceLocation RHS) {
+    return LHS == RHS;
+  }
+};
 
-  // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
-  template <> struct FoldingSetTrait<clang::SourceLocation> {
-    static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
-  };
+// Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
+template <> struct FoldingSetTrait<clang::SourceLocation> {
+  static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
+};
 
-  // Teach SmallPtrSet how to handle SourceLocation.
-  template<>
-  struct PointerLikeTypeTraits<clang::SourceLocation> {
-    static constexpr int NumLowBitsAvailable = 0;
+// Teach SmallPtrSet how to handle SourceLocation.
+template<>
+struct PointerLikeTypeTraits<clang::SourceLocation> {
+  static constexpr int NumLowBitsAvailable = 0;
 
-    static void *getAsVoidPointer(clang::SourceLocation L) {
-      return L.getPtrEncoding();
-    }
+  static void *getAsVoidPointer(clang::SourceLocation L) {
+    return L.getPtrEncoding();
+  }
 
-    static clang::SourceLocation getFromVoidPointer(void *P) {
-      return clang::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
-    }
-  };
+  static clang::SourceLocation getFromVoidPointer(void *P) {
+    return clang::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
+  }
+};
 
 } // namespace llvm
 

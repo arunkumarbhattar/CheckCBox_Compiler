@@ -82,6 +82,7 @@ public:
 private:
   /// This refers to the LLVMContext in which this type was uniqued.
   LLVMContext &Context;
+  bool isTaintedStruct = false;
 
   TypeID   ID : 8;            // The current base type of this type.
   unsigned SubclassData : 24; // Space for subclasses to store data.
@@ -227,8 +228,11 @@ public:
   bool isArrayTy() const { return getTypeID() == ArrayTyID; }
 
   /// True if this is an instance of PointerType.
-  bool isPointerTy() const { return getTypeID() == PointerTyID; }
+  bool isPointerTy() const { return (getTypeID() == PointerTyID
+  || getTypeID() == TaintedPointerTyID); }
 
+  bool isTaintedPointerTy() const { return isTaintedStruct;}
+  bool setTaintedPointerTy(bool val) {isTaintedStruct = val;}
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
@@ -274,6 +278,7 @@ public:
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
         getTypeID() == PointerTyID || getTypeID() == X86_MMXTyID ||
+        getTypeID() == TaintedPointerTyID ||
         getTypeID() == X86_AMXTyID)
       return true;
     // If it is not something that can have a size (e.g. a function or label),
@@ -373,7 +378,7 @@ public:
   }
 
   Type *getPointerElementType() const {
-    assert(getTypeID() == PointerTyID);
+    assert((getTypeID() == PointerTyID) || (getTypeID() == TaintedPointerTyID));
     return ContainedTys[0];
   }
 
@@ -394,7 +399,7 @@ public:
   //
 
   /// Return a type based on an identifier.
-  static Type *getPrimitiveType(LLVMContext &C, TypeID IDNumber);
+  Type *getPrimitiveType(LLVMContext &C, TypeID IDNumber);
 
   //===--------------------------------------------------------------------===//
   // These are the builtin types that are always available.
@@ -483,6 +488,8 @@ private:
   /// of the type are sized as well. Since asking for their size is relatively
   /// uncommon, move this operation out-of-line.
   bool isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited = nullptr) const;
+
+    Type *getTaintedPointerTy(LLVMContext &C);
 };
 
 // Printing of types.
@@ -494,7 +501,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Type &T) {
 // allow isa<PointerType>(x) to work without DerivedTypes.h included.
 template <> struct isa_impl<PointerType, Type> {
   static inline bool doit(const Type &Ty) {
-    return Ty.getTypeID() == Type::PointerTyID;
+    return (Ty.getTypeID() == Type::PointerTyID
+    || Ty.getTypeID() == Type::TaintedPointerTyID);
   }
 };
 
