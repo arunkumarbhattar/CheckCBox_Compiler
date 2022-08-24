@@ -649,7 +649,8 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
       OS << "%\"type " << STy << '\"';
     return;
   }
-  case Type::PointerTyID: {
+  case Type::PointerTyID:
+  case Type::TaintedPointerTyID:  {
     PointerType *PTy = cast<PointerType>(Ty);
     print(PTy->getElementType(), OS);
     if (unsigned AddressSpace = PTy->getAddressSpace())

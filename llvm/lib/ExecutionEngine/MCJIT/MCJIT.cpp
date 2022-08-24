@@ -603,6 +603,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
     case Type::PPC_FP128TyID:
       llvm_unreachable("long double not supported yet");
     case Type::PointerTyID:
+    case Type::TaintedPointerTyID:
       return PTOGV(((void*(*)())(intptr_t)FPtr)());
     }
   }

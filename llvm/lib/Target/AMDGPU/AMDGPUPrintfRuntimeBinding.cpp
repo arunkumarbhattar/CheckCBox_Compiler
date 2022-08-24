@@ -422,7 +422,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           }
           Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
           WhatToStore.push_back(Arg);
-        } else if (ArgType->getTypeID() == Type::PointerTyID) {
+        } else if ((ArgType->getTypeID() == Type::PointerTyID)
+      || (ArgType->getTypeID() == Type::TaintedPointerTyID)){
           if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
             const char *S = NonLiteralStr;
             if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {

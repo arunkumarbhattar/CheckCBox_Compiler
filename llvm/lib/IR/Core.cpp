@@ -506,6 +506,7 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
   case Type::ArrayTyID:
     return LLVMArrayTypeKind;
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     return LLVMPointerTypeKind;
   case Type::FixedVectorTyID:
     return LLVMVectorTypeKind;
@@ -517,7 +518,6 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTokenTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
-
   }
   llvm_unreachable("Unhandled TypeID.");
 }

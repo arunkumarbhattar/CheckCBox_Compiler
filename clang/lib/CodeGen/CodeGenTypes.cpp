@@ -96,7 +96,8 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
   }
 
   llvm::Type *R = ConvertType(T);
-
+  if(T->isTaintedPointerType())
+      R->setTaintedPointerTy(true);
   // If this is a bool type, or an ExtIntType in a bitfield representation,
   // map this integer to the target-specified size.
   if ((ForBitField && T->isExtIntType()) ||
@@ -646,8 +647,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     unsigned AS = PointeeType->isFunctionTy()
                       ? getDataLayout().getProgramAddressSpace()
                       : Context.getTargetAddressSpace(ETy);
-
     ResultType = llvm::PointerType::get(PointeeType, AS);
+    if(PTy->isTaintedPointerType())
+       ResultType->setTaintedPointerTy(true);
     break;
   }
   case Type::TypeVariable: {
@@ -832,6 +834,12 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   }
   llvm::StructType *Ty = Entry;
 
+  /*
+   * If this Struct is a tainted pointer type -> Mark it so -->
+   *
+   */
+  if(RD->getTypeForDecl()->isTaintedStructureType())
+      Ty->setTaintedPointerTy(true);
   // If this is still a forward declaration, or the LLVM type is already
   // complete, there's nothing more to do.
   RD = RD->getDefinition();

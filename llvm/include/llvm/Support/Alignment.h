@@ -84,6 +84,7 @@ public:
   /// Needed to interact with C for instance.
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
 
+  void SetShiftVal(uint32_t val) { ShiftValue = val;}
   /// Returns a default constructed Align which corresponds to no alignment.
   /// It was decided to deprecate Align::None because it's too close to
   /// llvm::None which can be used to initialize `MaybeAlign`.

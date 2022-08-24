@@ -432,7 +432,7 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
     // %LHS = bitcast i8* %call to base_ty*
 
     Value *OffsetVal =
-            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt64Ty(
+            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt32Ty(
                     BaseAddr.getPointer()->getContext()));
 
     Value* PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);

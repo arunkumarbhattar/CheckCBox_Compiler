@@ -303,6 +303,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
     return *Entry = FixedVectorType::get(
                ElementTypes[0], cast<FixedVectorType>(Ty)->getNumElements());
   case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
     return *Entry = PointerType::get(ElementTypes[0],
                                      cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:

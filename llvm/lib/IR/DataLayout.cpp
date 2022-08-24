@@ -743,10 +743,15 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   // Early escape for the non-numeric types.
   case Type::LabelTyID:
     return abi_or_pref ? getPointerABIAlignment(0) : getPointerPrefAlignment(0);
-  case Type::PointerTyID: {
+  case Type::TaintedPointerTyID:
+  case Type::PointerTyID:
+  {
     unsigned AS = cast<PointerType>(Ty)->getAddressSpace();
-    return abi_or_pref ? getPointerABIAlignment(AS)
+    auto retAlign = abi_or_pref ? getPointerABIAlignment(AS)
                        : getPointerPrefAlignment(AS);
+    if(Ty->isTaintedPointerTy())
+      retAlign.SetShiftVal(2);
+    return retAlign;
     }
   case Type::ArrayTyID:
     return getAlignment(cast<ArrayType>(Ty)->getElementType(), abi_or_pref);

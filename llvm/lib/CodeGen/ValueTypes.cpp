@@ -505,7 +505,9 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
-  case Type::PointerTyID:   return MVT(MVT::iPTR);
+  case Type::PointerTyID:
+  case Type::TaintedPointerTyID:
+      return MVT(MVT::iPTR);
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);

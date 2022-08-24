@@ -9291,6 +9291,12 @@ private:
             Elems.push_back(ElemTy);
             Size += 64;
           }
+        case llvm::Type::TaintedPointerTyID:
+          if (ElemOffset % 32 == 0) {
+             pad(ElemOffset);
+             Elems.push_back(ElemTy);
+             Size += 32;
+         }
           break;
         default:
           break;
