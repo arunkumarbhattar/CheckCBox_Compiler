@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <string>
 #include <utility>
-#include <clang/AST/DeclBase.h>
 
 namespace llvm {
 
@@ -196,7 +195,7 @@ inline bool operator!=(const SourceLocation &LHS, const SourceLocation &RHS) {
 
 // Ordering is meaningful only if LHS and RHS have the same FileID!
 // Otherwise use SourceManager::isBeforeInTranslationUnit().
-inline bool operator<(const DeclContext::specific_decl_iterator <clang::FieldDecl> LHS, const SourceLocation &RHS) {
+inline bool operator<(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.getRawEncoding() < RHS.getRawEncoding();
 }
 inline bool operator>(const SourceLocation &LHS, const SourceLocation &RHS) {
