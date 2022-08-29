@@ -332,7 +332,7 @@ bool CopyW2CDefToW2CFile(ASTContext &Context, ProgramInfo &Info,
     std::string SandboxUtilFuncitons = "\n"
                                        "int c_isPointerToTaintedMem(void* pointer);\n"
                                        "\n"
-                                       "void* c_fetch_pointer_from_offset(const unsigned long pointer_offset);\n"
+\
                                        "\n"
                                        "int c_isTaintedPointerToTaintedMem(void* pointer);\n"
                                        "\n"
@@ -619,7 +619,7 @@ bool GenerateCallbackInterceptor(ASTContext &Context, ProgramInfo &Info,
        */
       CallContent =  CallContent +
                     "(" + tyToStr(CallbackFuncParam.getTypePtr(), "") + ") "
-                    + "c_fetch_pointer_from_offset(" + "arg_" + itostr(i+1) + ")";
+                    + "arg_" + itostr(i+1);
     }
     else
     {
@@ -884,10 +884,6 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     std::vector<std::string> VarDecls ;
     auto RetType = TaintedFunctionDecls->getAsFunction()->getReturnType();
 
-    if(RetType->isTaintedPointerType()){
-      ReturnArg = "c_fetch_pointer_from_offset(";
-    }
-
     //now generate the parameter list in form of a string -->
     std::string FinalParamString;
     std::vector<std::string> SetOfParams;
@@ -1004,7 +1000,7 @@ bool WasmSandboxRewriteOp(ASTContext &Context, ProgramInfo &Info,
     else {
 
       FinalBoardingCall += "\n\n return (" + RetCastStr + ")" + ReturnArg +
-                           WasmFunctionName + "(" + FinalParamString + "));\n";
+                           WasmFunctionName + "(" + FinalParamString + ");\n";
     }
     R.InsertTextAfter(TaintedFunctionDecls->getBody()->getEndLoc(), FinalBoardingCall);
     /*

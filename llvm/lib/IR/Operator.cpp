@@ -61,9 +61,12 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
 bool GEPOperator::accumulateConstantOffset(
     const DataLayout &DL, APInt &Offset,
     function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
-   assert(Offset.getBitWidth() ==
-              DL.getIndexSizeInBits(getPointerAddressSpace()) &&
-          "The offset bit width does not match DL specification.");
+  if (!((Offset.getBitWidth() == 32) && (DL.getIndexSizeInBits(getPointerAddressSpace() == 64))))
+   {
+    assert(Offset.getBitWidth() ==
+            DL.getIndexSizeInBits(getPointerAddressSpace()) &&
+        "The offset bit width does not match DL specification.");
+    }
 
   bool UsedExternalAnalysis = false;
   auto AccumulateOffset = [&](APInt Index, uint64_t Size) -> bool {

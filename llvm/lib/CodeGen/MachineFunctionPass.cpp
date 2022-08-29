@@ -68,7 +68,10 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   // MachineFunction before the pass runs.
   if (ShouldEmitSizeRemarks)
     CountBefore = MF.getInstructionCount();
-
+if(F.getName().str() == "json_value_get_object")
+  {
+  printf("Hey there");
+  }
   bool RV = runOnMachineFunction(MF);
 
   if (ShouldEmitSizeRemarks) {

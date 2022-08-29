@@ -97,7 +97,7 @@ public:
   }
 
   /// Return true if both registers are in this class.
-  bool contains(Register Reg1, Register Reg2) const {
+  bool   contains(Register Reg1, Register Reg2) const {
     /// FIXME: Historically this function has returned false when given a vregs
     ///        but it should probably only receive physical registers
     if (!Reg1.isPhysical() || !Reg2.isPhysical())

@@ -3400,7 +3400,11 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   // SrcReg(GR64)  -> DestReg(VR64)
 
   if (X86::GR64RegClass.contains(DestReg)) {
-    if (X86::VR128XRegClass.contains(SrcReg))
+    if (X86::GR32RegClass.contains(SrcReg))
+    {
+      return X86::MOV32mr;
+    }
+    else if (X86::VR128XRegClass.contains(SrcReg))
       // Copy from a VR128 register to a GR64 register.
       return HasAVX512 ? X86::VMOVPQIto64Zrr :
              HasAVX    ? X86::VMOVPQIto64rr  :
@@ -3446,6 +3450,10 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool HasAVX = Subtarget.hasAVX();
   bool HasVLX = Subtarget.hasVLX();
   unsigned Opc = 0;
+  if((strcmp(RI.getName(SrcReg), "EAX") == 0) && (0 == strcmp(RI.getName(DestReg), "RAX")))
+  {
+    printf("hey there");
+  }
   if (X86::GR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MOV64rr;
   else if (X86::GR32RegClass.contains(DestReg, SrcReg))
