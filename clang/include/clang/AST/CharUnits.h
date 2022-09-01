@@ -178,6 +178,8 @@ namespace clang {
       /// getQuantity - Get the raw integer representation of this quantity.
       QuantityType getQuantity() const { return Quantity; }
 
+      void setQuantity(unsigned int val) {Quantity = val; }
+
       /// getAsAlign - Returns Quantity as a valid llvm::Align,
       /// Beware llvm::Align assumes power of two 8-bit bytes.
       llvm::Align getAsAlign() const { return llvm::Align(Quantity); }

@@ -101,6 +101,32 @@ public:
   // take an alignment.
   llvm::StoreInst *CreateStore(llvm::Value *Val, Address Addr,
                                bool IsVolatile = false) {
+    /*
+     * Hijack the llvm::Value in here to change its type from Tstruct.NonSplType
+     * to Tstruct.Spl_NonSplType
+     */
+    llvm::Type* AllocaType = NULL;
+    llvm::Type* OriginalType = Val->getType();
+    if (OriginalType->isTStructTy() || (OriginalType->isPointerTy() &&
+                                        OriginalType->getPointerElementType()->isTStructTy())) {
+
+      AllocaType = ChangeStructName(
+          static_cast<llvm::StructType *>(OriginalType));
+      /*
+   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.Spl_Name
+       */
+      if(AllocaType != NULL)
+      {
+        while (OriginalType->isPointerTy())
+        {
+          OriginalType = OriginalType->getPointerElementType();
+          AllocaType = AllocaType->getPointerTo(0);
+        }
+        Val->setType(AllocaType);
+      }
+      else
+        AllocaType = OriginalType;
+    }
     return CreateAlignedStore(Val, Addr.getPointer(),
                               Addr.getAlignment().getAsAlign(), IsVolatile);
   }

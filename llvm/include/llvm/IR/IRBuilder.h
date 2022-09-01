@@ -2147,9 +2147,51 @@ public:
                         const Twine &Name = "") {
     return CreateCast(Instruction::PtrToInt, V, DestTy, Name);
   }
-
+  llvm::Type* ChangeStructName(llvm::StructType* StructType)
+  {
+    std::string ModifiedName = "";
+    if(StructType->isPointerTy())
+    {
+      std::string StructName = StructType->
+                               getPointerElementType()->getStructName().str();
+      auto start = StructName.find('.');
+      std::string actualName = StructName.substr(start+1);
+      actualName = "Tstruct.Spl_"+ actualName;
+      ModifiedName = std::string(actualName);
+    }
+    else
+    {
+      std::string StructName = StructType->
+                               getStructName().str();
+      auto start = StructName.find('.');
+      std::string actualName = StructName.substr(start+1);
+      actualName = "Tstruct.Spl_"+ actualName;
+      ModifiedName = std::string(actualName);
+    }
+    if(!ModifiedName.empty())
+      return StructType->getTypeByName(BB->getModule()->getContext(), StringRef(ModifiedName));
+    else
+      return NULL;
+  }
   Value *CreateIntToPtr(Value *V, Type *DestTy,
                         const Twine &Name = "") {
+    /*
+     * This Cast Will be called numerous times, whenever receive
+     * offsets. However, The destTy, if a Tstruct, must be cast to a
+     * Spl Tstruct
+     */
+    llvm::Type* DecoyType = DestTy;
+    if (DestTy->isTStructTy() || (DestTy->isPointerTy() &&
+                                             DestTy->getPointerElementType()->isTStructTy())) {
+
+      DecoyType = ChangeStructName(
+          static_cast<llvm::StructType *>(DestTy));
+      /*
+   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.Spl_Name
+       */
+      if (DestTy->isPointerTy())
+        DecoyType = DecoyType->getPointerTo(0);
+    }
     return CreateCast(Instruction::IntToPtr, V, DestTy, Name);
   }
 

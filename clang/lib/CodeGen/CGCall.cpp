@@ -4474,7 +4474,7 @@ public:
 
 } // namespace
 
-llvm::Type* CodeGenFunction::ChangeStructName(llvm::Type* StructType)
+llvm::Type* CodeGenFunction::ChangeStructName(llvm::StructType* StructType)
 {
   std::string ModifiedName = "";
   if(StructType->isPointerTy())
@@ -4483,8 +4483,8 @@ llvm::Type* CodeGenFunction::ChangeStructName(llvm::Type* StructType)
                              getPointerElementType()->getStructName().str();
     auto start = StructName.find('.');
     std::string actualName = StructName.substr(start+1);
-    actualName = "Spl_"+ actualName;
-    ModifiedName = std::string("Tstruct." + actualName);
+    actualName = "Tstruct.Spl_"+ actualName;
+    ModifiedName = std::string(actualName);
   }
   else
   {
@@ -4492,14 +4492,60 @@ llvm::Type* CodeGenFunction::ChangeStructName(llvm::Type* StructType)
                              getStructName().str();
     auto start = StructName.find('.');
     std::string actualName = StructName.substr(start+1);
-    actualName = "Spl_"+ actualName;
-    ModifiedName = std::string("Tstruct." + actualName);
+    actualName = "Tstruct.Spl_"+ actualName;
+    ModifiedName = std::string(actualName);
   }
   if(!ModifiedName.empty())
-    return StructType->GetTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
+    return StructType->getTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
   else
     return NULL;
 }
+
+llvm::Type* CodeGenFunction::FetchTemplatedTStructType(llvm::StructType* StructType)
+{
+  std::string ModifiedName = "";
+  if(StructType->isPointerTy())
+  {
+    std::string StructName = StructType->
+                             getPointerElementType()->getStructName().str();
+    auto start = StructName.find('.');
+    std::string actualName = StructName.substr(start+1);
+
+    // Search for the substring in string
+    size_t pos = actualName.find("Spl_");
+
+    if (pos != std::string::npos)
+    {
+      // If found then erase it from string
+      actualName.erase(pos, std::string("Spl_").length());
+    }
+    actualName = "Tstruct."+ actualName;
+    ModifiedName = std::string(actualName);
+  }
+  else
+  {
+    std::string StructName = StructType->
+                             getStructName().str();
+    auto start = StructName.find('.');
+    std::string actualName = StructName.substr(start+1);
+
+    // Search for the substring in string
+    size_t pos = actualName.find("Spl_");
+
+    if (pos != std::string::npos)
+    {
+      // If found then erase it from string
+      actualName.erase(pos, std::string("Spl_").length());
+    }
+    actualName = "Tstruct."+ actualName;
+    ModifiedName = std::string(actualName);
+  }
+  if(!ModifiedName.empty())
+    return StructType->getTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
+  else
+    return NULL;
+}
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -4517,14 +4563,22 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   llvm::FunctionType *IRFuncTy = getTypes().GetFunctionType(CallInfo);
 
-  llvm::Type* DecoyType = NULL;
+  llvm::Type* DecoyType = IRFuncTy->getReturnType();
   if (RetTy->isTaintedStructureType() || (RetTy->isTaintedPointerType() &&
-                                          RetTy->getPointeeType()->isTaintedStructureType()))
-    DecoyType = ChangeStructName(IRFuncTy->getReturnType());
-  /*
-   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.SplName
-   */
+                                          RetTy->getPointeeType()->isTaintedStructureType())) {
 
+    DecoyType = ChangeStructName(
+        static_cast<llvm::StructType *>(IRFuncTy->getReturnType()));
+    /*
+   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.Spl_Name
+     */
+    if (DecoyType != NULL)
+    {
+      if (RetTy->isPointerType())
+        DecoyType = DecoyType->getPointerTo(0);
+      IRFuncTy->setReturnType(DecoyType);
+    }
+  }
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
     // We can only guarantee that a function is called from the correct

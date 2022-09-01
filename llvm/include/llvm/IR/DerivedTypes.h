@@ -121,7 +121,7 @@ public:
 
   bool isVarArg() const { return getSubclassData()!=0; }
   Type *getReturnType() const { return ContainedTys[0]; }
-
+  void setReturnType(Type* RetType) {ContainedTys[0] = RetType; }
   using param_iterator = Type::subtype_iterator;
 
   param_iterator param_begin() const { return ContainedTys + 1; }
@@ -347,18 +347,10 @@ public:
   }
   /// Return the type with the specified name, or null if there is none by that
   /// name.
-  StructType *getTypeFromName(LLVMContext &C, StringRef Name){
-    return getTypeByName(C, Name);
-  }
 };
 
 StringRef Type::getStructName() const {
   return cast<StructType>(this)->getName();
-}
-
-Type* Type::GetTypeByName(LLVMContext &C, StringRef Name)
-{
-  cast<Type>(cast<StructType>(this)->getTypeFromName(C, Name));
 }
 
 unsigned Type::getStructNumElements() const {
@@ -369,6 +361,9 @@ Type *Type::getStructElementType(unsigned N) const {
   return cast<StructType>(this)->getElementType(N);
 }
 
+Type *Type::getStructTypeFromName(LLVMContext &C, StringRef Name) const {
+  return reinterpret_cast<Type*>(cast<StructType>(this)->getTypeByName(C, Name));
+}
 /// Class to represent array types.
 class ArrayType : public Type {
   /// The element type of the array.

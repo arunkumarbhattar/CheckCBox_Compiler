@@ -109,7 +109,37 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     llvm::Value *ArraySize) {
   if (ArraySize)
     return Builder.CreateAlloca(Ty, ArraySize, Name);
-  return new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+  /*
+   * We Hijack into the alloca instruction
+   * Given every change, we want to allocate memory for Spl Struct and Not
+   * the NON-Spl Struct.
+   *
+   * We ultimately wish to use Non-Spl Struct ONLY and ONLY as template into
+   * the Final Dereference Type (int* or char*, or int, char, or whatever)..
+   */
+  llvm::Type* AllocaType = Ty;
+  llvm::Type* OriginalType = Ty;
+  if (Ty->isTStructTy() || (Ty->isPointerTy() &&
+                                          Ty->getPointerElementType()->isTStructTy())) {
+
+    AllocaType = ChangeStructName(
+        static_cast<llvm::StructType *>(Ty));
+    /*
+   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.Spl_Name
+     */
+    if(AllocaType != NULL)
+    {
+      while (OriginalType->isPointerTy())
+      {
+        OriginalType = OriginalType->getPointerElementType();
+        AllocaType = AllocaType->getPointerTo(0);
+      }
+
+    }
+    else
+      AllocaType = Ty;
+  }
+  return new llvm::AllocaInst(AllocaType, CGM.getDataLayout().getAllocaAddrSpace(),
                               ArraySize, Name, AllocaInsertPt);
 }
 
@@ -3684,6 +3714,12 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   CharUnits eltAlign =
     getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
 
+  /*
+   *
+   (gdb) p addr.getType()->getPointerElementType()->getTypeID()
+    $7 = llvm::Type::PointerTyID
+    In this situation, we hack and replace theAddr's Type to be i32*
+   */
   llvm::Value *eltPtr;
   auto LastIndex = dyn_cast<llvm::ConstantInt>(indices.back());
   if (!LastIndex ||
@@ -3886,10 +3922,41 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     if(TaintedPtrFromOffset != NULL)
       Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
+    /*
+     * We are gonna perform something Extra here.
+     * If the Addr Type is a double pointer or triple pointer or whatever.
+     * You will change the addr type to i32* type
+     */
+    llvm::Type* AddrTypeHandle = Addr.getType();
+    llvm::Type* OriginalType = Addr.getType();
+    unsigned pointer_depth = 0;
+    llvm::Value* CastedPointer = NULL;
+    while(AddrTypeHandle->isPointerTy())
+    {
+      AddrTypeHandle = AddrTypeHandle->getPointerElementType();
+      pointer_depth++;
+    }
+
+    if (pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+          Addr.getPointer()->getContext());
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
+    /*
+     * Now, once you get the address, cast it back to original type
+     */
+    if (pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = OriginalType;
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);

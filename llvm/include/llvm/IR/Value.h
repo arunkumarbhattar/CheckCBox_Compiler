@@ -244,7 +244,8 @@ public:
 
   /// All values are typed, get the type of this value.
   Type *getType() const { return VTy; }
-
+  /// All values are typed, get the type of this value.
+  void setType(llvm::Type* Val) { VTy = Val; }
   /// All values hold a context through their type.
   LLVMContext &getContext() const;
 

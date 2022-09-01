@@ -806,6 +806,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   assert(ResultType && "Didn't convert a type?");
 
   TypeCache[Ty] = ResultType;
+  if(T->isTaintedStructureType())
+    ResultType->setTStructTy(true);
+
   return ResultType;
 }
 
@@ -832,6 +835,8 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   }
   llvm::StructType *Ty = Entry;
 
+  if (RD->getTypeForDecl()->getCanonicalTypeInternal()->isTaintedStructureType())
+    Ty->setTStructTy(true);
   // If this is still a forward declaration, or the LLVM type is already
   // complete, there's nothing more to do.
   RD = RD->getDefinition();

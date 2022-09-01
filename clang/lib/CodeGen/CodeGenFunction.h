@@ -4753,7 +4753,8 @@ private:
 
     llvm::Value * EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr, const QualType BaseTy);
 
-    llvm::Type*  ChangeStructName(llvm::Type *StructType);
+    llvm::Type*  ChangeStructName(llvm::StructType *StructType);
+    llvm::Type *FetchTemplatedTStructType(llvm::StructType *StructType);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

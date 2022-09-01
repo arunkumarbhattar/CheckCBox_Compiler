@@ -430,27 +430,53 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
     // %conv = sext i32 %1 to i64 THis instruction can be made to be avoided
     // %call = call i8* @c_fetch_pointer_from_offset(i64 %conv)
     // %LHS = bitcast i8* %call to base_ty*
+    llvm::Type * BitCastType = BaseAddr.getType();
+    if (BitCastType->isTStructTy() || (BitCastType->isPointerTy() &&
+                                       BitCastType->getCoreElementType()->isTStructTy())) {
+      BitCastType =
+          ChangeStructName(reinterpret_cast<StructType *>(BitCastType->getCoreElementType()));
+      if (BitCastType != NULL)
+      {
+        llvm::Type* CurrentTypeReferences =  BaseAddr.getType();
+        while (CurrentTypeReferences->isPointerTy()) {
+          CurrentTypeReferences = CurrentTypeReferences->getPointerElementType();
+          BitCastType = BitCastType->getPointerTo(0);
+        }
+        BaseAddr.setType(BitCastType);
+      }
+      else
+        BitCastType = BaseAddr.getType();
+    }
 
     Value *OffsetVal =
             Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt32Ty(
                     BaseAddr.getPointer()->getContext()));
-
     Value* PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
-
     /*
      * Now bitcast the returned pointer to the actual type of the pointer for use
      */
     Value *ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
                                                      "_Dynamic_check.tainted_pointer");
-
     EmitDynamicCheckBlocks(ConditionVal);
 
-    llvm::Type * BitCastType = BaseAddr.getType();
-    if (BaseTy->isTaintedStructureType() || (BaseTy->isTaintedPointerType() &&
-                     BaseTy->getPointeeType()->isTaintedStructureType()))
-      BitCastType = ChangeStructName(BaseAddr.getType());
-
-    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, BitCastType);
+    /*
+     * If the destination type is NOT a TStruct Type, then we finna gonna follow
+     * Template Tstruct Type itself
+     */
+    llvm::Type* DestTy = BitCastType;
+    if (DestTy->isTStructTy() || (DestTy->isPointerTy() &&
+                                  DestTy->getPointerTo()->isTStructTy())) {
+      DestTy =
+          ChangeStructName(reinterpret_cast<StructType *>(DestTy));
+      if (DestTy != NULL)
+      {
+        if (DestTy->isPointerTy())
+          DestTy = DestTy->getPointerTo(0);
+      }
+      else
+        DestTy  = BitCastType;
+    }
+    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, DestTy);
 
     return CastedPointer;
 }

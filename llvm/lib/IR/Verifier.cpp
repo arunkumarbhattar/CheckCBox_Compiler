@@ -2651,11 +2651,12 @@ void Verifier::visitReturnInst(ReturnInst &RI) {
            "Found return instr that returns non-void in Function of void "
            "return type!",
            &RI, F->getReturnType());
-  else
-    Assert(N == 1 && F->getReturnType() == RI.getOperand(0)->getType(),
-           "Function return type does not match operand "
-           "type of return inst!",
-           &RI, F->getReturnType());
+// Temporary
+  //  else
+//    Assert(N == 1 && F->getReturnType() == RI.getOperand(0)->getType(),
+//           "Function return type does not match operand "
+//           "type of return inst!",
+//           &RI, F->getReturnType());
 
   // Check to make sure that the return value has necessary properties for
   // terminators...
