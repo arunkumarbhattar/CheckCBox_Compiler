@@ -270,6 +270,10 @@ public:
     SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return llvm::StructType::get(Ctx, StructFields);
   }
+  /// Return the type with the specified name, or null if there is none by that
+  /// name.
+  static StructType *getTypeByName(LLVMContext &C, StringRef Name);
+
 
   bool isPacked() const { return (getSubclassData() & SCDB_Packed) != 0; }
 
@@ -343,7 +347,9 @@ public:
   }
   /// Return the type with the specified name, or null if there is none by that
   /// name.
-  StructType *getTypeByName(LLVMContext &C, StringRef Name);
+  StructType *getTypeFromName(LLVMContext &C, StringRef Name){
+    return getTypeByName(C, Name);
+  }
 };
 
 StringRef Type::getStructName() const {
@@ -352,7 +358,7 @@ StringRef Type::getStructName() const {
 
 Type* Type::GetTypeByName(LLVMContext &C, StringRef Name)
 {
-  cast<Type>(cast<StructType>(this)->getTypeByName(C, Name));
+  cast<Type>(cast<StructType>(this)->getTypeFromName(C, Name));
 }
 
 unsigned Type::getStructNumElements() const {
