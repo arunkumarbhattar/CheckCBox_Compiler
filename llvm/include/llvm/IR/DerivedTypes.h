@@ -132,7 +132,7 @@ public:
 
   /// Parameter type accessors.
   Type *getParamType(unsigned i) const { return ContainedTys[i+1]; }
-
+  void setParamType(unsigned i, Type* Ty)  { ContainedTys[i+1] = Ty; }
   /// Return the number of fixed parameters this function type requires.
   /// This does not consider varargs.
   unsigned getNumParams() const { return NumContainedTys - 1; }

@@ -4579,6 +4579,45 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       IRFuncTy->setReturnType(DecoyType);
     }
   }
+
+  /*
+   * Just the Same way that you are manipulating the IRFuncTy's Return type,
+   * We need to manipulate All the argument types too. Just so that
+   * This same function CAN receive Decoy Tstructs and Not Scream
+   * "Argument value does not match function argument type!"
+   */
+  for (int i = 0 ; i < IRFuncTy->getNumParams(); i++)
+  {
+    llvm::Type* DecoyType = IRFuncTy->getParamType(i);
+    llvm::Type* OriginalType = IRFuncTy->getParamType(i);
+    if (DecoyType->isTStructTy() || (DecoyType->isPointerTy() &&
+                                            DecoyType->getCoreElementType()
+                                         ->isTStructTy())) {
+
+      DecoyType = ChangeStructName(
+          static_cast<llvm::StructType *>(DecoyType));
+      /*
+       * change the Type to Decoy Struct from Tstruct.Name to Tstruct.Spl_Name
+       */
+      if(DecoyType != NULL)
+      {
+        while (OriginalType->isPointerTy())
+        {
+          OriginalType = OriginalType->getPointerElementType();
+          DecoyType = DecoyType->getPointerTo(0);
+        }
+
+      }
+      else
+        DecoyType = IRFuncTy->getParamType(i);
+
+      if (DecoyType != NULL)
+      {
+        IRFuncTy->setParamType(i, DecoyType);
+      }
+    }
+  }
+
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
     // We can only guarantee that a function is called from the correct
