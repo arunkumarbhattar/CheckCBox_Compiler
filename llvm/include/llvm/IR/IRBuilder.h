@@ -2625,6 +2625,13 @@ public:
     //Create a Call to "c_isTaintedPointerToTaintedMem" by Passing the pointer reference
     return CreateTaintedPtrMemCheck(Arg);
   }
+
+  Value *CreateCondlTaintedO2Ptr(Value *pValue);
+  Value *CreateDerefCondlTaintedPtr(Value *Arg, const Twine &Name = "") {
+    //Create a Call to "c_conditionalO2P" by Passing the pointer reference
+    return CreateCondlTaintedO2Ptr(Arg);
+  }
+
   /// Return the i64 difference between two pointer values, dividing out
   /// the size of the pointed-to objects.
   ///

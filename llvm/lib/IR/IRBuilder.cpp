@@ -338,6 +338,14 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
  return createCallHelper(Decl, Ops, Builder);
 }
 
+static CallInst *CreateCondlTaintedO2PtrInternal(IRBuilderBase *Builder, Value *Src){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Src};
+  auto *Decl = Intrinsic::SandboxCondlTaintedO2PtrFunction(M);
+  return createCallHelper(Decl, Ops, Builder);
+}
+
+
 static CallInst *createTaintedOffset2Ptr(IRBuilderBase *Builder, Value *Offset){
     Module *M = Builder->GetInsertBlock()->getParent()->getParent();
     Value *Ops[] = {Offset};
@@ -1174,6 +1182,9 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
+}
+Value *IRBuilderBase::CreateCondlTaintedO2Ptr(Value *pValue) {
+  return CreateCondlTaintedO2PtrInternal(this, pValue);
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() {}

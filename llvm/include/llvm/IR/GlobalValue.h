@@ -39,6 +39,7 @@ class Module;
 
 namespace Intrinsic {
 typedef unsigned ID;
+Function *SandboxCondlTaintedO2PtrFunction(Module *M);
 } // end namespace Intrinsic
 
 class GlobalValue : public Constant {

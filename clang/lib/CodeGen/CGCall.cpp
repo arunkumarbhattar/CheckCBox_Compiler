@@ -4595,7 +4595,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                          ->isTStructTy())) {
 
       DecoyType = ChangeStructName(
-          static_cast<llvm::StructType *>(DecoyType));
+          static_cast<llvm::StructType *>(DecoyType->getCoreElementType()));
       /*
        * change the Type to Decoy Struct from Tstruct.Name to Tstruct.Spl_Name
        */
@@ -4952,10 +4952,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          * Here is where we perform our instrumentation
          */
          QualType pointeeTy = I->Ty->getPointeeType();
+         const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
+         const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TD);
          auto AddrRefOfVal = Address(V, getPointerAlign());
          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
          if(TaintedPtrFromOffset != NULL)
               V = TaintedPtrFromOffset;
+         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy()))
+         {/*
+            * To Improve Performance, Only TLIB functions that might have
+            * Itypes will receive this additional Tainting
+            * */
+           auto *TaintedPtr = EmitConditionalTaintedPtrDerefAdaptor(V);
+           if(TaintedPtr != NULL)
+           {
+             V = TaintedPtr;
+           }
+         }
         // Implement swifterror by copying into a new swifterror argument.
         // We'll write back in the normal path out of the call.
         if (CallInfo.getExtParameterInfo(ArgNo).getABI()
@@ -4991,9 +5004,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
  * The instrumentation for that must be inserted here
  */
 //        auto AddressOfV = Address(V, getPointerAlign());
-//        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddressOfV, I->Ty);
-//        if(TaintedPtrFromOffset != NULL)
-//            V = TaintedPtrFromOffset;
+//        auto *TaintedPtrFromOffsetVal = EmitTaintedPtrDerefAdaptor(AddressOfV, I->Ty);
+//        if(TaintedPtrFromOffsetVal != NULL)
+//            V = TaintedPtrFromOffsetVal;
         IRCallArgs[FirstIRArg] = V;
         break;
       }

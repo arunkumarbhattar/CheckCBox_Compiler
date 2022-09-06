@@ -71,20 +71,6 @@ static bool shouldEmitNonNullCheck(const CodeGenModule &CGM,
   return true;
 }
 
-static bool shouldEmitTaintedPtrMemoryCheck(const CodeGenModule &CGM,
-                                            const QualType BaseTy) {
-  if(!CGM.getLangOpts().CheckedC)
-    return false;
-  //if(!CGM.getLangOpts().TaintedC)
-  //return false;
-
-  if(!(BaseTy->isTaintedPointerType()))
-    return false;
-
-  return true;
-
-}
-
 static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                             const QualType BaseTy) {
     if(!CGM.getLangOpts().CheckedC)
@@ -92,7 +78,8 @@ static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
     //if(!CGM.getLangOpts().TaintedC)
     //return false;
 
-    if(!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType()))
+    if((!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType()))
+          || BaseTy->isFunctionType() || BaseTy->isFunctionPointerType())
         return false;
 
     return true;
@@ -121,6 +108,34 @@ Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
     return EmitDynamicTaintedPtrAdaptorBlock(BaseAddr, BaseTy);
 }
 
+/*
+ * This Function is introduced to insert Tainted Pointer Dereference
+ * Instrumentation against Call Arguments to a function that does not have
+ * Explicit Tainted Argument Types as function parameters.
+ *
+ * The user might still be passing Tainted Pointers because it is quite
+ * possible that function arguments might of itype accepting Tainted Pointers.
+ *
+ * Hence, We do the following.
+ * 1.) We check if the Pointer is a Tainted Pointer offset or Not.
+ * 2.) If it is Offset, we return pointer, else we return whatever we receive
+ * (This way we dont break, if the passed pointer argument is a checked region
+ * pointer)
+ */
+
+Value* CodeGenFunction::EmitConditionalTaintedPtrDerefAdaptor(Value* Base){
+  ++NumDynamicChecksTainted;
+  llvm::Type* OriginalType = Base->getType();
+  Value *OffsetVal = Builder.CreatePtrToInt(
+      Base,
+      llvm::Type::getInt64Ty(Base->getContext()));
+  llvm::Value* ConvPtr = Builder.CreateDerefCondlTaintedPtr(OffsetVal,
+                                                   "_Dynamic_check.tainted_pointer");
+  /*
+   * Returned Ptr is of type i8* (void*) , hence cast it back to original type.
+   */
+  return Builder.CreatePointerCast(ConvPtr, OriginalType);
+}
 void CodeGenFunction::EmitDynamicNonNullCheck(Value *Val,
                                               const QualType BaseTy) {
   if (!shouldEmitNonNullCheck(CGM, BaseTy))
@@ -447,17 +462,23 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
       else
         BitCastType = BaseAddr.getType();
     }
+    Value *PointerVal = BaseAddr.getPointer();
 
-    Value *OffsetVal =
-            Builder.CreatePtrToInt(BaseAddr.getPointer(), llvm::Type::getInt32Ty(
-                    BaseAddr.getPointer()->getContext()));
-    Value* PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
-    /*
-     * Now bitcast the returned pointer to the actual type of the pointer for use
-     */
-    Value *ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
-                                                     "_Dynamic_check.tainted_pointer");
-    EmitDynamicCheckBlocks(ConditionVal);
+    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy()) {
+      Value *OffsetVal = Builder.CreatePtrToInt(
+          BaseAddr.getPointer(),
+          llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
+      PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
+    }
+
+    Value *ConditionVal = PointerVal;
+
+    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
+    {
+      ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
+                                                "_Dynamic_check.tainted_pointer");
+      EmitDynamicCheckBlocks(ConditionVal);
+    }
 
     /*
      * If the destination type is NOT a TStruct Type, then we finna gonna follow
@@ -476,7 +497,9 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
       else
         DestTy  = BitCastType;
     }
-    Value* CastedPointer = Builder.CreatePointerCast(PointerVal, DestTy);
+    Value* CastedPointer = ConditionVal;
+    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
+      CastedPointer = Builder.CreatePointerCast(PointerVal, DestTy);
 
     return CastedPointer;
 }

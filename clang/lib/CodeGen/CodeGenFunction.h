@@ -4755,6 +4755,7 @@ private:
 
     llvm::Type*  ChangeStructName(llvm::StructType *StructType);
     llvm::Type *FetchTemplatedTStructType(llvm::StructType *StructType);
+    llvm::Value *EmitConditionalTaintedPtrDerefAdaptor(llvm::Value* BaseAddr);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

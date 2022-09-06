@@ -10297,7 +10297,8 @@ bool ASTContext::isAtLeastAsCheckedAs(QualType T1, QualType T2) const {
   case Type::Pointer: {
     const PointerType *T1PtrType = cast<PointerType>(T1Type);
     const PointerType *T2PtrType = cast<PointerType>(T2Type);
-    if (lessThan(T1PtrType->isChecked(), T2PtrType->isChecked()))
+    if (lessThan((T1PtrType->isChecked() || T1PtrType->isTaintedPointerType()),
+                 (T2PtrType->isChecked() || T1PtrType->isTaintedPointerType()) ))
       return false;
 
     QualType T1PointeeType = T1PtrType->getPointeeType();
