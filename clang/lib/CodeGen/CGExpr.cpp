@@ -3937,13 +3937,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       pointer_depth++;
     }
 
-    if (pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
-          Addr.getPointer()->getContext());
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
-    }
+//    if (pointer_depth >= 2)
+//    {
+//      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+//          Addr.getPointer()->getContext());
+//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+//      Addr = Address(CastedPointer, Addr.getAlignment());
+//    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -3951,12 +3951,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     /*
      * Now, once you get the address, cast it back to original type
      */
-    if (pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = OriginalType;
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
-    }
+//    if (pointer_depth >= 2)
+//    {
+//      llvm::Type* DestTy = OriginalType;
+//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+//      Addr = Address(CastedPointer, Addr.getAlignment());
+//    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);

@@ -185,6 +185,10 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
     return;
   }
 
+  llvm::Value *TaintedPtrFromOffset = PtrAddr.getPointer();
+  TaintedPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(PtrAddr.getPointer());
+  if(TaintedPtrFromOffset == NULL)
+    TaintedPtrFromOffset = PtrAddr.getPointer();
   const RangeBoundsExpr *BoundsRange = dyn_cast<RangeBoundsExpr>(Bounds);
 
   ++NumDynamicChecksRange;
@@ -195,31 +199,36 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
   // We don't infer an expression with the correct cast for
   // multidimensional array access, but icmp requires that
   // its operands are of the same type, so we bitcast Lower to
-  // match the type of PtrAddr at the LLVM IR Level.
-  if (Lower.getType() != PtrAddr.getType())
-    Lower = Builder.CreateBitCast(Lower, PtrAddr.getType());
+  // match the type of TaintedPtrFromOffset at the LLVM IR Level.
+  if (Lower.getType() != TaintedPtrFromOffset->getType())
+    Lower = Builder.CreateBitCast(Lower, TaintedPtrFromOffset->getType());
 
   Address Upper = EmitPointerWithAlignment(BoundsRange->getUpperExpr());
 
   // As above, we may need to bitcast Upper to match the type
-  // of PtrAddr at the LLVM IR Level.
-  if (Upper.getType() != PtrAddr.getType())
-    Upper = Builder.CreateBitCast(Upper, PtrAddr.getType());
+  // of TaintedPtrFromOffset at the LLVM IR Level.
+  if (Upper.getType() != TaintedPtrFromOffset->getType())
+    Upper = Builder.CreateBitCast(Upper, TaintedPtrFromOffset->getType());
+
+  llvm::Value *TaintedUpperPtrFromOffset = Upper.getPointer();
+  TaintedUpperPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(Upper.getPointer());
+  if(TaintedUpperPtrFromOffset == NULL)
+    TaintedUpperPtrFromOffset = Upper.getPointer();
 
   // Make the lower check
   Value *LowerChk = Builder.CreateICmpULE(
-      Lower.getPointer(), PtrAddr.getPointer(), "_Dynamic_check.lower");
+      Lower.getPointer(), TaintedPtrFromOffset, "_Dynamic_check.lower");
 
   // Make the upper check
   Value *UpperChk;
   assert(CheckKind != BCK_None);
   if (CheckKind != BCK_NullTermRead)
-    UpperChk = Builder.CreateICmpULT(PtrAddr.getPointer(), Upper.getPointer(),
+    UpperChk = Builder.CreateICmpULT(TaintedPtrFromOffset, TaintedUpperPtrFromOffset,
                                      "_Dynamic_check.upper");
   else
     // For reads of null-terminated pointers, we allow the element exactly
     // at the upper bound to be read.
-    UpperChk = Builder.CreateICmpULE(PtrAddr.getPointer(), Upper.getPointer(),
+    UpperChk = Builder.CreateICmpULE(TaintedPtrFromOffset, TaintedUpperPtrFromOffset,
                                      "_Dynamic_check.upper");
   llvm::Value *Condition =
     Builder.CreateAnd(LowerChk, UpperChk, "_Dynamic_check.range");
@@ -230,7 +239,8 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
   BasicBlock *DyCkSuccess = createBasicBlock("_Dynamic_check.succeeded");
   BasicBlock *DyCkFailure;
   if (CheckKind == BCK_NullTermWriteAssign)
-    DyCkFailure = EmitNulltermWriteAdditionalCheck(PtrAddr, Upper, LowerChk,
+    DyCkFailure = EmitNulltermWriteAdditionalCheck(Address(TaintedPtrFromOffset, getPointerAlign()) ,
+                                                   Address(TaintedUpperPtrFromOffset, getPointerAlign()), LowerChk,
                                                    Val, DyCkSuccess);
   else
     DyCkFailure = EmitDynamicCheckFailedBlock();
