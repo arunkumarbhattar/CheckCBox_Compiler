@@ -4565,7 +4565,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   llvm::Type* DecoyType = IRFuncTy->getReturnType();
   if (RetTy->isTaintedStructureType() || (RetTy->isTaintedPointerType() &&
-                                          RetTy->getPointeeType()->isTaintedStructureType())) {
+                                          RetTy.getCanonicalType()->isTaintedStructureType())) {
 
     DecoyType = ChangeStructName(
         static_cast<llvm::StructType *>(IRFuncTy->getReturnType()));

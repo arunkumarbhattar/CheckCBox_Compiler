@@ -1864,6 +1864,38 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         LValueBaseInfo BaseInfo,
                                         TBAAAccessInfo TBAAInfo,
                                         bool isInit, bool isNontemporal) {
+  auto SourceValue = Value;
+  llvm::Value* DecoyValue = NULL;
+  auto SourceValType = SourceValue->getType();
+  auto DestValue = Addr.getPointer();
+  auto DestValType = DestValue->getType();
+
+  if (SourceValType->isPointerTy() && DestValType->isPointerTy())
+  {
+    int DecoyedVal = -1;
+    auto DecoyTypeAmongstTwo = DestValue->AreDecoyCopies(SourceValType, DestValType
+                                                         ,&DecoyedVal);
+    if (DecoyTypeAmongstTwo)
+    {
+      if (DecoyedVal == 1)
+      {
+        auto DecoyType = DecoyTypeAmongstTwo;
+        SourceValue = Builder.CreateBitCast(SourceValue, DecoyType);
+        Value = SourceValue;
+      }
+      else if (DecoyedVal == 2)
+      {
+        auto DecoyType = DecoyTypeAmongstTwo;
+        DestValue = Builder.CreateBitCast(DestValue, DecoyType);
+        Addr = Address(DestValue, Addr.getAlignment());
+      }
+      else
+      {
+        assert(false && "DecoyedVal is not 1 or 2");
+      }
+    }
+  }
+
   if (!CGM.getCodeGenOpts().PreserveVec3Type) {
     // Handle vectors differently to get better performance.
     if (Ty->isVectorType()) {
@@ -3936,14 +3968,20 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       AddrTypeHandle = AddrTypeHandle->getPointerElementType();
       pointer_depth++;
     }
-
-//    if (pointer_depth >= 2)
-//    {
-//      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
-//          Addr.getPointer()->getContext());
-//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-//      Addr = Address(CastedPointer, Addr.getAlignment());
-//    }
+/*
+ * This Extra Instrumentation to handle the double pointer and triple pointer
+ * must be inserted for the address only if the address is a Decoy Tstruct's member.
+ *
+ * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
+ */
+    bool IsAddrDecoyTstructMember = false;
+    if (pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+          Addr.getPointer()->getContext());
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -3951,12 +3989,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     /*
      * Now, once you get the address, cast it back to original type
      */
-//    if (pointer_depth >= 2)
-//    {
-//      llvm::Type* DestTy = OriginalType;
-//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-//      Addr = Address(CastedPointer, Addr.getAlignment());
-//    }
+    if (pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = OriginalType;
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4561,10 +4599,14 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   * involved, then I dont want to add all the instrumentation in between pointer assignments. Makes no sense.
   *
   */
-//  auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
-//  if(InstrumentedVal != NULL)
-//        addr = Address(InstrumentedVal, addr.getAlignment());
-  // If this is a reference field, load the reference right now.
+  if (addr.getPointer()->getType()->getCoreElementType()->isTStructTy())
+  {
+    auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
+    if(InstrumentedVal != NULL)
+      addr = Address(InstrumentedVal, addr.getAlignment());
+  }
+
+   //If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
     LValue RefLVal =
         MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
@@ -4581,12 +4623,50 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // for both unions and structs.  A union needs a bitcast, a struct element
   // will need a bitcast if the LLVM type laid out doesn't match the desired
   // type.
-  /*
-   * Right before the element bit cast, we will call Emit the Tainted offset to pointer
-   * instrumentation
-   */
-  addr = Builder.CreateElementBitCast(
-      addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
+/*
+ * GEP generated Result for TStruct Member will again be bitcast to original field type
+ * Which is good. However, if the field type is a Tstruct, and if there exists a
+ * decoy version of this Tstruct field type, it means that The bitcast operation
+ * below must be to the decoy version of the Tstruct field type.
+ *
+ * We fetch the Tstruct Type name and append "Spl_" to it and check if the type
+ * exits. If this type exists, then we bitcast to this decoy type.
+ */
+  auto FieldTy = field->getType();
+  while(FieldTy->isPointerType()){
+        FieldTy = FieldTy->getPointeeType();
+  }
+  llvm::Type* DecoyTy = NULL;
+  if (FieldTy->isTaintedStructureType())
+  {
+    auto FieldTyName = FieldTy.getCanonicalType().getAsString();
+    auto start = FieldTyName.find(' ');
+    FieldTyName = FieldTyName.substr(start+1);
+    auto QualTyName = "Spl_" + FieldTyName;
+    auto PossibleDecoyTypeName = "Tstruct."+ QualTyName;
+    if(llvm::StructType::getTypeByName(CGM.getModule().getContext(),
+                                        StringRef(PossibleDecoyTypeName))!= NULL)
+    {
+        DecoyTy = llvm::StructType::getTypeByName(CGM.getModule().getContext(),
+                                            StringRef(PossibleDecoyTypeName));
+    }
+    auto temp = field->getType();
+    while(temp->isPointerType())
+    {
+      temp = temp->getPointeeType();
+      DecoyTy = DecoyTy->getPointerTo();
+    }
+  }
+  if (DecoyTy != NULL)
+  {
+    addr = Builder.CreateElementBitCast(
+        addr, DecoyTy, field->getName());
+  }
+  else
+  {
+    addr = Builder.CreateElementBitCast(
+        addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
+  }
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
@@ -5641,7 +5721,22 @@ llvm::Value *CodeGenFunction::EmitBoundsCast(CastExpr *CE) {
   if (E->getType()->isPointerType()) {
     Addr = EmitPointerWithAlignment(E);
     // explicit type casting for destination type
-    Addr = Builder.CreateBitCast(Addr, ConvertType(DestTy));
+    /*
+     * Because we give the user freedom to cast freely from Tainted types to
+     * generic C types and vice versa within a Tainted region.
+     * We may run into cases here where
+     */
+    auto AddrOriginalType = Addr.getPointer()->getType();
+    auto DestTyOriginalType = ConvertType(DestTy);
+    int DecoyType = -1;
+    auto DecoyTypeOfTheTwo = Addr.getPointer()->AreDecoyCopies(AddrOriginalType,
+                                                               DestTyOriginalType,
+                                                               &DecoyType);
+    if (DecoyTypeOfTheTwo) {
+        DestTyOriginalType = DecoyTypeOfTheTwo;
+    }
+
+    Addr = Builder.CreateBitCast(Addr, DestTyOriginalType);
   } else {
     // CK_IntegralToPointer (IntToPtr) casts integer to pointer type
     llvm::Value *Src = EmitScalarExpr(const_cast<Expr *>(E));

@@ -896,6 +896,46 @@ bool Value::isSwiftError() const {
   return Alloca->isSwiftError();
 }
 
+Type* Value::AreDecoyCopies(Type *T1, Type *T2, int* DecoyedOp) {
+  if (!T1->isPointerTy() || !T2->isPointerTy())
+        return NULL;
+  auto T1Canonical = T1->getCoreElementType();
+  auto T2Canonical = T2->getCoreElementType();
+  *DecoyedOp = -1;
+  Type* ReturnType = NULL;
+  auto IsValid = T1Canonical->isTStructTy() && T2Canonical->isTStructTy();
+  if (!IsValid)
+    return NULL;
+
+  std::string T1Name = T1Canonical->getStructName().str();
+  std::string T2Name = T2Canonical->getStructName().str();
+  auto T1start = T1Name.find('.');
+  std::string T1ActualName = T1Name.substr(T1start+1);
+  auto T2start = T2Name.find('.');
+  std::string T2ActualName = T2Name.substr(T2start+1);
+
+  if (T1ActualName == "Spl_" + T2ActualName ){
+    ReturnType =  T1Canonical;
+    Type* T2Tmp = T2;
+    while(T2Tmp->isPointerTy()){
+      T2Tmp = T2Tmp->getPointerElementType();
+      ReturnType = ReturnType->getPointerTo();
+    }
+    *DecoyedOp = 2;
+  }
+  else if (T2ActualName == "Spl_" + T1ActualName){
+    ReturnType = T2Canonical;
+    Type* T1Tmp = T1;
+        while(T1Tmp->isPointerTy()){
+          T1Tmp = T1Tmp->getPointerElementType();
+          ReturnType = ReturnType->getPointerTo();
+        }
+        *DecoyedOp = 1;
+  }
+  return ReturnType;
+}
+void Value::ApplyDecoyCopy(Type *T1, Type *T2) {}
+
 //===----------------------------------------------------------------------===//
 //                             ValueHandleBase Class
 //===----------------------------------------------------------------------===//

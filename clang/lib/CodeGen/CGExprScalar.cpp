@@ -3995,12 +3995,65 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
            E->getOpcode() == BO_NE);
     Value *LHS = CGF.EmitScalarExpr(E->getLHS());
     Value *RHS = CGF.EmitScalarExpr(E->getRHS());
+    auto LHSType = LHS->getType();
+    auto RHSType = RHS->getType();
+    int DecoyedValue = -1;
+    if (LHSType->isPointerTy() && RHSType->isPointerTy())
+    {
+      int DecoyedVal = -1;
+      auto DecoyTypeAmongstTwo = RHS->AreDecoyCopies(LHSType, RHSType
+                                                           ,&DecoyedVal);
+      if (DecoyTypeAmongstTwo)
+      {
+        if (DecoyedVal == 1)
+        {
+          auto DecoyType = DecoyTypeAmongstTwo;
+          LHS = Builder.CreateBitCast(LHS, DecoyType);
+        }
+        else if (DecoyedVal == 2)
+        {
+          auto DecoyType = DecoyTypeAmongstTwo;
+          RHS = Builder.CreateBitCast(RHS, DecoyType);
+        }
+        else
+        {
+          assert(false && "DecoyedVal is not 1 or 2");
+        }
+      }
+    }
+
     Result = CGF.CGM.getCXXABI().EmitMemberPointerComparison(
                    CGF, LHS, RHS, MPT, E->getOpcode() == BO_NE);
   } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
     BinOpInfo BOInfo = EmitBinOps(E);
     Value *LHS = BOInfo.LHS;
     Value *RHS = BOInfo.RHS;
+    auto LHSType = LHS->getType();
+    auto RHSType = RHS->getType();
+    int DecoyedValue = -1;
+    if (LHSType->isPointerTy() && RHSType->isPointerTy())
+    {
+      int DecoyedVal = -1;
+      auto DecoyTypeAmongstTwo = RHS->AreDecoyCopies(LHSType, RHSType
+                                                     ,&DecoyedVal);
+      if (DecoyTypeAmongstTwo)
+      {
+        if (DecoyedVal == 1)
+        {
+          auto DecoyType = DecoyTypeAmongstTwo;
+          LHS = Builder.CreateBitCast(LHS, DecoyType);
+        }
+        else if (DecoyedVal == 2)
+        {
+          auto DecoyType = DecoyTypeAmongstTwo;
+          RHS = Builder.CreateBitCast(RHS, DecoyType);
+        }
+        else
+        {
+          assert(false && "DecoyedVal is not 1 or 2");
+        }
+      }
+    }
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result
@@ -4626,6 +4679,38 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     return RHS;
   if (!RHS)
     return LHS;
+
+  /*
+   * LHS and RHS cannot be of different types with the strict Clang enforcement
+   * of interoperability between tainted pointers and generic pointers in place.
+   *
+   */
+  auto LHSType = LHS->getType();
+  auto RHSType = RHS->getType();
+  int DecoyedValue = -1;
+  if (LHSType->isPointerTy() && RHSType->isPointerTy())
+  {
+    int DecoyedVal = -1;
+    auto DecoyTypeAmongstTwo = RHS->AreDecoyCopies(LHSType, RHSType
+                                                   ,&DecoyedVal);
+    if (DecoyTypeAmongstTwo)
+    {
+      if (DecoyedVal == 1)
+      {
+        auto DecoyType = DecoyTypeAmongstTwo;
+        LHS = Builder.CreateBitCast(LHS, DecoyType);
+      }
+      else if (DecoyedVal == 2)
+      {
+        auto DecoyType = DecoyTypeAmongstTwo;
+        RHS = Builder.CreateBitCast(RHS, DecoyType);
+      }
+      else
+      {
+        assert(false && "DecoyedVal is not 1 or 2");
+      }
+    }
+  }
 
   // Create a PHI node for the real part.
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
