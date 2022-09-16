@@ -126,6 +126,9 @@ Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
 Value* CodeGenFunction::EmitConditionalTaintedPtrDerefAdaptor(Value* Base){
   ++NumDynamicChecksTainted;
   llvm::Type* OriginalType = Base->getType();
+  if (!Base->getType()->isPointerTy())
+    return NULL;
+
   Value *OffsetVal = Builder.CreatePtrToInt(
       Base,
       llvm::Type::getInt64Ty(Base->getContext()));
@@ -186,7 +189,7 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
   }
 
   llvm::Value *TaintedPtrFromOffset = PtrAddr.getPointer();
-  TaintedPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(PtrAddr.getPointer());
+  TaintedPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffset);
   if(TaintedPtrFromOffset == NULL)
     TaintedPtrFromOffset = PtrAddr.getPointer();
   const RangeBoundsExpr *BoundsRange = dyn_cast<RangeBoundsExpr>(Bounds);
@@ -211,7 +214,7 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
     Upper = Builder.CreateBitCast(Upper, TaintedPtrFromOffset->getType());
 
   llvm::Value *TaintedUpperPtrFromOffset = Upper.getPointer();
-  TaintedUpperPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(Upper.getPointer());
+  TaintedUpperPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedUpperPtrFromOffset);
   if(TaintedUpperPtrFromOffset == NULL)
     TaintedUpperPtrFromOffset = Upper.getPointer();
 

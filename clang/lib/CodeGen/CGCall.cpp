@@ -4958,10 +4958,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
          if(TaintedPtrFromOffset != NULL)
               V = TaintedPtrFromOffset;
-         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy()))
+         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
+                  && (I->Ty->isTaintedPointerType()))
          {/*
             * To Improve Performance, Only TLIB functions that might have
             * Itypes will receive this additional Tainting
+            * And one more criteria is that argument being passed must be a
+            * Tainted Pointer
             * */
            auto *TaintedPtr = EmitConditionalTaintedPtrDerefAdaptor(V);
            if(TaintedPtr != NULL)

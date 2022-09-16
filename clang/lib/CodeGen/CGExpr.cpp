@@ -3975,13 +3975,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
  * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
  */
     bool IsAddrDecoyTstructMember = false;
-    if (pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
-          Addr.getPointer()->getContext());
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
-    }
+//    if (pointer_depth >= 2)
+//    {
+//      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+//          Addr.getPointer()->getContext());
+//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+//      Addr = Address(CastedPointer, Addr.getAlignment());
+//    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -3989,12 +3989,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     /*
      * Now, once you get the address, cast it back to original type
      */
-    if (pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = OriginalType;
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
-    }
+//    if (pointer_depth >= 2)
+//    {
+//      llvm::Type* DestTy = OriginalType;
+//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+//      Addr = Address(CastedPointer, Addr.getAlignment());
+//    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4650,13 +4650,16 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         DecoyTy = llvm::StructType::getTypeByName(CGM.getModule().getContext(),
                                             StringRef(PossibleDecoyTypeName));
     }
-    auto temp = field->getType();
-    while(temp->isPointerType())
-    {
-      temp = temp->getPointeeType();
-      DecoyTy = DecoyTy->getPointerTo();
+
+    if (DecoyTy != NULL) {
+      auto temp = field->getType();
+      while (temp->isPointerType()) {
+        temp = temp->getPointeeType();
+        DecoyTy = DecoyTy->getPointerTo();
+      }
     }
   }
+
   if (DecoyTy != NULL)
   {
     addr = Builder.CreateElementBitCast(
