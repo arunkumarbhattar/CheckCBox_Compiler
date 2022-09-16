@@ -1341,14 +1341,13 @@ class ExtQualsTypeCommonBase {
   friend class ExtQuals;
   friend class QualType;
   friend class Type;
-
   /// The "base" type of an extended qualifiers type (\c ExtQuals) or
   /// a self-referential pointer (for \c Type).
   ///
   /// This pointer allows an efficient mapping from a QualType to its
   /// underlying type pointer.
   const Type *const BaseType;
-
+  bool Decoyed = false;
   /// The canonical type of this type.  A QualType.
   QualType CanonicalType;
 
@@ -1634,7 +1633,6 @@ private:
     }
   };
   enum { NumTypeBits = 8 + llvm::BitWidth<TypeDependence> + 6 };
-
 protected:
   // These classes allow subclasses to somewhat cleanly pack bitfields
   // into Type.
@@ -1927,7 +1925,6 @@ private:
 
 protected:
   friend class ASTContext;
-
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
@@ -2610,6 +2607,14 @@ public:
     return CanonicalType;
   }
 
+  QualType getCoreTypeInternal() const {
+    auto TempType = getCanonicalTypeInternal();
+    while(TempType->isPointerType())
+    {
+        TempType = TempType->getPointeeType();
+    }
+    return TempType;
+  }
   CanQualType getCanonicalTypeUnqualified() const; // in CanonicalType.h
   void dump() const;
   void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
@@ -3903,6 +3908,7 @@ public:
     bool getCallback() const{ return Actually_callback; }
     bool getMirror() const {return Actually_mirror; }
     bool getTLIB() const{ return Actually_TLIB; }
+    bool isDecoyedType() const {return Decoyed;}
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
@@ -3929,6 +3935,7 @@ public:
     int Actually_callback = 0;
     int Actually_mirror = 0;
     int Actually_TLIB = 0;
+    bool Decoyed = false;
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
 
@@ -3952,6 +3959,10 @@ public:
         return ExtInfo(Actually_callback = 1);
       else
         return ExtInfo(Actually_callback = 0);
+    }
+
+    void setDecoyed(bool decoyed) {
+      Decoyed = decoyed;
     }
 
     ExtInfo setMirror(bool mirror) {
@@ -6811,7 +6822,6 @@ class alignas(8) TypeSourceInfo {
   friend class ASTContext;
 
   QualType Ty;
-
   TypeSourceInfo(QualType ty) : Ty(ty) {}
 
 public:

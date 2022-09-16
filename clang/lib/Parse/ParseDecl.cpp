@@ -4013,7 +4013,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Tok, diag::ext_c11_feature) << Tok.getName();
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
-
+    case tok::kw__Decoy:
+      if (!getLangOpts().C11)
+          Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+        isInvalid = DS.setFunctionSpecDecoy(Loc, PrevSpec, DiagID);
+        break;
    case tok::kw__Tainted:
     {
       // Checked C - handle _Tainted declaration specifiers.
@@ -5373,6 +5377,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     if(DS.isTaintedSpecified())
       D->setTaintedDecl(true);
 
+    if(DS.isDecoyDeclSpecified())
+      D->setDecoyDecl(true);
     if(DS.isTaintedMirrorSpecified())
       D->setMirrorDecl(true);
 
@@ -5812,7 +5818,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw___thread:
   case tok::kw_thread_local:
   case tok::kw__Thread_local:
-
+  case tok::kw__Decoy:
     // Modules
   case tok::kw___module_private__:
 

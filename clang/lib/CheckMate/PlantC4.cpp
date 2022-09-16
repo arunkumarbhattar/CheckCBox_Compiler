@@ -46,25 +46,12 @@ bool PlantC4::ConvertTaintedToVanilla() {
 
   auto ListOfTaintedFiles = Info.TaintedRewriteFileVector;
   for(auto TaintedFilePath : ListOfTaintedFiles){
-    std::string Filepath = TaintedFilePath;
-
-    fetch_path_from_file_path(Filepath,
-    std::string(getFileNameFromPath(TaintedFilePath.c_str())));
-
-    std::string TempFile = Filepath + "vanilla_"
-                                     +std::string(getFileNameFromPath(TaintedFilePath.c_str()));
     // switch to C4 directory to execute the script
     chdir("../tools/C4");
 
-    std::string Command = "touch " + TempFile;
+    std::string Command ="";
+    Command = "./exec.sh " + TaintedFilePath;
     std::system(Command.c_str());
-    Command = "cp " + TaintedFilePath + " " +TempFile;
-    std::system(Command.c_str());
-    Command = "./exec.sh " + TempFile;
-    std::system(Command.c_str());
-    Command = "mv " + TempFile + " " + TaintedFilePath;
-    std::system(Command.c_str());
-
   }
   return true;
 }

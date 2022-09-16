@@ -209,99 +209,6 @@ static cl::opt<bool> OptDumpUnwritableChanges(
              "of the file to stderr for troubleshooting."),
     cl::init(false), cl::cat(_CheckMateCategory));
 
-//static cl::opt<bool> OptAllowUnwritableChanges(
-//    "allow-unwritable-changes",
-//    // "CheckMate" for the software in general, "CheckMate" for this frontend. :/
-//    cl::desc("When CheckMate generates changes to a file it cannot write (due to "
-//             "stdout mode or implementation limitations), issue a warning "
-//             "instead of an error. This option is intended to be used "
-//             "temporarily until you fix the root cause of the problem (by "
-//             "correcting your usage of stdout mode or reporting the "
-//             "implementation limitation to the CheckMate team to get it fixed) and "
-//             "may be removed in the future."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptAllowRewriteFailures(
-//    "allow-rewrite-failures",
-//    cl::desc("When CheckMate fails to make a rewrite to a source file (typically "
-//             "because of macros), issue a warning instead of an error. This "
-//             "option is intended to be used temporarily until you change your "
-//             "code to allow CheckMate to work or you report the problem to the CheckMate "
-//             "team to get it fixed; the option may be removed in the future. "
-//             "Note that some kinds of rewrite failures currently generate "
-//             "warnings regardless of this option, due to known bugs that "
-//             "affect common use cases."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptItypesForExtern(
-//    "itypes-for-extern",
-//    cl::desc("All functions with external linkage will be rewritten to use "
-//             "itypes instead checked types. This does not apply to static "
-//             "functions which continue to have itypes only when the function "
-//             "is internally unsafe."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptInferTypesForUndef(
-//    "infer-types-for-undefs",
-//    cl::desc("Enable type inference for undefined functions. Under this flag, "
-//             "types for undefined functions are inferred according to the same "
-//             "rules as defined functions with the caveat that an undefined "
-//             "function will only solve to an itype and not a fully checked "
-//             "type. Because CheckMate is not able to examine the body of the "
-//             "function, the inferred pointer types (and array bounds) may not "
-//             "be consistent with the actual implementation. By default, the "
-//             "Checked C compiler trusts the declared itypes and will not "
-//             "detect a spatial memory safety violation if the function is used "
-//             "in a way that is consistent with the itypes but not the "
-//             "assumptions actually made by the implementation. Thus, if you "
-//             "want to guarantee spatial memory safety, you must manually "
-//             "check the inferred types against your understanding of what the "
-//             "function actually does (or any available documentation)."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-
-//static cl::opt<bool> OptDebugSolver(
-//    "debug-solver",
-//    cl::desc("Dump intermediate solver state"),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptOnlyGreatestSol(
-//    "only-g-sol",
-//    cl::desc("Perform only greatest solution for Pty Constrains."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptOnlyLeastSol(
-//    "only-l-sol",
-//    cl::desc("Perform only least solution for Pty Constrains."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-
-//static llvm::cl::opt<bool> OptDisableRDs(
-//    "disable-rds",
-//    llvm::cl::desc("Disable reverse edges for Checked Constraints."),
-//    llvm::cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static llvm::cl::opt<bool> OptDisableFunctionEdges(
-//    "disable-fnedgs",
-//    llvm::cl::desc("Disable reverse edges for external functions."),
-//    llvm::cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptDisableArrH(
-//    "disable-arr-hu",
-//    cl::desc("Disable Array Bounds Inference Heuristics."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> DebugArrSolver(
-//    "debug-arr-solver",
-//    cl::desc("Dump array bounds inference graph"),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-//
-//static cl::opt<bool> OptDisableInfDecls(
-//    "disable-arr-missd",
-//    cl::desc("Disable ignoring of missed bounds from declarations."),
-//    cl::init(false), cl::cat(_CheckMateCategory));
-
-
-// clang-format on
-
 int main(int argc, const char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
 
@@ -348,25 +255,10 @@ int main(int argc, const char **argv) {
   CcOptions.StatsOutputJson = OptStatsOutputJson.getValue();
   CcOptions.WildPtrInfoJson = OptWildPtrInfoJson.getValue();
   CcOptions.PerWildPtrInfoJson = OptPerPtrWILDInfoJson.getValue();
-//  CcOptions.AddCheckedRegions = OptAddCheckedRegions;
   CcOptions.AddSandbox = OptSandboxType.getValue();
-//  CcOptions.AllTypes = OptAllTypes;
   CcOptions.EnableCCTypeChecker = OptEnableCCTypeChecker;
-//  CcOptions.WarnRootCause = OptWarnRootCause;
-//  CcOptions.WarnAllRootCause = OptWarnAllRootCause;
   CcOptions.DumpUnwritableChanges = OptDumpUnwritableChanges;
-//  CcOptions.AllowUnwritableChanges = OptAllowUnwritableChanges;
-//  CcOptions.AllowRewriteFailures = OptAllowRewriteFailures;
-//  CcOptions.ItypesForExtern = OptItypesForExtern;
-//  CcOptions.InferTypesForUndefs = OptInferTypesForUndef;
-//  CcOptions.DebugSolver = OptDebugSolver;
-//  CcOptions.OnlyGreatestSol = OptOnlyGreatestSol;
-//  CcOptions.OnlyLeastSol = OptOnlyLeastSol;
-//  CcOptions.DisableRDs = OptDisableRDs;
-//  CcOptions.DisableFunctionEdges = OptDisableFunctionEdges;
-//  CcOptions.DisableInfDecls = OptDisableInfDecls;
-//  CcOptions.DisableArrH = OptDisableArrH;
-//  CcOptions.DebugArrSolver = DebugArrSolver;
+
 
 
   //Add user specified function allocators
@@ -442,12 +334,6 @@ int main(int argc, const char **argv) {
     errs() << "Finished Building Constraints.\n";
     errs() << "Trying to solve Constraints.\n";
   }
-
-  // Solve the constraints.
-//  if (!_CheckMateInterface.solveConstraints()) {
-//    errs() << "Failure occurred while trying to solve constraints. Exiting.\n";
-//    return _CheckMateInterface.determineExitCode();
-//  }
 
   if (OptVerbose) {
     errs() << "Finished solving constraints.\n";

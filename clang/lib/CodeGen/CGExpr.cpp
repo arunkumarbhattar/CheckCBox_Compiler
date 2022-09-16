@@ -1961,6 +1961,16 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
+  auto LVAddr = LV.getAddress(*this);
+  if (!LVAddr.getPointer()->getType()->isPointerTy())
+  {
+    /*
+     * This happens in the case of Tainted Pointers.
+     * Just return the address as an RValue.
+     * The caller will take care of the rest.
+     */
+    return RValue::get(LVAddr.getPointer());
+  }
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress(*this);
@@ -1986,6 +1996,10 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
       return EmitLoadOfMatrixLValue(LV, Loc, *this);
 
     // Everything needs a load.
+    /*
+     * This ultimately calls the Load Instruction on your LVALUE
+     */
+
     return RValue::get(EmitLoadOfScalar(LV, Loc));
   }
 
@@ -2576,6 +2590,17 @@ LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
   TBAAAccessInfo TBAAInfo;
   Address Addr = EmitLoadOfPointer(PtrAddr, PtrTy, &BaseInfo, &TBAAInfo);
   return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo, TBAAInfo);
+}
+
+LValue CodeGenFunction::EmitLoadOfWASMPointerLValue(Address PtrAddr,
+                                                const QualType PtrTy) {
+  LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
+  /*
+   * LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
+     TBAAAccessInfo TBAAInfo)
+   */
+  return MakeWasmAddrLValue(PtrAddr, PtrTy, BaseInfo, TBAAInfo);
 }
 
 static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
@@ -3773,7 +3798,38 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
 
   return Address(eltPtr, eltAlign);
 }
+bool CodeGenFunction::IsBaseExprDecoyExists(Expr* BaseExpr, llvm::StructType* StructType)
+{
+  if (!BaseExpr)
+    return false;
 
+  // Step 1: We fetch the Name of the Structure
+  auto RefDec = BaseExpr->getReferencedDeclOfCallee();
+  if (!RefDec)
+    return false;
+
+  auto RefDecContext = RefDec->getDeclContext();
+  if (!RefDecContext)
+    return false;
+
+  auto RefDecOuterLexical = RefDecContext->getOuterLexicalRecordContext();
+  if(!RefDecOuterLexical)
+    return false;
+
+  std::string StructureName = RefDecOuterLexical->getNameAsString();
+  if (StructureName.empty())
+    return false;
+
+  // Step 2: Generate the Possible Decoy Tstruct Name
+  std::string PossibleDecoyStructName  = "Tstruct.Spl_"+ StructureName;
+
+  // Step 3: Check if the Decoy Structure Exists
+  auto *RetrievedDecoyType = StructType->getTypeByName(CGM.getModule().getContext(), StringRef(PossibleDecoyStructName));
+  if (RetrievedDecoyType && RetrievedDecoyType->isDecoyed())
+    return true;
+
+  return false;
+}
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -3975,13 +4031,25 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
  * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
  */
     bool IsAddrDecoyTstructMember = false;
-//    if (pointer_depth >= 2)
-//    {
-//      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
-//          Addr.getPointer()->getContext());
-//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-//      Addr = Address(CastedPointer, Addr.getAlignment());
-//    }
+    auto AddrType = Addr.getPointer()->getType();
+    if (AddrType->isPointerTy())
+    {
+      AddrType = AddrType->getCoreElementType();
+    }
+  /*
+   * E->getBase() is the base expression of the array subscript expression.
+   * Which means it holds deep within itself what we want desperately. Which is
+   * the name of the structure that this field we are indexing below belongs to.
+   */
+    Expr* BaseExp = const_cast<Expr *>(E->getBase());
+    bool IsShouldMultiPointerBeInstrumented = IsBaseExprDecoyExists(BaseExp, static_cast<llvm::StructType *>(AddrType));
+    if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+          Addr.getPointer()->getContext());
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
@@ -3989,12 +4057,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     /*
      * Now, once you get the address, cast it back to original type
      */
-//    if (pointer_depth >= 2)
-//    {
-//      llvm::Type* DestTy = OriginalType;
-//      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-//      Addr = Address(CastedPointer, Addr.getAlignment());
-//    }
+    if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+    {
+      llvm::Type* DestTy = OriginalType;
+      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
+      Addr = Address(CastedPointer, Addr.getAlignment());
+    }
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4582,7 +4650,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
        * Step 4: delete the final pointer
        */
    auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr,
-        field->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
+        field->getParent()->getTypeForDecl()->getCoreTypeInternal());
     if(InstrumentedVal != NULL)
         addr = Address(InstrumentedVal, addr.getAlignment());
     if (!IsInPreservedAIRegion &&
@@ -4599,12 +4667,12 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   * involved, then I dont want to add all the instrumentation in between pointer assignments. Makes no sense.
   *
   */
-  if (addr.getPointer()->getType()->getCoreElementType()->isTStructTy())
-  {
-    auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
-    if(InstrumentedVal != NULL)
-      addr = Address(InstrumentedVal, addr.getAlignment());
-  }
+//  if (addr.getPointer()->getType()->getCoreElementType()->isTStructTy())
+//  {
+//    auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
+//    if(InstrumentedVal != NULL)
+//      addr = Address(InstrumentedVal, addr.getAlignment());
+//  }
 
    //If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
@@ -4637,9 +4705,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         FieldTy = FieldTy->getPointeeType();
   }
   llvm::Type* DecoyTy = NULL;
-  if (FieldTy->isTaintedStructureType())
+  if (field->getType()->isPointerType() && FieldTy->isTaintedStructureType())
   {
-    auto FieldTyName = FieldTy.getCanonicalType().getAsString();
+    auto FieldTyName = FieldTy->getCoreTypeInternal().getAsString();
     auto start = FieldTyName.find(' ');
     FieldTyName = FieldTyName.substr(start+1);
     auto QualTyName = "Spl_" + FieldTyName;
@@ -4657,30 +4725,40 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         temp = temp->getPointeeType();
         DecoyTy = DecoyTy->getPointerTo();
       }
+      DecoyTy = DecoyTy->getPointerElementType();
     }
   }
-
+  LValue LV;
   if (DecoyTy != NULL)
   {
-    addr = Builder.CreateElementBitCast(
-        addr, DecoyTy, field->getName());
+    /*
+     * addr Must be instrumented conditionally
+//     */
+//    auto InstAddr = EmitTaintedPtrDerefAdaptor(addr,
+//                                               field->getType());
+//    if (InstAddr != NULL)
+//      addr = Address(InstAddr, CharUnits::Four());
+
+//    addr = Builder.CreateElementBitCast(
+//        addr, DecoyTy, field->getName());
+    addr.setType(DecoyTy);
+    LV = EmitLoadOfWASMPointerLValue(addr, field->getType());
   }
   else
   {
     addr = Builder.CreateElementBitCast(
-        addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
+        addr, CGM.getTypes().ConvertTypeForMem(field->getType()), field->getName());
+    LV = MakeAddrLValue(addr, field->getType(), FieldBaseInfo, FieldTBAAInfo);
   }
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
 
-  LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(RecordCVR);
 
   // __weak attribute on a field is ignored.
   if (LV.getQuals().getObjCGCAttr() == Qualifiers::Weak)
     LV.getQuals().removeObjCGCAttr();
-
   return LV;
 }
 

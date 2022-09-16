@@ -6186,6 +6186,12 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   {
     Dcl->setTaintedDecl(true);
   }
+
+  if (D.getDeclSpec().isDecoyDeclSpecified())
+  {
+    Dcl->setDecoyDecl(true);
+  }
+
   return Dcl;
 }
 
@@ -18888,6 +18894,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       FD->setMirrorDecl(true);
     }
 
+    if (EnclosingDecl->isDecoyDecl())
+    {
+      FD->setDecoyDecl(true);
+      getFunctionExtInfo(FD->getTypeRef()).setDecoyed(true);
+    }
+
     if (!FD->isAnonymousStructOrUnion()) {
       // Remember all fields written by the user.
       RecFields.push_back(FD);
@@ -19814,6 +19826,11 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
         Elements[i]->setMirrorDecl(true);
       }
 
+      if (EnumDeclX->isDecoyDecl())
+      {
+        Elements[i]->setDecoyDecl(true);
+      }
+
       EnumConstantDecl *ECD =
         cast_or_null<EnumConstantDecl>(Elements[i]);
       if (!ECD) continue;
@@ -19850,6 +19867,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     {
       Elements[i]->setMirrorDecl(true);
     }
+
+    if(EnumDeclX->isDecoyDecl())
+    {
+      Elements[i]->setDecoyDecl(true);
+    }
+
     EnumConstantDecl *ECD =
       cast_or_null<EnumConstantDecl>(Elements[i]);
     if (!ECD) continue;  // Already issued a diagnostic.
@@ -19976,6 +19999,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     {
       D->setMirrorDecl(true);
     }
+
+    if (EnumDeclX->isDecoyDecl())
+    {
+      D->setDecoyDecl(true);
+    }
+
     auto *ECD = cast_or_null<EnumConstantDecl>(D);
     if (!ECD) continue;  // Already issued a diagnostic.
 
@@ -20049,6 +20078,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       {
         D->setMirrorDecl(true);
       }
+
+      if (EnumDeclX->isDecoyDecl())
+      {
+        D->setDecoyDecl(true);
+      }
+
       EnumConstantDecl *ECD = cast_or_null<EnumConstantDecl>(D);
       if (!ECD) continue;  // Already issued a diagnostic.
 

@@ -218,9 +218,14 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
   if(TaintedUpperPtrFromOffset == NULL)
     TaintedUpperPtrFromOffset = Upper.getPointer();
 
+  llvm::Value *TaintedLowerPtrFromOffset = Lower.getPointer();
+  TaintedLowerPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedLowerPtrFromOffset);
+  if(TaintedLowerPtrFromOffset == NULL)
+    TaintedLowerPtrFromOffset = Lower.getPointer();
+
   // Make the lower check
   Value *LowerChk = Builder.CreateICmpULE(
-      Lower.getPointer(), TaintedPtrFromOffset, "_Dynamic_check.lower");
+      TaintedLowerPtrFromOffset, TaintedPtrFromOffset, "_Dynamic_check.lower");
 
   // Make the upper check
   Value *UpperChk;
@@ -359,13 +364,34 @@ CodeGenFunction::EmitDynamicBoundsCastCheck(const Address BaseAddr,
   if (CastUpper.getType() != Upper.getType())
     CastUpper = Builder.CreateBitCast(CastUpper, Upper.getType());
 
+  llvm::Value *TaintedPtrFromOffsetLower = Lower.getPointer();
+  TaintedPtrFromOffsetLower = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetLower);
+  if(TaintedPtrFromOffsetLower == NULL)
+    TaintedPtrFromOffsetLower = Lower.getPointer();
+
+  llvm::Value *TaintedPtrFromOffsetCastLower = CastLower.getPointer();
+  TaintedPtrFromOffsetCastLower = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetCastLower);
+  if(TaintedPtrFromOffsetCastLower == NULL)
+    TaintedPtrFromOffsetCastLower = CastLower.getPointer();
+
   // Make the lower check (Lower <= CastLower)
   Value *LowerChk = Builder.CreateICmpULE(
-      Lower.getPointer(), CastLower.getPointer(), "_Dynamic_check.lower");
+      TaintedPtrFromOffsetLower, TaintedPtrFromOffsetCastLower, "_Dynamic_check.lower");
+
+  llvm::Value *TaintedPtrFromOffsetCastUpper = CastUpper.getPointer();
+  TaintedPtrFromOffsetCastUpper = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetCastUpper);
+  if(TaintedPtrFromOffsetCastUpper == NULL)
+    TaintedPtrFromOffsetCastUpper = CastUpper.getPointer();
+
+  llvm::Value *TaintedPtrFromOffsetUpper = Upper.getPointer();
+  TaintedPtrFromOffsetUpper = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetUpper);
+  if(TaintedPtrFromOffsetUpper == NULL)
+    TaintedPtrFromOffsetUpper = Upper.getPointer();
+
 
   // Make the upper check (CastUpper <= Upper)
   Value *UpperChk = Builder.CreateICmpULE(
-      CastUpper.getPointer(), Upper.getPointer(), "_Dynamic_check.upper");
+      TaintedPtrFromOffsetCastUpper, TaintedPtrFromOffsetUpper, "_Dynamic_check.upper");
 
   // Make Both Checks
   Value *CastCond =
@@ -463,7 +489,7 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
                                        BitCastType->getCoreElementType()->isTStructTy())) {
       BitCastType =
           ChangeStructName(reinterpret_cast<StructType *>(BitCastType->getCoreElementType()));
-      if (BitCastType != NULL)
+      if ((BitCastType != NULL) && (BitCastType->isDecoyed()))
       {
         llvm::Type* CurrentTypeReferences =  BaseAddr.getType();
         while (CurrentTypeReferences->isPointerTy()) {
@@ -498,21 +524,29 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
      * Template Tstruct Type itself
      */
     llvm::Type* DestTy = BitCastType;
+    llvm::Type* DecoyedDestTy = BitCastType;
     if (DestTy->isTStructTy() || (DestTy->isPointerTy() &&
-                                  DestTy->getPointerTo()->isTStructTy())) {
+                                  DestTy->getCoreElementType()->isTStructTy())) {
       DestTy =
+      DecoyedDestTy =
           ChangeStructName(reinterpret_cast<StructType *>(DestTy));
-      if (DestTy != NULL)
+
+      if (DecoyedDestTy != NULL)
       {
-        if (DestTy->isPointerTy())
-          DestTy = DestTy->getPointerTo(0);
+        auto *CurrentTypeReferences = DestTy;
+        while (CurrentTypeReferences->isPointerTy())
+        {
+                CurrentTypeReferences = CurrentTypeReferences->getPointerElementType();
+                DecoyedDestTy = DecoyedDestTy->getPointerTo(0);
+        }
       }
       else
-        DestTy  = BitCastType;
+        DecoyedDestTy  = BitCastType;
     }
+
     Value* CastedPointer = ConditionVal;
     if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
-      CastedPointer = Builder.CreatePointerCast(PointerVal, DestTy);
+      CastedPointer = Builder.CreatePointerCast(PointerVal, DecoyedDestTy);
 
     return CastedPointer;
 }

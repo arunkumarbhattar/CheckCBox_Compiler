@@ -317,7 +317,7 @@ private:
   unsigned MirrorDecl : 1;
   unsigned LIBDecl : 1;
   unsigned CallbackDecl : 1;
-
+  unsigned DecoyDecl : 1;
 protected:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -387,7 +387,7 @@ protected:
       : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
         DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
         TaintedDecl(false), MirrorDecl(false), LIBDecl(false), CallbackDecl(false),
-        Implicit(false), Used(false), Referenced(false),
+        Implicit(false), Used(false), Referenced(false), DecoyDecl(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
         CacheValidAndLinkage(0) {
@@ -397,6 +397,7 @@ protected:
   Decl(Kind DK, EmptyShell Empty)
       : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
         TaintedDecl(false), MirrorDecl(false), LIBDecl(false), CallbackDecl(false),
+        DecoyDecl(false),
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -585,6 +586,10 @@ public:
 
   bool isCallbackDecl() const {return CallbackDecl;}
   void setCallbackDecl(bool I = false) {CallbackDecl = I;}
+
+  bool isDecoyDecl() const {return DecoyDecl; }
+  void setDecoyDecl(bool I = false) {DecoyDecl = I;}
+
 
   /// Whether *any* (re-)declaration of the entity was used, meaning that
   /// a definition is required.

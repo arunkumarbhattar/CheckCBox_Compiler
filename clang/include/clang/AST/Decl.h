@@ -645,6 +645,7 @@ protected:
 
 public:
   QualType getType() const { return DeclType; }
+  QualType getTypeRef() { return DeclType;}
   void setType(QualType newType) { DeclType = newType; }
 
   /// Determine whether this symbol is weakly-imported,

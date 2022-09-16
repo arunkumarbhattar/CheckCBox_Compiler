@@ -4480,7 +4480,7 @@ llvm::Type* CodeGenFunction::ChangeStructName(llvm::StructType* StructType)
   if(StructType->isPointerTy())
   {
     std::string StructName = StructType->
-                             getPointerElementType()->getStructName().str();
+                             getCoreElementType()->getStructName().str();
     auto start = StructName.find('.');
     std::string actualName = StructName.substr(start+1);
     actualName = "Tstruct.Spl_"+ actualName;
@@ -4496,52 +4496,13 @@ llvm::Type* CodeGenFunction::ChangeStructName(llvm::StructType* StructType)
     ModifiedName = std::string(actualName);
   }
   if(!ModifiedName.empty())
-    return StructType->getTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
-  else
-    return NULL;
-}
-
-llvm::Type* CodeGenFunction::FetchTemplatedTStructType(llvm::StructType* StructType)
-{
-  std::string ModifiedName = "";
-  if(StructType->isPointerTy())
   {
-    std::string StructName = StructType->
-                             getPointerElementType()->getStructName().str();
-    auto start = StructName.find('.');
-    std::string actualName = StructName.substr(start+1);
-
-    // Search for the substring in string
-    size_t pos = actualName.find("Spl_");
-
-    if (pos != std::string::npos)
-    {
-      // If found then erase it from string
-      actualName.erase(pos, std::string("Spl_").length());
-    }
-    actualName = "Tstruct."+ actualName;
-    ModifiedName = std::string(actualName);
+    auto *RetrievedDecoyType = StructType->getTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
+    if (RetrievedDecoyType && RetrievedDecoyType->isDecoyed())
+      return RetrievedDecoyType;
+    else
+      return NULL;
   }
-  else
-  {
-    std::string StructName = StructType->
-                             getStructName().str();
-    auto start = StructName.find('.');
-    std::string actualName = StructName.substr(start+1);
-
-    // Search for the substring in string
-    size_t pos = actualName.find("Spl_");
-
-    if (pos != std::string::npos)
-    {
-      // If found then erase it from string
-      actualName.erase(pos, std::string("Spl_").length());
-    }
-    actualName = "Tstruct."+ actualName;
-    ModifiedName = std::string(actualName);
-  }
-  if(!ModifiedName.empty())
-    return StructType->getTypeByName(CGM.getModule().getContext(), StringRef(ModifiedName));
   else
     return NULL;
 }
@@ -4564,8 +4525,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   llvm::FunctionType *IRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   llvm::Type* DecoyType = IRFuncTy->getReturnType();
+  const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
+  auto F = dyn_cast_or_null<FunctionDecl>(TD);
+
   if (RetTy->isTaintedStructureType() || (RetTy->isTaintedPointerType() &&
-                                          RetTy.getCanonicalType()->isTaintedStructureType())) {
+                                          RetTy->getCoreTypeInternal()->isTaintedStructureType())) {
 
     DecoyType = ChangeStructName(
         static_cast<llvm::StructType *>(IRFuncTy->getReturnType()));
@@ -4574,8 +4538,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
      */
     if (DecoyType != NULL)
     {
-      if (RetTy->isPointerType())
+      auto CurrentPointerType = RetTy;
+      if (CurrentPointerType->isPointerType())
+      {
+        CurrentPointerType = CurrentPointerType->getPointeeType();
         DecoyType = DecoyType->getPointerTo(0);
+      }
       IRFuncTy->setReturnType(DecoyType);
     }
   }
@@ -4606,7 +4574,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           OriginalType = OriginalType->getPointerElementType();
           DecoyType = DecoyType->getPointerTo(0);
         }
-
       }
       else
         DecoyType = IRFuncTy->getParamType(i);
@@ -4954,11 +4921,29 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          QualType pointeeTy = I->Ty->getPointeeType();
          const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
          const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TD);
+         /*
+          * The reason why I removed this is -->
+          * %16 = bitcast i8* %14 to %Tstruct.Spl_json_value_value_t_t*
+            %value6 = bitcast %Tstruct.Spl_json_value_value_t_t* %16 to %Tstruct.Spl_json_value_value_t_t**
+            %17 = load %Tstruct.Spl_json_value_value_t_t*, %Tstruct.Spl_json_value_value_t_t** %value6, align 8
+            %18 = ptrtoint %Tstruct.Spl_json_value_value_t_t* %17 to i32
+            %19 = call i8* @c_fetch_pointer_from_offset(i32 %18)
+            %20 = call i1 @c_isTaintedPointerToTaintedMem(i8* %19)
+            br i1 %20, label %_Dynamic_check.succeeded8, label %_Dynamic_check.failed7
+            _Dynamic_check.succeeded8:                        ; preds = %_Dynamic_check.succeeded5
+            %21 = bitcast i8* %19 to %Tstruct.Spl_json_value_value_t_t*
+            %array = getelementptr inbounds %Tstruct.Spl_json_value_value_t_t, %Tstruct.Spl_json_value_value_t_t* %21, i32 0, i32 3
+
+          As you see, Instead of using %16, we are do all of the unnecessary instrumentation and passing %21 when we want to GEP
+          to get %array
+          */
          auto AddrRefOfVal = Address(V, getPointerAlign());
          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
          if(TaintedPtrFromOffset != NULL)
               V = TaintedPtrFromOffset;
-         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
+         else
+
+         if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
                   && (I->Ty->isTaintedPointerType()))
          {/*
             * To Improve Performance, Only TLIB functions that might have

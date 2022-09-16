@@ -88,6 +88,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
 llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
+  // If QualType is also a Decoyed Type, apply this specifier to the LLVM return
+  //type
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
@@ -809,6 +811,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   if(T->isTaintedStructureType())
     ResultType->setTStructTy(true);
 
+  if (getFunctionExtInfo(T).isDecoyedType())
+    ResultType->setDecoyed(true);
+
   return ResultType;
 }
 
@@ -837,6 +842,10 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
 
   if (RD->getTypeForDecl()->getCanonicalTypeInternal()->isTaintedStructureType())
     Ty->setTStructTy(true);
+
+  if (RD->isDecoyDecl())
+    Ty->setDecoyed(true);
+
   // If this is still a forward declaration, or the LLVM type is already
   // complete, there's nothing more to do.
   RD = RD->getDefinition();

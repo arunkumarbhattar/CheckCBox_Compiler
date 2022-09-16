@@ -1131,6 +1131,21 @@ bool DeclSpec::setFunctionSpecCallback(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecDecoy(SourceLocation Loc,
+                                       const char *&PrevSpec,
+                                       unsigned &DiagID) {
+  // '_Callback _Callback' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_Decoy_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_Decoy";
+    return true;
+  }
+  FS_Decoy_specified = true;
+  FS_Decoy_specifiedLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecTLIB(SourceLocation Loc,
                                    TLIBScopeSpecifier TLIBSS,
                                    const char *&PrevSpec,

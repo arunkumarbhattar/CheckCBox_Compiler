@@ -2064,6 +2064,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         D->setTaintedDecl(true);
       if(DS.isTaintedMirrorSpecified())
         D->setMirrorDecl(true);
+      if(DS.isDecoyDeclSpecified())
+        D->setDecoyDecl(true);
 
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));

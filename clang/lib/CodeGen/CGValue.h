@@ -399,6 +399,19 @@ public:
     return R;
   }
 
+  static LValue MakeWASMAddr(Address address, QualType type, ASTContext &Context,
+                         LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
+    Qualifiers qs = type.getQualifiers();
+    qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
+
+    LValue R;
+    R.LVType = Simple;
+    R.V = address.getPointer();
+    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
+    return R;
+  }
+
+
   static LValue MakeVectorElt(Address vecAddress, llvm::Value *Idx,
                               QualType type, LValueBaseInfo BaseInfo,
                               TBAAAccessInfo TBAAInfo) {
