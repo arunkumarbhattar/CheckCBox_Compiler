@@ -2441,15 +2441,6 @@ public:
 
   LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
                         TBAAAccessInfo TBAAInfo) {
-    if (!Addr.getPointer()->getType()->isPointerTy())
-    {
-      /*
-       * If the address is not a pointer, it means we just pass what
-       * we receive
-       */
-      return LValue::MakeWASMAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
-    }
-    else
       return LValue::MakeAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
   }
 

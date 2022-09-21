@@ -78,7 +78,8 @@ static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
     //if(!CGM.getLangOpts().TaintedC)
     //return false;
 
-    if((!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType()))
+    if((!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType()
+           || (CGM.getContext().getTypeSizeInChars(BaseTy).getQuantity() > 4)))
           || BaseTy->isFunctionType() || BaseTy->isFunctionPointerType())
         return false;
 

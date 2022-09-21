@@ -1962,15 +1962,14 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   auto LVAddr = LV.getAddress(*this);
-  if (!LVAddr.getPointer()->getType()->isPointerTy())
+  /*
+     * If Your LV says that this is a WASM Pointer, then just return the address
+   */
+  if (LV.isWasmPtr())
   {
-    /*
-     * This happens in the case of Tainted Pointers.
-     * Just return the address as an RValue.
-     * The caller will take care of the rest.
-     */
     return RValue::get(LVAddr.getPointer());
   }
+
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress(*this);
@@ -1996,10 +1995,6 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
       return EmitLoadOfMatrixLValue(LV, Loc, *this);
 
     // Everything needs a load.
-    /*
-     * This ultimately calls the Load Instruction on your LVALUE
-     */
-
     return RValue::get(EmitLoadOfScalar(LV, Loc));
   }
 
@@ -2208,6 +2203,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       break;
     }
   }
+
 
   if (Dst.isObjCWeak() && !Dst.isNonGC()) {
     // load of a __weak object.
@@ -4725,29 +4721,34 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         temp = temp->getPointeeType();
         DecoyTy = DecoyTy->getPointerTo();
       }
-      DecoyTy = DecoyTy->getPointerElementType();
     }
   }
   LValue LV;
+  /*
+   * If field is a pointer member belonging to a decoyed Tstruct, then you need
+   * to EmitTaintedPtrDererAdaptor on the field
+   */
+
   if (DecoyTy != NULL)
   {
-    /*
-     * addr Must be instrumented conditionally
-//     */
-//    auto InstAddr = EmitTaintedPtrDerefAdaptor(addr,
-//                                               field->getType());
-//    if (InstAddr != NULL)
-//      addr = Address(InstAddr, CharUnits::Four());
-
-//    addr = Builder.CreateElementBitCast(
-//        addr, DecoyTy, field->getName());
+    addr = Builder.CreateElementBitCast(
+        addr, DecoyTy, field->getName());
     addr.setType(DecoyTy);
-    LV = EmitLoadOfWASMPointerLValue(addr, field->getType());
+    LV = MakeWasmAddrLValue(addr, field->getType(), FieldBaseInfo, FieldTBAAInfo);
+    LV.setWasmPtr(true);
   }
   else
   {
     addr = Builder.CreateElementBitCast(
         addr, CGM.getTypes().ConvertTypeForMem(field->getType()), field->getName());
+    if (getContext().getTypeSizeInChars(field->getType()).getQuantity() > 4)
+    {
+      // This means, albeit a Non-Pointer field, it is a represented as a pointer
+      // IN wasm World, Hence Insert Instrumentation
+      auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
+      if(InstrumentedVal != NULL)
+        addr = Address(InstrumentedVal, addr.getAlignment());
+    }
     LV = MakeAddrLValue(addr, field->getType(), FieldBaseInfo, FieldTBAAInfo);
   }
 
