@@ -1962,15 +1962,7 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   auto LVAddr = LV.getAddress(*this);
-  if (!LVAddr.getPointer()->getType()->isPointerTy())
-  {
-    /*
-     * This happens in the case of Tainted Pointers.
-     * Just return the address as an RValue.
-     * The caller will take care of the rest.
-     */
-    return RValue::get(LVAddr.getPointer());
-  }
+
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress(*this);
@@ -1996,10 +1988,6 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
       return EmitLoadOfMatrixLValue(LV, Loc, *this);
 
     // Everything needs a load.
-    /*
-     * This ultimately calls the Load Instruction on your LVALUE
-     */
-
     return RValue::get(EmitLoadOfScalar(LV, Loc));
   }
 
@@ -4725,31 +4713,33 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         temp = temp->getPointeeType();
         DecoyTy = DecoyTy->getPointerTo();
       }
-      DecoyTy = DecoyTy->getPointerElementType();
     }
   }
   LValue LV;
+  /*
+   * If field is a pointer member belonging to a decoyed Tstruct, then you need
+   * to EmitTaintedPtrDererAdaptor on the field
+   */
+
   if (DecoyTy != NULL)
   {
     /*
-     * addr Must be instrumented conditionally
+   * addr Must be instrumented conditionally
 //     */
-//    auto InstAddr = EmitTaintedPtrDerefAdaptor(addr,
-//                                               field->getType());
-//    if (InstAddr != NULL)
-//      addr = Address(InstAddr, CharUnits::Four());
+    //    auto InstAddr = EmitTaintedPtrDerefAdaptor(addr,
+    //                                               field->getType());
+    //    if (InstAddr != NULL)
+    //      addr = Address(InstAddr, CharUnits::Four());
 
-//    addr = Builder.CreateElementBitCast(
-//        addr, DecoyTy, field->getName());
-    addr.setType(DecoyTy);
-    LV = EmitLoadOfWASMPointerLValue(addr, field->getType());
+    addr = Builder.CreateElementBitCast(
+        addr, DecoyTy, field->getName());
   }
   else
   {
     addr = Builder.CreateElementBitCast(
         addr, CGM.getTypes().ConvertTypeForMem(field->getType()), field->getName());
-    LV = MakeAddrLValue(addr, field->getType(), FieldBaseInfo, FieldTBAAInfo);
   }
+  LV = MakeAddrLValue(addr, field->getType(), FieldBaseInfo, FieldTBAAInfo);
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
