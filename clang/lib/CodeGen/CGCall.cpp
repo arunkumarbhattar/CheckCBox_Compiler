@@ -4937,11 +4937,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           As you see, Instead of using %16, we are do all of the unnecessary instrumentation and passing %21 when we want to GEP
           to get %array
           */
-//         auto AddrRefOfVal = Address(V, getPointerAlign());
-//         auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
-//         if(TaintedPtrFromOffset != NULL)
-//              V = TaintedPtrFromOffset;
-//         else
+         auto AddrRefOfVal = Address(V, getPointerAlign());
+         auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
+         if(TaintedPtrFromOffset != NULL)
+              V = TaintedPtrFromOffset;
+         else
 
          if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
                   && (I->Ty->isTaintedPointerType()))

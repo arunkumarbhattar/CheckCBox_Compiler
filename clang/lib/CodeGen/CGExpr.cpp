@@ -1961,8 +1961,6 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
-  auto LVAddr = LV.getAddress(*this);
-
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress(*this);
