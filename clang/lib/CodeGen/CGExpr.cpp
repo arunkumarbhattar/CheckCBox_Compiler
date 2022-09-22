@@ -1961,8 +1961,6 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
-  auto LVAddr = LV.getAddress(*this);
-
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress(*this);
@@ -3741,6 +3739,53 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      QualType *arrayType = nullptr,
                                      const Expr *Base = nullptr,
                                      const llvm::Twine &name = "arrayidx") {
+  /*
+     * We are gonna perform something Extra here.
+     * If the Addr Type is a double pointer or triple pointer or whatever.
+     * You will change the addr type to i32* type
+   */
+  llvm::Type* Addr4PtrDepth = addr.getType();
+  llvm::Type* OriginalType = addr.getType();
+  unsigned pointer_depth = 0;
+  llvm::Value* CastedPointer = NULL;
+  while(Addr4PtrDepth->isPointerTy())
+  {
+    Addr4PtrDepth = Addr4PtrDepth->getPointerElementType();
+    pointer_depth++;
+  }
+
+  /*
+ * This Extra Instrumentation to handle the double pointer and triple pointer
+ * must be inserted for the address only if the address is a Decoy Tstruct's member.
+ *
+ * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
+   */
+  bool IsAddrDecoyTstructMember = false;
+  auto AddrType = addr.getPointer()->getType();
+  if (AddrType->isPointerTy())
+  {
+    AddrType = AddrType->getCoreElementType();
+  }
+  /*
+   * E->getBase() is the base expression of the array subscript expression.
+   * Which means it holds deep within itself what we want desperately. Which is
+   * the name of the structure that this field we are indexing below belongs to.
+   */
+  if (pointer_depth >=2)
+  {
+    int i = 10;
+  }
+  Expr* BaseExp = const_cast<Expr *>(Base);
+  bool IsShouldMultiPointerBeInstrumented = CodeGenFunction::IsBaseExprDecoyExists(CGF,
+      BaseExp, static_cast<llvm::StructType *>(AddrType));
+  if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+  {
+    llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+        addr.getPointer()->getContext());
+    CastedPointer = CGF.Builder.CreatePointerCast(addr.getPointer(), DestTy);
+    addr = Address(CastedPointer, addr.getAlignment());
+  }
+
   // All the indices except that last must be zero.
 #ifndef NDEBUG
   for (auto idx : indices.drop_back())
@@ -3783,10 +3828,20 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                                         indices.size() - 1,
                                                         idx, DbgInfo);
   }
-
-  return Address(eltPtr, eltAlign);
+  auto RetAddr = Address(eltPtr, eltAlign);
+  /*
+     * Now, once you get the address, cast it back to original type
+   */
+  if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+  {
+    llvm::Type* DestTy = OriginalType;
+    CastedPointer = CGF.Builder.CreatePointerCast(RetAddr.getPointer(), DestTy);
+    RetAddr = Address(CastedPointer, RetAddr.getAlignment());
+  }
+  return RetAddr;
 }
-bool CodeGenFunction::IsBaseExprDecoyExists(Expr* BaseExpr, llvm::StructType* StructType)
+
+bool CodeGenFunction::IsBaseExprDecoyExists(CodeGenFunction& CGF , Expr* BaseExpr, llvm::StructType* StructType)
 {
   if (!BaseExpr)
     return false;
@@ -3812,12 +3867,44 @@ bool CodeGenFunction::IsBaseExprDecoyExists(Expr* BaseExpr, llvm::StructType* St
   std::string PossibleDecoyStructName  = "Tstruct.Spl_"+ StructureName;
 
   // Step 3: Check if the Decoy Structure Exists
-  auto *RetrievedDecoyType = StructType->getTypeByName(CGM.getModule().getContext(), StringRef(PossibleDecoyStructName));
+  auto *RetrievedDecoyType = StructType->getTypeByName(CGF.getLLVMContext(), StringRef(PossibleDecoyStructName));
   if (RetrievedDecoyType && RetrievedDecoyType->isDecoyed())
     return true;
 
   return false;
 }
+
+bool CodeGenFunction::IsBaseExprDecoyExists(CodeGenFunction& CGF , const RecordDecl* Rec, llvm::StructType* StructType)
+{
+  // Step 1: We fetch the Name of the Structure
+  auto RefDec = Rec;
+  if (!RefDec)
+    return false;
+
+  auto RefDecContext = RefDec->getDeclContext();
+  if (!RefDecContext)
+    return false;
+
+  auto RefDecOuterLexical = RefDecContext->getOuterLexicalRecordContext();
+  if(!RefDecOuterLexical)
+    return false;
+
+  std::string StructureName = RefDecOuterLexical->getNameAsString();
+  if (StructureName.empty())
+    return false;
+
+  // Step 2: Generate the Possible Decoy Tstruct Name
+  std::string PossibleDecoyStructName  = "Tstruct.Spl_"+ StructureName;
+
+  // Step 3: Check if the Decoy Structure Exists
+  auto *RetrievedDecoyType = StructType->getTypeByName(CGF.getLLVMContext(), StringRef(PossibleDecoyStructName));
+  if (RetrievedDecoyType && RetrievedDecoyType->isDecoyed())
+    return true;
+
+  return false;
+}
+
+
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -3851,24 +3938,24 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
   // If the base is a vector type, then we are forming a vector element lvalue
   // with this subscript.
-  if (BaseTy->isVectorType() &&
-      !isa<ExtVectorElementExpr>(E->getBase())) {
+  if (BaseTy->isVectorType() && !isa<ExtVectorElementExpr>(E->getBase())) {
     // Emit the vector as an lvalue to get its address.
     LValue LHS = EmitLValue(E->getBase());
-    auto *Idx = EmitIdxAfterBase(/*Promote*/false);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ false);
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
-    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
+    auto *TaintedPtrFromOffset =
+        EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
     Address Addr = LHS.getAddress(*this);
-    if(TaintedPtrFromOffset != NULL) {
-        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+    if (TaintedPtrFromOffset != NULL) {
+      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     }
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    LValue LV = LValue::MakeVectorElt(Addr, Idx,
-      E->getBase()->getType(), LHS.getBaseInfo(), TBAAAccessInfo());
+    LValue LV = LValue::MakeVectorElt(Addr, Idx, E->getBase()->getType(),
+                                      LHS.getBaseInfo(), TBAAAccessInfo());
 
     EmitDynamicBoundsCheck(LV.getVectorAddress(), E->getBoundsExpr(),
-                            E->getBoundsCheckKind(), nullptr);
+                           E->getBoundsCheckKind(), nullptr);
 
     return LV;
   }
@@ -3878,12 +3965,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   // Handle the extvector case we ignored above.
   if (isa<ExtVectorElementExpr>(E->getBase())) {
     LValue LV = EmitLValue(E->getBase());
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
     Address Addr = EmitExtVectorElementLValue(LV);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL) {
-        Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
-        LV.setAddress(Addr);
+    if (TaintedPtrFromOffset != NULL) {
+      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+      LV.setAddress(Addr);
     }
     EmitDynamicNonNullCheck(Addr, BaseTy);
     QualType EltType = LV.getType()->castAs<VectorType>()->getElementType();
@@ -3892,7 +3979,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue AddrLV = MakeAddrLValue(Addr, EltType, LV.getBaseInfo(),
                                    CGM.getTBAAInfoForSubobject(LV, EltType));
     EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
-      nullptr);
+                           nullptr);
 
     return AddrLV;
   }
@@ -3901,14 +3988,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   TBAAAccessInfo EltTBAAInfo;
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
-           getContext().getAsVariableArrayType(E->getType())) {
+          getContext().getAsVariableArrayType(E->getType())) {
     // The base must be a pointer, which is not an aggregate.  Emit
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL)
+    if (TaintedPtrFromOffset != NULL)
       Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
     // The element count here is the total number of non-VLA elements.
@@ -3928,12 +4015,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc());
 
-  } else if (const ObjCObjectType *OIT = E->getType()->getAs<ObjCObjectType>()){
+  } else if (const ObjCObjectType *OIT =
+                 E->getType()->getAs<ObjCObjectType>()) {
     // Indexing over an interface, as in "NSString *P; P[4];"
 
     // Emit the base pointer.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
 
     CharUnits InterfaceSize = getContext().getTypeSizeInChars(OIT);
     llvm::Value *InterfaceSizeVal =
@@ -3941,8 +4029,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     llvm::Value *ScaledIdx = Builder.CreateMul(Idx, InterfaceSizeVal);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL)
-       Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+    if (TaintedPtrFromOffset != NULL)
+      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
     // We don't necessarily build correct LLVM struct types for ObjC
     // interfaces, so we can't rely on GEP to do this scaling
@@ -3953,7 +4041,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     // Do the GEP.
     CharUnits EltAlign =
-      getArrayElementAlign(Addr.getAlignment(), Idx, InterfaceSize);
+        getArrayElementAlign(Addr.getAlignment(), Idx, InterfaceSize);
     llvm::Value *EltPtr =
         emitArraySubscriptGEP(*this, Addr.getPointer(), ScaledIdx, false,
                               SignedIndices, E->getExprLoc());
@@ -3975,7 +4063,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
     else
       ArrayLV = EmitLValue(Array);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
 
     EmitDynamicNonNullCheck(ArrayLV.getAddress(*this), BaseTy);
     /*
@@ -3992,80 +4080,29 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
     QualType ptrType = E->getBase()->getType();
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
-    if(TaintedPtrFromOffset != NULL)
+    if (TaintedPtrFromOffset != NULL)
       Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
     EmitDynamicNonNullCheck(Addr, BaseTy);
-    /*
-     * We are gonna perform something Extra here.
-     * If the Addr Type is a double pointer or triple pointer or whatever.
-     * You will change the addr type to i32* type
-     */
-    llvm::Type* AddrTypeHandle = Addr.getType();
-    llvm::Type* OriginalType = Addr.getType();
-    unsigned pointer_depth = 0;
-    llvm::Value* CastedPointer = NULL;
-    while(AddrTypeHandle->isPointerTy())
-    {
-      AddrTypeHandle = AddrTypeHandle->getPointerElementType();
-      pointer_depth++;
-    }
-/*
- * This Extra Instrumentation to handle the double pointer and triple pointer
- * must be inserted for the address only if the address is a Decoy Tstruct's member.
- *
- * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
- */
-    bool IsAddrDecoyTstructMember = false;
-    auto AddrType = Addr.getPointer()->getType();
-    if (AddrType->isPointerTy())
-    {
-      AddrType = AddrType->getCoreElementType();
-    }
-  /*
-   * E->getBase() is the base expression of the array subscript expression.
-   * Which means it holds deep within itself what we want desperately. Which is
-   * the name of the structure that this field we are indexing below belongs to.
-   */
-    Expr* BaseExp = const_cast<Expr *>(E->getBase());
-    bool IsShouldMultiPointerBeInstrumented = IsBaseExprDecoyExists(BaseExp, static_cast<llvm::StructType *>(AddrType));
-    if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
-          Addr.getPointer()->getContext());
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
-    }
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
-    /*
-     * Now, once you get the address, cast it back to original type
-     */
-    if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
-    {
-      llvm::Type* DestTy = OriginalType;
-      CastedPointer = Builder.CreatePointerCast(Addr.getPointer(), DestTy);
-      Addr = Address(CastedPointer, Addr.getAlignment());
+
+    LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
+
+    EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
+                           nullptr);
+
+    if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+      LV.setNonGC(!E->isOBJCGCCandidate(getContext()));
+      setObjCGCLValueClass(getContext(), E, LV);
     }
+    return LV;
   }
-
-  LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
-
-  EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
-                         nullptr);
-
-  if (getLangOpts().ObjC &&
-      getLangOpts().getGC() != LangOptions::NonGC) {
-    LV.setNonGC(!E->isOBJCGCCandidate(getContext()));
-    setObjCGCLValueClass(getContext(), E, LV);
-  }
-  return LV;
 }
-
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   assert(
       !E->isIncomplete() &&
@@ -4448,15 +4485,75 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                       const FieldDecl *field) {
-  if (field->isZeroSize(CGF.getContext()))
-    return emitAddrOfZeroSizeField(CGF, base, field);
+  /*
+     * We are gonna perform something Extra here.
+     * If the Addr Type is a double pointer or triple pointer or whatever.
+     * You will change the addr type to i32* type
+   */
+  llvm::Type* Addr4PtrDepth = base.getPointer()->getType();
+  llvm::Type* OriginalType = base.getPointer()->getType();
+  unsigned pointer_depth = 0;
+  llvm::Value* CastedPointer = NULL;
+  while(Addr4PtrDepth->isPointerTy())
+  {
+    Addr4PtrDepth = Addr4PtrDepth->getPointerElementType();
+    pointer_depth++;
+  }
 
+  /*
+ * This Extra Instrumentation to handle the double pointer and triple pointer
+ * must be inserted for the address only if the address is a Decoy Tstruct's member.
+ *
+ * Hence, we need to check if the Addr is a Decoy Tstruct's Member or NOT.
+   */
+  bool IsAddrDecoyTstructMember = false;
+  auto AddrType = base.getPointer()->getType();
+  if (AddrType->isPointerTy())
+  {
+    AddrType = AddrType->getCoreElementType();
+  }
+  /*
+   * E->getBase() is the base expression of the array subscript expression.
+   * Which means it holds deep within itself what we want desperately. Which is
+   * the name of the structure that this field we are indexing below belongs to.
+   */
+  if (pointer_depth >=2)
+  {
+    int i = 10;
+  }
   const RecordDecl *rec = field->getParent();
+  bool IsShouldMultiPointerBeInstrumented = CodeGenFunction::IsBaseExprDecoyExists(CGF,
+                                                                                   rec, static_cast<llvm::StructType *>(AddrType));
+  if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+  {
+    llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
+        base.getPointer()->getContext());
+    CastedPointer = CGF.Builder.CreatePointerCast(base.getPointer(), DestTy);
+    base = Address(CastedPointer, base.getAlignment());
+  }
+
+  Address RetVal = base;
+  if (field->isZeroSize(CGF.getContext()))
+    RetVal = emitAddrOfZeroSizeField(CGF, base, field);
+
+
 
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  return CGF.Builder.CreateStructGEP(base, idx, field->getName());
+  RetVal = CGF.Builder.CreateStructGEP(base, idx, field->getName());
+
+  /*
+     * Now, once you get the address, cast it back to original type
+   */
+  if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
+  {
+    llvm::Type* DestTy = OriginalType;
+    CastedPointer = CGF.Builder.CreatePointerCast(RetVal.getPointer(), DestTy);
+    RetVal = Address(CastedPointer, RetVal.getAlignment());
+  }
+  return RetVal;
+
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
@@ -4730,9 +4827,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     //                                               field->getType());
     //    if (InstAddr != NULL)
     //      addr = Address(InstAddr, CharUnits::Four());
-
     addr = Builder.CreateElementBitCast(
-        addr, DecoyTy, field->getName());
+        addr, DecoyTy,field->getName());
   }
   else
   {

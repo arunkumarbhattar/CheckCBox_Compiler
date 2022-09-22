@@ -1275,6 +1275,15 @@ Function* Intrinsic::SandboxCondlTaintedO2PtrFunction(Module *M) {
           .getCallee());
 }
 
+Function* Intrinsic::SandboxTaintedPtr2OFunction(Module *M) {
+  Type *RetVOIDPtr =
+      const_cast<PointerType *>(Type::getInt8PtrTy(M->getContext()));
+  Type *I64Ty = Type::getInt64Ty(M->getContext());
+  return cast<Function>(
+      M->getOrInsertFunction("c_TPtoO", I64Ty, RetVOIDPtr)
+          .getCallee());
+}
+
 Function* Intrinsic::Offset2Pointer(Module *M){
     Type* RetVOIDPtr = const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
     Type *I32Ty = Type::getInt32Ty(M->getContext());

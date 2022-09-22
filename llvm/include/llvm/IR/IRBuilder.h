@@ -1773,6 +1773,15 @@ public:
       const DataLayout &DL = BB->getModule()->getDataLayout();
       Align = DL.getABITypeAlign(Ty);
     }
+
+    if (Ptr->getType()->isPointerTy() &&
+        Ptr->getType()->getCoreElementType()->isDecoyed())
+    {
+      llvm::errs()<< "CreateAlignedLoad: " ;
+      Ptr->dump() ;
+      const DataLayout &DL = BB->getModule()->getDataLayout();
+      Align = Align.ToFour();
+    }
     return Insert(new LoadInst(Ty, Ptr, Twine(), isVolatile, *Align), Name);
   }
 
@@ -2621,6 +2630,10 @@ public:
     return CreateCondlTaintedO2Ptr(Arg);
   }
 
+  Value *CreateP2O(Value *Arg, const Twine &Name = "") {
+    //Create a Call to "c_" by Passing the pointer reference
+    return CreatePToO(Arg);
+  }
   /// Return the i64 difference between two pointer values, dividing out
   /// the size of the pointed-to objects.
   ///
@@ -2698,6 +2711,7 @@ public:
   CallInst *CreateTaintedPtrMemCheck(Value *Src);
 
     CallInst *CreateTaintedOffset2Ptr(Value *Offset);
+  Value *CreatePToO(Value *pValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting

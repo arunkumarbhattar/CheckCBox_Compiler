@@ -1414,7 +1414,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   emission.IsEscapingByRef = isEscapingByRef;
 
   CharUnits alignment = getContext().getDeclAlign(&D);
-
+  if (D.getType()->isTaintedPointerType())
+    alignment = alignment.Four();
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);

@@ -643,7 +643,10 @@ public:
 
     llvm::Value * EmitTaintedPtrDerefAdaptor(const Address BaseAddr, const QualType BaseTy);
 
-public:
+  static bool IsBaseExprDecoyExists(CodeGenFunction& CGF, Expr *BaseExpr, llvm::StructType *StructType);
+  static bool IsBaseExprDecoyExists(CodeGenFunction &CGF, const RecordDecl *Rec,
+                             llvm::StructType *StructType);
+  public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
   /// rethrows.
   SmallVector<llvm::Value*, 8> ObjCEHValueStack;
@@ -4762,9 +4765,9 @@ private:
     llvm::Type*  ChangeStructName(llvm::StructType *StructType);
     llvm::Type *FetchTemplatedTStructType(llvm::StructType *StructType);
     llvm::Value *EmitConditionalTaintedPtrDerefAdaptor(llvm::Value* BaseAddr);
-    bool IsBaseExprDecoyExists(Expr *BaseExpr, llvm::StructType *StructType);
     LValue EmitLoadOfWASMPointerLValue(Address PtrAddr,
                                        const QualType PtrTy);
+    llvm::Value *EmitConditionalTaintedO2PAdaptor(llvm::Value *Base);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function
