@@ -2204,6 +2204,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
     }
   }
 
+
   if (Dst.isObjCWeak() && !Dst.isNonGC()) {
     // load of a __weak object.
     Address LvalueDst = Dst.getAddress(*this);
