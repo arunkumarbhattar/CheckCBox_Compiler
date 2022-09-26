@@ -3995,6 +3995,16 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
            E->getOpcode() == BO_NE);
     Value *LHS = CGF.EmitScalarExpr(E->getLHS());
     Value *RHS = CGF.EmitScalarExpr(E->getRHS());
+    /*
+     * If you are performing Pointer to Pointer comparison, and if the
+     * any of pointers under compare are tainted pointers.
+     * Always convert the tainted pointer to an offset.
+     */
+    if (LHSTy->isTaintedPointerType())
+        LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+    if (RHSTy->isTaintedPointerType())
+        RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+
     auto LHSType = LHS->getType();
     auto RHSType = RHS->getType();
     int DecoyedValue = -1;
@@ -4054,6 +4064,11 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
         }
       }
     }
+
+    if (LHSTy->isTaintedPointerType())
+      LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+    if (RHSTy->isTaintedPointerType())
+      RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result

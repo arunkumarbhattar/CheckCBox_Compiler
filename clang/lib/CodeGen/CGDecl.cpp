@@ -1513,6 +1513,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       } else {
         allocaTy = ConvertTypeForMem(Ty);
         allocaAlignment = alignment;
+        if (Ty->isTaintedPointerType())
+          allocaAlignment = allocaAlignment.Four();
       }
 
       // Create the alloca.  Note that we set the name separately from
@@ -2492,7 +2494,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       DeclPtr = OpenMPLocalAddr;
     } else {
       // Otherwise, create a temporary to hold the value.
-      DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
+      auto align = getContext().getDeclAlign(&D);
+      if (Ty->isTaintedPointerType())
+        align = CharUnits::Four();
+      DeclPtr = CreateMemTemp(Ty, align,
                               D.getName() + ".addr");
     }
     DoStore = true;

@@ -225,7 +225,6 @@ class LValue {
 
   Expr *BaseIvarExp;
 
-  bool isWasm = false;
 private:
   void Initialize(QualType Type, Qualifiers Quals, CharUnits Alignment,
                   LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
@@ -269,9 +268,6 @@ public:
   Qualifiers::ObjCLifetime getObjCLifetime() const {
     return Quals.getObjCLifetime();
   }
-
-  bool isWasmPtr() const {return isWasm;}
-  void setWasmPtr(bool isWasmVal) {this->isWasm = isWasmVal;}
 
   bool isObjCIvar() const { return Ivar; }
   void setObjCIvar(bool Value) { Ivar = Value; }
