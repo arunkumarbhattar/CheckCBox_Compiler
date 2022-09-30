@@ -423,7 +423,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     // 'struct List _For_any(T)', and 'R2' is the RecordDecl for the type application
     // 'struct List<int>'. Then codegen 'struct List<int>' as we would codegen 'struct List'.
     if (RecDecl->isInstantiated()) RecDecl = RecDecl->genericBaseDecl();
-    return ConvertRecordDeclType(RecDecl);
+    auto RetTy =  ConvertRecordDeclType(RecDecl);
+    if (T->isTaintedPointerType())
+      RetTy->setTaintedPtrTy(true);
+
+    return RetTy;
   }
 
   // See if type is already cached.
@@ -810,6 +814,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   TypeCache[Ty] = ResultType;
   if(T->isTaintedStructureType())
     ResultType->setTStructTy(true);
+
+  if (T->isTaintedPointerType())
+    ResultType->setTaintedPtrTy(true);
 
   if (getFunctionExtInfo(T).isDecoyedType())
     ResultType->setDecoyed(true);

@@ -1916,6 +1916,27 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
 
   Value = EmitToMemory(Value, Ty);
 
+  /*
+   * if the Ty (Type of the Source Operand) is a pointer with depth greater than 1
+   * --> then we convert Value to i32 type and
+   * convert Addr to i32* type and then store the value
+   */
+  uint8_t pointer_depth = 0;
+  auto TempTy = Ty;
+  while(TempTy->isTaintedPointerType())
+  {
+    pointer_depth++;
+    TempTy = TempTy->getPointeeType();
+  }
+
+  if (pointer_depth >= 1) {
+    Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
+    Addr = Builder.CreateElementBitCast(Addr, Builder.getInt32Ty());
+  }
+
+  if (Ty->isTaintedPointerType())
+    Addr = Address(Addr.getPointer(), CharUnits::Four());
+
   LValue AtomicLValue =
       LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo);
   if (Ty->isAtomicType() ||

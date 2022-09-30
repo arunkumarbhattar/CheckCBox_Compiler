@@ -87,6 +87,7 @@ private:
                               // Note that this should be synchronized with
                               // MAX_INT_BITS value in IntegerType class.
   bool TStructTyId = false;
+  bool TaintedPtrTyId = false;
   bool Decoyed = false;
 protected:
   friend class LLVMContextImpl;
@@ -225,9 +226,12 @@ public:
   /// True if this is an instance of StructType.
   bool isTStructTy() const { return TStructTyId; }
 
+  bool isTaintedPtrTy() const { return TaintedPtrTyId; }
   bool isDecoyed() const {return Decoyed;}
 
   void setTStructTy(bool val) {TStructTyId = true;}
+
+  void setTaintedPtrTy(bool val) {TaintedPtrTyId = true;}
 
   void setDecoyed(bool val) {Decoyed = val;}
   /// True if this is an instance of ArrayType.

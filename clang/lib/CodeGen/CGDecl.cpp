@@ -1517,6 +1517,43 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           allocaAlignment = allocaAlignment.Four();
       }
 
+      /*
+       * There is going to be some extra instrumentation needed here -->
+       * If variable is a pointer, and its core type is a Tstruct,
+       * then check if the Tstruct has a Decoy sibling or not.
+       *
+       * If there is a Decoy Sibling, then we need to allocate the address
+       * have the type of the Decoy Sibling and NOT the Original Tstruct.
+       *
+       */
+      llvm::Type* DecoyTy = NULL;
+      if (Ty->isPointerType()) {
+        const auto coreType = Ty->getCoreTypeInternal();
+        if (coreType->isTaintedStructureType()) {
+          const RecordDecl *coreDecl = coreType->getAsStructureType()->getDecl();
+          const std::string coreRecordDeclName = coreDecl->getNameAsString();
+          auto start = coreRecordDeclName.find(' ');
+          auto FinalcoreRecordDeclName = coreRecordDeclName.substr(start+1);
+          const std::string decoyRecordDeclName = "Tstruct.Spl_" + FinalcoreRecordDeclName;
+
+          if(llvm::StructType::getTypeByName(CGM.getModule().getContext(),
+                                              StringRef(decoyRecordDeclName))!= NULL)
+          {
+            DecoyTy = llvm::StructType::getTypeByName(CGM.getModule().getContext(),
+                                                      StringRef(decoyRecordDeclName));
+          }
+
+
+          if ((DecoyTy != NULL) && (DecoyTy->isDecoyed())) {
+            auto temp = Ty;
+            while (temp->isPointerType()) {
+              temp = temp->getPointeeType();
+              DecoyTy = DecoyTy->getPointerTo();
+            }
+            allocaTy = DecoyTy;
+          }
+        }
+      }
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.

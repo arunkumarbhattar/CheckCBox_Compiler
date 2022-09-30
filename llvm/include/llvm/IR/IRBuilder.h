@@ -1271,6 +1271,16 @@ private:
 public:
   Value *CreateAdd(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
+    if (LHS->getType()->isTaintedPtrTy())
+    {
+      LHS = CreatePToO(LHS);
+    }
+
+    if (RHS->getType()->isTaintedPtrTy())
+    {
+      RHS = CreatePToO(RHS);
+    }
+
     if (auto *LC = dyn_cast<Constant>(LHS))
       if (auto *RC = dyn_cast<Constant>(RHS))
         return Insert(Folder.CreateAdd(LC, RC, HasNUW, HasNSW), Name);
@@ -1288,6 +1298,20 @@ public:
 
   Value *CreateSub(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
+   /*
+   * If the Operands are tainted pointer types. We need to emit a call to
+   * fetch the offsets of these pointers.
+   */
+
+   if (LHS->getType()->isTaintedPtrTy())
+   {
+     LHS = CreatePToO(LHS);
+   }
+
+   if (RHS->getType()->isTaintedPtrTy())
+   {
+     RHS = CreatePToO(RHS);
+   }
     if (auto *LC = dyn_cast<Constant>(LHS))
       if (auto *RC = dyn_cast<Constant>(RHS))
         return Insert(Folder.CreateSub(LC, RC, HasNUW, HasNSW), Name);
@@ -2419,6 +2443,15 @@ public:
 
   Value *CreateICmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "") {
+    if (LHS->getType()->isTaintedPtrTy())
+    {
+      LHS = CreatePToO(LHS);
+    }
+
+    if (RHS->getType()->isTaintedPtrTy())
+    {
+      RHS = CreatePToO(RHS);
+    }
     if (auto *LC = dyn_cast<Constant>(LHS))
       if (auto *RC = dyn_cast<Constant>(RHS))
         return Insert(Folder.CreateICmp(P, LC, RC), Name);

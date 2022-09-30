@@ -413,10 +413,11 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
 
 CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
     //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
-    if(Offset->getType() != Type::getInt32Ty(this->getContext()))
+
+    if(Offset->getType()->isTaintedPtrTy())
     {
         //cast it to uint32 pointer
-        Offset = CreateBitCast(Offset,Type::getInt32Ty(this->getContext()));
+        Offset = CreatePtrToInt(Offset,Type::getInt32Ty(this->getContext()));
     }
     return createTaintedOffset2Ptr(this, Offset);
 }
@@ -1194,6 +1195,11 @@ Value *IRBuilderBase::CreateCondlTaintedO2Ptr(Value *pValue) {
 }
 
 Value *IRBuilderBase::CreatePToO(Value *pValue) {
+  if(!pValue->getType()->getCoreElementType()->isVoidTy())
+  {
+    //cast it to void* pointer
+    pValue = CreateBitCast(pValue,Type::getInt8PtrTy(this->getContext()));
+  }
   return CreateCondlTaintedPToOInternal(this, pValue);
 }
 

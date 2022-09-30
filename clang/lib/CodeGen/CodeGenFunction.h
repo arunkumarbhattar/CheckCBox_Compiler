@@ -642,7 +642,7 @@ public:
   FPOptions CurFPFeatures;
 
     llvm::Value * EmitTaintedPtrDerefAdaptor(const Address BaseAddr, const QualType BaseTy);
-
+    llvm::Value* EmitConditionalTaintedP2OAdaptor(llvm::Value* Base);
   static bool IsBaseExprDecoyExists(CodeGenFunction& CGF, Expr *BaseExpr, llvm::StructType *StructType);
   static bool IsBaseExprDecoyExists(CodeGenFunction &CGF, const RecordDecl *Rec,
                              llvm::StructType *StructType);

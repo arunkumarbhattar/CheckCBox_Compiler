@@ -140,7 +140,7 @@ Value* CodeGenFunction::EmitConditionalTaintedPtrDerefAdaptor(Value* Base){
   return Builder.CreatePointerCast(ConvPtr, OriginalType);
 }
 
-Value* CodeGenFunction::EmitConditionalTaintedO2PAdaptor(Value* Base){
+Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
   ++NumDynamicChecksTainted;
   llvm::Type* OriginalType = Base->getType();
   if (!Base->getType()->isPointerTy())
@@ -208,7 +208,7 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
 
   llvm::Value *TaintedPtrFromOffset = PtrAddr.getPointer();
   //TaintedPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffset);
-  TaintedPtrFromOffset = EmitConditionalTaintedO2PAdaptor(TaintedPtrFromOffset);
+  TaintedPtrFromOffset = EmitConditionalTaintedP2OAdaptor(TaintedPtrFromOffset);
   if(TaintedPtrFromOffset == NULL)
     TaintedPtrFromOffset = PtrAddr.getPointer();
   const RangeBoundsExpr *BoundsRange = dyn_cast<RangeBoundsExpr>(Bounds);
@@ -259,13 +259,13 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
 
   llvm::Value *TaintedUpperPtrFromOffset = Upper.getPointer();
   //TaintedUpperPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedUpperPtrFromOffset);
-  TaintedUpperPtrFromOffset = EmitConditionalTaintedO2PAdaptor(TaintedUpperPtrFromOffset);
+  TaintedUpperPtrFromOffset = EmitConditionalTaintedP2OAdaptor(TaintedUpperPtrFromOffset);
   if(TaintedUpperPtrFromOffset == NULL)
     TaintedUpperPtrFromOffset = Upper.getPointer();
 
   llvm::Value *TaintedLowerPtrFromOffset = Lower.getPointer();
   //TaintedLowerPtrFromOffset = EmitConditionalTaintedPtrDerefAdaptor(TaintedLowerPtrFromOffset);
-  TaintedLowerPtrFromOffset = EmitConditionalTaintedO2PAdaptor(TaintedLowerPtrFromOffset);
+  TaintedLowerPtrFromOffset = EmitConditionalTaintedP2OAdaptor(TaintedLowerPtrFromOffset);
   if(TaintedLowerPtrFromOffset == NULL)
     TaintedLowerPtrFromOffset = Lower.getPointer();
 
@@ -412,13 +412,13 @@ CodeGenFunction::EmitDynamicBoundsCastCheck(const Address BaseAddr,
 
   llvm::Value *TaintedPtrFromOffsetLower = Lower.getPointer();
   //TaintedPtrFromOffsetLower = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetLower);
-  TaintedPtrFromOffsetLower = EmitConditionalTaintedO2PAdaptor(TaintedPtrFromOffsetLower);
+  TaintedPtrFromOffsetLower = EmitConditionalTaintedP2OAdaptor(TaintedPtrFromOffsetLower);
   if(TaintedPtrFromOffsetLower == NULL)
     TaintedPtrFromOffsetLower = Lower.getPointer();
 
   llvm::Value *TaintedPtrFromOffsetCastLower = CastLower.getPointer();
   //TaintedPtrFromOffsetCastLower = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetCastLower);
-  TaintedPtrFromOffsetCastLower = EmitConditionalTaintedO2PAdaptor(TaintedPtrFromOffsetCastLower);
+  TaintedPtrFromOffsetCastLower = EmitConditionalTaintedP2OAdaptor(TaintedPtrFromOffsetCastLower);
   if(TaintedPtrFromOffsetCastLower == NULL)
     TaintedPtrFromOffsetCastLower = CastLower.getPointer();
 
@@ -428,13 +428,13 @@ CodeGenFunction::EmitDynamicBoundsCastCheck(const Address BaseAddr,
 
   llvm::Value *TaintedPtrFromOffsetCastUpper = CastUpper.getPointer();
   //TaintedPtrFromOffsetCastUpper = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetCastUpper);
-  TaintedPtrFromOffsetCastUpper = EmitConditionalTaintedO2PAdaptor(TaintedPtrFromOffsetCastUpper);
+  TaintedPtrFromOffsetCastUpper = EmitConditionalTaintedP2OAdaptor(TaintedPtrFromOffsetCastUpper);
   if(TaintedPtrFromOffsetCastUpper == NULL)
     TaintedPtrFromOffsetCastUpper = CastUpper.getPointer();
 
   llvm::Value *TaintedPtrFromOffsetUpper = Upper.getPointer();
   //TaintedPtrFromOffsetUpper = EmitConditionalTaintedPtrDerefAdaptor(TaintedPtrFromOffsetUpper);
-  TaintedPtrFromOffsetUpper = EmitConditionalTaintedO2PAdaptor(TaintedPtrFromOffsetUpper);
+  TaintedPtrFromOffsetUpper = EmitConditionalTaintedP2OAdaptor(TaintedPtrFromOffsetUpper);
   if(TaintedPtrFromOffsetUpper == NULL)
     TaintedPtrFromOffsetUpper = Upper.getPointer();
 

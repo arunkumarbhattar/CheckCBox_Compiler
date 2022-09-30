@@ -1325,7 +1325,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (isa<llvm::PointerType>(SrcTy)) {
     // Must be an ptr to int cast.
     assert(isa<llvm::IntegerType>(DstTy) && "not ptr->int?");
-    return Builder.CreatePtrToInt(Src, DstTy, "conv");
+    if (SrcTy->isTaintedPtrTy())
+      return Builder.CreatePtrToInt(Src, CGF.Int32Ty, "conv");
+    else
+      return Builder.CreatePtrToInt(Src, DstTy, "conv");
   }
 
   // A scalar can be splatted to an extended vector of the same element type
@@ -3754,10 +3757,17 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // Otherwise, this is a pointer subtraction.
 
   // Do the raw subtraction part.
-  llvm::Value *LHS
-    = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS
-    = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  llvm::Value *LHS = NULL;
+  if (op.LHS->getType()->isTaintedPtrTy())
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.Int32Ty, "sub.ptr.lhs.cast");
+  else
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  llvm::Value *RHS = NULL;
+  if (op.RHS->getType()->isTaintedPtrTy())
+    RHS = Builder.CreatePtrToInt(op.RHS, CGF.Int32Ty, "sub.ptr.rhs.cast");
+  else
+    RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
