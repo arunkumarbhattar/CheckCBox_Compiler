@@ -381,6 +381,22 @@ public:
     return Builder.CreateICmpNE(V, Zero, "tobool");
   }
 
+  Value* EmitConditionalTaintedP2OAdaptor(Value* Base){
+    llvm::Type* OriginalType = Base->getType();
+    if (!Base->getType()->isPointerTy())
+      return NULL;
+
+    Value *OffsetVal = Builder.CreatePointerCast(
+        Base,
+        llvm::Type::getInt8PtrTy(Base->getContext()));
+    llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal,
+                                             "_Dynamic_check.tainted_pointer");
+    /*
+   * Returned Ptr is of type unsigned int , hence cast it back to original type.
+     */
+    return Builder.CreateIntToPtr(ConvPtr, OriginalType);
+  }
+
   Value *EmitIntToBoolConversion(Value *V) {
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
@@ -396,7 +412,6 @@ public:
         return Result;
       }
     }
-
     return Builder.CreateIsNotNull(V, "tobool");
   }
 
@@ -893,6 +908,9 @@ public:
 /// boolean (i1) truth value.  This is equivalent to "Val != 0".
 Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
   assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
+
+  if (SrcType->isTaintedPointerType())
+    Src->getType()->setTaintedPtrTy(true);
 
   if (SrcType->isRealFloatingType())
     return EmitFloatToBoolConversion(Src);

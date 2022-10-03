@@ -4942,7 +4942,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          if(TaintedPtrFromOffset != NULL)
               V = TaintedPtrFromOffset;
          else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
-                  && (I->Ty->isPointerType()))
+                  && (I->Ty->isPointerType()) && (!isa<llvm::Constant>(V)))
          {/*
             * To Improve Performance, Only TLIB functions that might have
             * Itypes will receive this additional Tainting
