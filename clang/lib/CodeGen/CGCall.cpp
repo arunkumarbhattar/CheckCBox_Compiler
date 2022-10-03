@@ -4526,7 +4526,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   llvm::Type* DecoyType = IRFuncTy->getReturnType();
   const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
-  auto F = dyn_cast_or_null<FunctionDecl>(TD);
+  const FunctionDecl *F;
+  F = dyn_cast_or_null<FunctionDecl>(TD);
+
+  /*
+   * The below instrumentation is our attempt at converting Function return Type
+   * of Tstruct type to Decoy sibling type of Tstruct type.
+   *
+   * We want to do this Tstruct.template_structure ------>> Tstruct.Spl_template_structure
+   *
+   * ChangeStructName function fetches the TypeName, appends "Spl_" to it, and tries
+   * to find if such a type exists in the module. --> If such a type exists(DecoyType!=NULL)
+   * (implies
+   * user has declared _Decoy sibling type), then we return the Decoy type.
+   */
 
   if (RetTy->isTaintedStructureType() || (RetTy->isTaintedPointerType() &&
                                           RetTy->getCoreTypeInternal()->isTaintedStructureType())) {
@@ -4534,8 +4547,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     DecoyType = ChangeStructName(
         static_cast<llvm::StructType *>(IRFuncTy->getReturnType()));
     /*
-   * Insert Adaptor to change the name of Struct from Tstruct.Name to Tstruct.Spl_Name
+     * We receive the DecoyType in its Raw form. If Templatized Tstruct Type (Tstruct.template_structure)
+     * was shieled in multiple layers of pointers, then we need to shield the DecoyType in the same
+     * number of layers of pointers.
      */
+
     if (DecoyType != NULL)
     {
       auto CurrentPointerType = RetTy;
@@ -4550,9 +4566,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   /*
    * Just the Same way that you are manipulating the IRFuncTy's Return type,
-   * We need to manipulate All the argument types too. Just so that
-   * This same function CAN receive Decoy Tstructs and Not Scream
-   * "Argument value does not match function argument type!"
+   * We need to manipulate All the argument types too.
    */
   for (int i = 0 ; i < IRFuncTy->getNumParams(); i++)
   {
@@ -4565,7 +4579,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       DecoyType = ChangeStructName(
           static_cast<llvm::StructType *>(DecoyType->getCoreElementType()));
       /*
-       * change the Type to Decoy Struct from Tstruct.Name to Tstruct.Spl_Name
+       * We receive the DecoyType in its Raw form. If Templatized Tstruct Type (Tstruct.template_structure)
+       * was shieled in multiple layers of pointers, then we need to shield the DecoyType in the same
+       * number of layers of pointers.
        */
       if(DecoyType != NULL)
       {
@@ -4575,8 +4591,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           DecoyType = DecoyType->getPointerTo(0);
         }
       }
-      else
-        DecoyType = IRFuncTy->getParamType(i);
+//      else
+//        DecoyType = IRFuncTy->getParamType(i);
 
       if (DecoyType != NULL)
       {
@@ -4706,9 +4722,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 /*
  * Instrumentation Not required on return pointers.
  */
-//      auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, RetTy);
-//      if(TaintedPtrFromOffset != NULL)
-//          ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
+//    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, RetTy);
+//    if(TaintedPtrFromOffset != NULL)
+//     ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
       Address Addr =
           Builder.CreateStructGEP(ArgMemory, RetAI.getInAllocaFieldIndex());
       Builder.CreateStore(SRetPtr.getPointer(), Addr);
@@ -4915,34 +4931,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
               I->hasLValue() ? I->getKnownLValue().getAddress(*this)
                              : I->getKnownRValue().getAggregateAddress());
 
-        /*
-         * Here is where we perform our instrumentation
-         */
          QualType pointeeTy = I->Ty->getPointeeType();
          const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
          const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TD);
-         /*
-          * The reason why I removed this is -->
-          * %16 = bitcast i8* %14 to %Tstruct.Spl_json_value_value_t_t*
-            %value6 = bitcast %Tstruct.Spl_json_value_value_t_t* %16 to %Tstruct.Spl_json_value_value_t_t**
-            %17 = load %Tstruct.Spl_json_value_value_t_t*, %Tstruct.Spl_json_value_value_t_t** %value6, align 8
-            %18 = ptrtoint %Tstruct.Spl_json_value_value_t_t* %17 to i32
-            %19 = call i8* @c_fetch_pointer_from_offset(i32 %18)
-            %20 = call i1 @c_isTaintedPointerToTaintedMem(i8* %19)
-            br i1 %20, label %_Dynamic_check.succeeded8, label %_Dynamic_check.failed7
-            _Dynamic_check.succeeded8:                        ; preds = %_Dynamic_check.succeeded5
-            %21 = bitcast i8* %19 to %Tstruct.Spl_json_value_value_t_t*
-            %array = getelementptr inbounds %Tstruct.Spl_json_value_value_t_t, %Tstruct.Spl_json_value_value_t_t* %21, i32 0, i32 3
 
-          As you see, Instead of using %16, we are do all of the unnecessary instrumentation and passing %21 when we want to GEP
-          to get %array
-          */
          auto AddrRefOfVal = Address(V, getPointerAlign());
          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
          if(TaintedPtrFromOffset != NULL)
               V = TaintedPtrFromOffset;
          else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
-                  && (I->Ty->isPointerType()))
+                  && (I->Ty->isPointerType()) && (!isa<llvm::Constant>(V)))
          {/*
             * To Improve Performance, Only TLIB functions that might have
             * Itypes will receive this additional Tainting
