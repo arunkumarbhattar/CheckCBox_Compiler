@@ -229,9 +229,9 @@ public:
   bool isTaintedPtrTy() const { return TaintedPtrTyId; }
   bool isDecoyed() const {return Decoyed;}
 
-  void setTStructTy(bool val) {TStructTyId = true;}
+  void setTStructTy(bool val) {TStructTyId = val;}
 
-  void setTaintedPtrTy(bool val) {TaintedPtrTyId = true;}
+  void setTaintedPtrTy(bool val) {TaintedPtrTyId = val;}
 
   void setDecoyed(bool val) {Decoyed = val;}
   /// True if this is an instance of ArrayType.

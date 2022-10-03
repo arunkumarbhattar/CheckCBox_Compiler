@@ -165,6 +165,7 @@ public:
 /// bitfields, this is not a simple LLVM pointer, it may be a pointer plus a
 /// bitrange.
 class LValue {
+
   enum {
     Simple,       // This is a normal l-value, use getAddress().
     VectorElt,    // This is a vector element l-value (V[i]), use getVector*
@@ -323,7 +324,8 @@ public:
 
   // simple lvalue
   llvm::Value *getPointer(CodeGenFunction &CGF) const {
-    assert(isSimple());
+    //NEED TO FIX THIS, ONly commenting to understand bug
+      //assert(isSimple());
     return V;
   }
   Address getAddress(CodeGenFunction &CGF) const {
@@ -398,19 +400,6 @@ public:
     R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
     return R;
   }
-
-  static LValue MakeWASMAddr(Address address, QualType type, ASTContext &Context,
-                         LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
-    Qualifiers qs = type.getQualifiers();
-    qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
-
-    LValue R;
-    R.LVType = Simple;
-    R.V = address.getPointer();
-    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
-    return R;
-  }
-
 
   static LValue MakeVectorElt(Address vecAddress, llvm::Value *Idx,
                               QualType type, LValueBaseInfo BaseInfo,

@@ -2599,17 +2599,6 @@ LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
   return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
-LValue CodeGenFunction::EmitLoadOfWASMPointerLValue(Address PtrAddr,
-                                                const QualType PtrTy) {
-  LValueBaseInfo BaseInfo;
-  TBAAAccessInfo TBAAInfo;
-  /*
-   * LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
-     TBAAAccessInfo TBAAInfo)
-   */
-  return MakeWasmAddrLValue(PtrAddr, PtrTy, BaseInfo, TBAAInfo);
-}
-
 static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
                                       const Expr *E, const VarDecl *VD) {
   QualType T = E->getType();
@@ -3792,10 +3781,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
    * Which means it holds deep within itself what we want desperately. Which is
    * the name of the structure that this field we are indexing below belongs to.
    */
-  if (pointer_depth >=2)
-  {
-    int i = 10;
-  }
   Expr* BaseExp = const_cast<Expr *>(Base);
   bool IsShouldMultiPointerBeInstrumented = CodeGenFunction::IsBaseExprDecoyExists(CGF,
       BaseExp, static_cast<llvm::StructType *>(AddrType));

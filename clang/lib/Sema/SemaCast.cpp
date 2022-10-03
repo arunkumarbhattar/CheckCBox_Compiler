@@ -3031,8 +3031,6 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, bool IsTaintedScope,
     }
   }
 
-  if(S != nullptr && !(S->isTaintedFunctionScope() || IsTaintedScope) &&
-      (!(S->isTLIBFunctionScope() || IsTLIBScope))) {
     // Checked C - No C-style casts to unchecked pointer/array type or variadic
     // type in a checked block.
     if (IsCheckedScope) {
@@ -3047,7 +3045,6 @@ void CastOperation::CheckCStyleCast(bool IsCheckedScope, bool IsTaintedScope,
         SrcExpr = ExprError();
         return;
       }
-    }
 
     // Disallow cast from other Checked Pointer types to Nt_array_ptr because
     // the SrcType might not point to a NULL-terminated array.

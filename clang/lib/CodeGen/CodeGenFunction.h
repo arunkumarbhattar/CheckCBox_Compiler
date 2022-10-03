@@ -2447,12 +2447,6 @@ public:
       return LValue::MakeAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
   }
 
-  LValue MakeWasmAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
-                        TBAAAccessInfo TBAAInfo) {
-    return LValue::MakeWASMAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
-  }
-
-
   LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
                         AlignmentSource Source = AlignmentSource::Type) {
     return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
@@ -4765,8 +4759,6 @@ private:
     llvm::Type*  ChangeStructName(llvm::StructType *StructType);
     llvm::Type *FetchTemplatedTStructType(llvm::StructType *StructType);
     llvm::Value *EmitConditionalTaintedPtrDerefAdaptor(llvm::Value* BaseAddr);
-    LValue EmitLoadOfWASMPointerLValue(Address PtrAddr,
-                                       const QualType PtrTy);
     llvm::Value *EmitConditionalTaintedO2PAdaptor(llvm::Value *Base);
 };
 
