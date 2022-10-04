@@ -232,7 +232,7 @@ public:
   || getTypeID() == TaintedPointerTyID); }
 
   bool isTaintedPointerTy() const { return isTaintedStruct;}
-  bool setTaintedPointerTy(bool val) {isTaintedStruct = val;}
+  void setTaintedPointerTy(bool val) {isTaintedStruct = val;}
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 

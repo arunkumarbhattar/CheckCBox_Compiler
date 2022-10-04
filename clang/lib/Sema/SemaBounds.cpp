@@ -2618,13 +2618,11 @@ namespace {
                                         BoundsExpr *SrcBounds,
                                         CheckedScopeSpecifier CSS) {
       ProofFailure Cause;
-      bool IsStaticPtrCast = (Src->getType()->isCheckedPointerPtrType() &&
-                              Cast->getType()->isCheckedPointerPtrType());
-      if(!IsStaticPtrCast)
-      {
-        IsStaticPtrCast = (Src->getType()->isTaintedPointerPtrType() &&
-                           Cast->getType()->isTaintedPointerPtrType());
-      }
+      bool IsStaticPtrCast = ((Src->getType()->isCheckedPointerPtrType() &&
+                              Cast->getType()->isCheckedPointerPtrType())
+                                      || (Src->getType()->isTaintedPointerPtrType() &&
+                                          Cast->getType()->isTaintedPointerPtrType()));
+
       ProofStmtKind Kind = IsStaticPtrCast ? ProofStmtKind::StaticBoundsCast :
                              ProofStmtKind::BoundsDeclaration;
       FreeVariableListTy FreeVars;
@@ -3168,8 +3166,7 @@ namespace {
           break;
         case Expr::BinaryOperatorClass:
         case Expr::CompoundAssignOperatorClass:
-          if(IsTaintedAssignmentValid(cast<BinaryOperator>(S), CSS)
-              == false)
+          if(!IsTaintedAssignmentValid(cast<BinaryOperator>(S), CSS))
           {
             return CreateBoundsEmpty();
           }
@@ -3572,13 +3569,11 @@ namespace {
             RHS->getType()->isCheckedPointerPtrType()) {
           // ptr<T> to ptr<T> assignment, no obligation to check assignment bounds
         }
-
-        if (!E->isCompoundAssignmentOp() &&
+        else if (!E->isCompoundAssignmentOp() &&
             LHSType->isTaintedPointerPtrType() &&
             RHS->getType()->isTaintedPointerPtrType()) {
           // TPtr<T> to TPtr<T> assignment, no obligation to check assignment bounds
         }
-
         else if (LHSType->isCheckedPointerType() ||
                   LHSType->isIntegerType() ||
                   IsBoundsSafeInterfaceAssignment(LHSType, RHS)) {
