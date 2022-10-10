@@ -6120,8 +6120,10 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       if (CFAudited)
         Entity.setParameterCFAudited();
 
+      if ((FDecl->isTLIB()) && (!FDecl->getParamDecl(i)->getInteropType().isNull()))
+        Entity.setInterOpSymbioteType(FDecl->getParamDecl(i)->getType());
       ExprResult ArgE = PerformCopyInitialization(
-          Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
+           Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
       if (ArgE.isInvalid())
         return true;
 
@@ -9243,10 +9245,18 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   Sema::AssignConvertType ConvTy = Sema::Compatible;
 
   //Check if Non-Tainted Pointers are being assigned to Tainted Pointers
-  if(!isTaintedAssignmentValid(lhkind, rhkind))
+/*
+ * Removing this check at this place because -->
+ * for the case of itypes, only the itypes of an argument is compared
+ * against the type of the parameter being passed -->
+ * if you pass char simple _Checked[120] to char* : itype(_TArray_ptr<char>)
+ * --> You are erroring out --> I dont like this -->
+ *
+ */
+
+    if(!isTaintedAssignmentValid(lhkind, rhkind))
   {
-    ConvTy = Sema::IncompatibleTaintedAssignment;
-    return ConvTy;
+      return Sema::IncompatibleTaintedAssignment;
   }
 
   // C99 6.5.16.1p1: This following citation is common to constraints

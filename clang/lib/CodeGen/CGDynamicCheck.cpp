@@ -143,7 +143,7 @@ Value* CodeGenFunction::EmitConditionalTaintedPtrDerefAdaptor(Value* Base){
 Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
   ++NumDynamicChecksTainted;
   llvm::Type* OriginalType = Base->getType();
-  if (!Base->getType()->isTaintedPtrTy())
+  if (!Base->getType()->isPointerTy())
     return NULL;
 
   Value *OffsetVal = Builder.CreatePointerCast(

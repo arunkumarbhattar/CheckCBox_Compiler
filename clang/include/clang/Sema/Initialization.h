@@ -140,6 +140,8 @@ private:
   /// The type of the object or reference being initialized.
   QualType Type;
 
+  /// The Interop type of the object
+  QualType InterOpSymbiote;
   /// The mangling number for the next reference temporary to be created.
   mutable unsigned ManglingNumber = 0;
 
@@ -442,6 +444,16 @@ public:
 
   /// Retrieve type being initialized.
   QualType getType() const { return Type; }
+
+  void setInterOpSymbioteType(QualType Ty)
+  {
+          InterOpSymbiote = Ty;
+  }
+
+  const QualType getInterOpSymbioteType()
+  const {
+    return InterOpSymbiote;
+  }
 
   /// Retrieve complete type-source information for the object being
   /// constructed, if known.
