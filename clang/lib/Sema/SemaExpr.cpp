@@ -6085,6 +6085,19 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     const BoundsAnnotations Annots = Proto->getParamAnnots(i);
 
     Expr *Arg;
+    /**
+     * Basically, if we know that the callee function is TLIB Type
+     * We want it TLIB-ness to flow through its arguments too.
+     * The reason this is being introduced is -->
+     * If the arg is of type char* dest : itype(_TArray_ptr : bounds)
+     * and the parameter being passed in place of this argument is _Nt_Checked,
+     * then CheckPointerTypesForAssignment throws an error saying, illegal assignment.
+     * However, if we know that the RHS (arg type) is tlib-ed, then it means it
+     * belong to a TLIB function..
+     */
+//    if (FDecl->isTLIB())
+//      Arg->setTLIBScopeSpecifier();
+
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
@@ -6120,8 +6133,10 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       if (CFAudited)
         Entity.setParameterCFAudited();
 
+      if ((FDecl->isTLIB()) && (!FDecl->getParamDecl(i)->getInteropType().isNull()))
+        Entity.setInterOpSymbioteType(FDecl->getParamDecl(i)->getType());
       ExprResult ArgE = PerformCopyInitialization(
-          Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
+           Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
       if (ArgE.isInvalid())
         return true;
 
@@ -9243,10 +9258,18 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   Sema::AssignConvertType ConvTy = Sema::Compatible;
 
   //Check if Non-Tainted Pointers are being assigned to Tainted Pointers
-  if(!isTaintedAssignmentValid(lhkind, rhkind))
+/*
+ * Removing this check at this place because -->
+ * for the case of itypes, only the itypes of an argument is compared
+ * against the type of the parameter being passed -->
+ * if you pass char simple _Checked[120] to char* : itype(_TArray_ptr<char>)
+ * --> You are erroring out --> I dont like this -->
+ *
+ */
+
+    if(!isTaintedAssignmentValid(lhkind, rhkind))
   {
-    ConvTy = Sema::IncompatibleTaintedAssignment;
-    return ConvTy;
+      return Sema::IncompatibleTaintedAssignment;
   }
 
   // C99 6.5.16.1p1: This following citation is common to constraints
@@ -10216,7 +10239,8 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
 
   // If we can't convert to the LHS type, try the LHS interop type instead.
   // Note that we have to insert a cast that "downgrades" the checkedness.
-  if ((result == Incompatible || result == IncompatibleCheckedCVoid) &&
+  if ((result == Incompatible || result == IncompatibleCheckedCVoid
+       || result == IncompatibleTaintedAssignment) &&
       !LHSInteropType.isNull()) {
     result = CheckAssignmentConstraints(LHSInteropType, RHS, Kind, ConvertRHS);
     if (result != Incompatible && result != IncompatibleCheckedCVoid) {
