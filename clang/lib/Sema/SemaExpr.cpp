@@ -6085,6 +6085,19 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     const BoundsAnnotations Annots = Proto->getParamAnnots(i);
 
     Expr *Arg;
+    /**
+     * Basically, if we know that the callee function is TLIB Type
+     * We want it TLIB-ness to flow through its arguments too.
+     * The reason this is being introduced is -->
+     * If the arg is of type char* dest : itype(_TArray_ptr : bounds)
+     * and the parameter being passed in place of this argument is _Nt_Checked,
+     * then CheckPointerTypesForAssignment throws an error saying, illegal assignment.
+     * However, if we know that the RHS (arg type) is tlib-ed, then it means it
+     * belong to a TLIB function..
+     */
+//    if (FDecl->isTLIB())
+//      Arg->setTLIBScopeSpecifier();
+
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
@@ -10226,7 +10239,8 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
 
   // If we can't convert to the LHS type, try the LHS interop type instead.
   // Note that we have to insert a cast that "downgrades" the checkedness.
-  if ((result == Incompatible || result == IncompatibleCheckedCVoid) &&
+  if ((result == Incompatible || result == IncompatibleCheckedCVoid
+       || result == IncompatibleTaintedAssignment) &&
       !LHSInteropType.isNull()) {
     result = CheckAssignmentConstraints(LHSInteropType, RHS, Kind, ConvertRHS);
     if (result != Incompatible && result != IncompatibleCheckedCVoid) {
