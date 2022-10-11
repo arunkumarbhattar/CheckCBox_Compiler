@@ -96,6 +96,7 @@ struct BinOpInfo {
   FPOptions FPFeatures;
   const Expr *E;      // Entire expr, for error unsupported.  May not be binop.
 
+  void setQualType(QualType T) { Ty = T; }
   /// Check if the binop can result in integer overflow.
   bool mayHaveIntegerOverflow() const {
     // Without constant input, we can't rule out overflow.
@@ -3776,16 +3777,20 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   // Do the raw subtraction part.
   llvm::Value *LHS = NULL;
-  if (op.LHS->getType()->isTaintedPtrTy())
-    LHS = Builder.CreatePtrToInt(op.LHS, CGF.Int32Ty, "sub.ptr.lhs.cast");
-  else
-    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
   llvm::Value *RHS = NULL;
-  if (op.RHS->getType()->isTaintedPtrTy())
-    RHS = Builder.CreatePtrToInt(op.RHS, CGF.Int32Ty, "sub.ptr.rhs.cast");
+  if (op.LHS->getType()->isTaintedPtrTy() || op.RHS->getType()->isTaintedPtrTy())
+  {
+    auto LHS_inter = Builder.CreatePtrToInt(op.LHS, CGF.Int32Ty, "sub.ptr.lhs.cast");
+    auto RHS_inter = Builder.CreatePtrToInt(op.RHS, CGF.Int32Ty, "sub.ptr.rhs.cast");
+    LHS = Builder.CreateIntCast(LHS_inter, CGF.PtrDiffTy, false, "sub.ptr.lhs.cast");
+    RHS = Builder.CreateIntCast(RHS_inter, CGF.PtrDiffTy, false, "sub.ptr.rhs.cast");
+    const_cast<BinOpInfo&>(op).setQualType(CGF.getContext().IntTy);
+  }
   else
+  {
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
     RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
-
+  }
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
