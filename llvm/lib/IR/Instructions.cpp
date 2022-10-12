@@ -2451,14 +2451,6 @@ BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2,
 void BinaryOperator::AssertOK() {
   Value *LHS = getOperand(0), *RHS = getOperand(1);
   (void)LHS; (void)RHS; // Silence warnings.
-  if ((LHS->getType() != RHS->getType()) && LHS->getType()->isIntegerTy() &&
-      RHS->getType()->isIntegerTy())
-  {
-    if (LHS->getType()->getIntegerBitWidth() > RHS->getType()->getIntegerBitWidth())
-      RHS = CastInst::CreateIntegerCast(RHS, LHS->getType(), false, "", this);
-    else
-      LHS = CastInst::CreateIntegerCast(LHS, RHS->getType(), false, "", this);
-  }
   assert(LHS->getType() == RHS->getType() &&
          "Binary operator operand types must match!");
 #ifndef NDEBUG
