@@ -8018,8 +8018,9 @@ void CheckFormatHandler::CheckVarargsInCheckedScope(
         E->getExprLoc(), /*IsStringLocation*/false,
         getSpecifierRange(StartSpecifier, SpecifierLen));
 
-    } else if (!ArgTy->isCheckedPointerNtArrayType() &&
-               !ArgTy->isNtCheckedArrayType()) {
+    } else if ((!ArgTy->isCheckedPointerNtArrayType() &&
+               !ArgTy->isNtCheckedArrayType())
+               && !ArgTy->isTaintedPointerType()) {
       EmitFormatDiagnostic(
         S.PDiag(diag::err_checked_scope_invalid_format_specifier_argument)
           << FSString << "null-terminated",

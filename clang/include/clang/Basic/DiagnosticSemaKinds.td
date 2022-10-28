@@ -11283,8 +11283,14 @@ def err_typecheck_bounds_expr_incompatible_pointers : Error<
 def err_typecheck_ptr_decl_with_bounds : Error<
   "bounds declaration not allowed because %0 has a _Ptr type">;
 
+def err_typecheck_tptr_decl_with_bounds : Error<
+  "bounds declaration not allowed because %0 has a _TPtr type">;
+
 def err_typecheck_ptr_return_with_bounds : Error<
   "bounds declaration not allowed for a _Ptr return type">;
+
+def err_typecheck_tptr_return_with_bounds : Error<
+  "bounds declaration not allowed for a _TPtr return type">;
 
 def err_typecheck_function_pointer_decl_with_bounds : Error<
   "bounds declaration not allowed because %0 has a function pointer type">;

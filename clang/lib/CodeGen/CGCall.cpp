@@ -5563,10 +5563,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
                 RetTy);
 
-  /*
-         * If return type is a Tainted Pointer, We need to make sure it is a
-         * valid 32 Bit offset, hence we pass it through a P2O converter
-   */
+/*
+ * We attempt to enforce an 32-bit tainted pointer invariant throughout the function
+ * Hence, we insert a convert a 64-bit tainted pointer to 32-bit tainted pointer below
+ */
   if (RetTy->isTaintedPointerType())
   {
     auto *TaintedPtrOffset = EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());

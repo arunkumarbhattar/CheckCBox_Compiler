@@ -6133,7 +6133,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       if (CFAudited)
         Entity.setParameterCFAudited();
 
-      if ((FDecl->isTLIB()) && (!FDecl->getParamDecl(i)->getInteropType().isNull()))
+      if (FDecl && (FDecl->isTLIB()) && (!FDecl->getParamDecl(i)->getInteropType().isNull()))
         Entity.setInterOpSymbioteType(FDecl->getParamDecl(i)->getType());
       ExprResult ArgE = PerformCopyInitialization(
            Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);

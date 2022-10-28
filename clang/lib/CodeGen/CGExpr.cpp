@@ -1917,9 +1917,15 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   Value = EmitToMemory(Value, Ty);
 
   /*
-   * if the Ty (Type of the Source Operand) is a pointer with depth greater than 1
-   * --> then we convert Value to i32 type and
-   * convert Addr to i32* type and then store the value
+   * Multi-depth pointer traversal of Decoyed structure members is to be handled
+   * specially here.
+   *
+   * Jumps between pointers in a 64-bit system is 8-bytes wide. However,
+   * since WASM is a 32-bit system, Decoyed Tstructs communicated between
+   * the two realms need to have members appropriated in the 32-bit realm.
+   *
+   * Which means --> assume char** name --> name[0] should be 4 bytes away from
+   * name[1], if name is a Decoyed member.
    */
   uint8_t pointer_depth = 0;
   auto TempTy = Ty;
