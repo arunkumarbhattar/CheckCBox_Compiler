@@ -8264,14 +8264,16 @@ bool Parser::CheckCurrentTaintedPointerSanity()
         SkipUntil(tok::r_paren, StopAtSemi);
         return false;
       }
-      if(GetLookAheadToken(curr_tok).is(tok::kw_struct))
-      {
-        Diag(Tok, diag::err_invalid_tainted_ptr_struct)<< FixItHint::CreateInsertion(
-            Tok.getLocation(),
-            "Tstruct");
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return false;
-      }
+      //Removing this and moving this check to ActOnDeclarator in SemaDecl
+      // because I can know if my decl is TLIB enclosed
+//      if(GetLookAheadToken(curr_tok).is(tok::kw_struct))
+//      {
+//        Diag(Tok, diag::err_invalid_tainted_ptr_struct)<< FixItHint::CreateInsertion(
+//            Tok.getLocation(),
+//            "Tstruct");
+//        SkipUntil(tok::r_paren, StopAtSemi);
+//        return false;
+//      }
       if(GetLookAheadToken(curr_tok).is(tok::kw__Checked)
           || (GetLookAheadToken(curr_tok).is(tok::kw__Nt_checked))) {
         Diag(Tok, diag::err_invalid_tainted_ptr_checked);
@@ -8374,18 +8376,7 @@ bool Parser::CheckCurrentTaintedPointerSanity()
     if(typedef_resolved_type->getAsRecordDecl() != NULL)
     {
       auto typedef_record_decl = typedef_resolved_type->getAsRecordDecl();
-      if((typedef_record_decl->isStruct())
-              && (!typedef_record_decl->isTaintedStruct())
-              )
-      {
-        Diag(Tok, diag::err_invalid_tainted_ptr_struct)
-            << FixItHint::CreateInsertion(
-            Tok.getLocation(),
-            "Tstruct");
-        SkipUntil(tok::greater, StopAtSemi);
-        return;
-      }
-      else if(typedef_record_decl->getTypeForDecl()->isCheckedPointerType()){
+      if(typedef_record_decl->getTypeForDecl()->isCheckedPointerType()){
         Diag(Tok, diag::err_invalid_tainted_ptr_checked)
             << FixItHint::CreateInsertion(
             Tok.getLocation(),

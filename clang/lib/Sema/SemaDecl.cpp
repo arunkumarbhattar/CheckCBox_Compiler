@@ -7473,6 +7473,14 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
     bool &AddToScope, ArrayRef<BindingDecl *> Bindings) {
   QualType R = TInfo->getType();
+  // The starting location of the last token in the type
+  auto typedef_resolved_type = R;
+  if (R->isTaintedPointerType() && R->getCoreTypeInternal()->isStructureType())
+  {
+    Diag(D.getIdentifierLoc(), diag::err_invalid_tainted_ptr_struct);
+    return nullptr;
+  }
+
   DeclarationName Name = GetNameForDeclarator(D).getName();
 
   IdentifierInfo *II = Name.getAsIdentifierInfo();

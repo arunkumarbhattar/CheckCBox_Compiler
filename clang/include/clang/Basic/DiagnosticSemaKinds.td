@@ -11571,6 +11571,10 @@ def err_bounds_type_annotation_lost_checking : Error<
     "%0 cannot be cast to %1 in a checked scope because "
     "%0 might not point to a null-terminated array">;
 
+  def err_invalid_tainted_ptr_struct : Error<
+    "Tainted Pointer cannot point to Non-Tainted Structs unless\n"
+     "they are part of a TLIB function parameter/Return Type">;
+
   def err_tainted_no_cast_to_nt_array_ptr : Error<
     "%0 cannot be cast to %1 in because "
     "%0 might not point to a null-terminated array">;
