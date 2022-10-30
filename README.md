@@ -171,6 +171,13 @@ ninja check-checkedc // This command will run all the sanity test cases for chec
 ```
 ninja check-clang // This command will run all the sanity test cases for clang frontend
 ```
+```
+to compile for ASAN --> 
+cd <compiler-rt> // Switch to compiler-rt directory
+cmake 
+make install
+export ASAN_SYMBOLIZER_PATH=<pathToLLVMSymbolizer> // For meaningful ASAN backtrace
+```
 ## Testing Playground for CheckCBox
 
 After the checkcbox tests have been cloned in the src/llvm/projects/checkcbox-wrapper directory by performing git clone https://github.com/arunkumarbhattar/checkcbox.git in the above mentioned directory
