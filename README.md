@@ -171,10 +171,11 @@ ninja check-checkedc // This command will run all the sanity test cases for chec
 ```
 ninja check-clang // This command will run all the sanity test cases for clang frontend
 ```
+Step 5 (Optional) Sanitizers --> 
 ```
-to compile for ASAN --> 
+First compile target llvm-config
 cd <compiler-rt> // Switch to compiler-rt directory
-cmake 
+cmake .
 make install
 export ASAN_SYMBOLIZER_PATH=<pathToLLVMSymbolizer> // For meaningful ASAN backtrace
 ```
