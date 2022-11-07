@@ -1005,8 +1005,19 @@ public:
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
   Type *getResultElementType() const {
-    assert(ResultElementType ==
-           cast<PointerType>(getType()->getScalarType())->getElementType());
+    if (ResultElementType != cast<PointerType>(getType())->getElementType())
+    {
+      //print the resultelementtype
+      llvm::errs() << " ASSERT HERE ******* "<<"\n";
+        ResultElementType->print(errs());
+        errs() << "\n";
+        // and then print the type of the pointer
+        cast<PointerType>(getType())->getElementType()->print(errs());
+        errs() << "\n";
+    }
+
+//    assert(ResultElementType ==
+//           cast<PointerType>(getType()->getScalarType())->getElementType());
     return ResultElementType;
   }
 
@@ -1179,8 +1190,16 @@ class ICmpInst: public CmpInst {
   void AssertOK() {
     assert(isIntPredicate() &&
            "Invalid ICmp predicate value");
-    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-          "Both operands to ICmp instruction are not of the same type!");
+if (getOperand(0)->getType() != getOperand(1)->getType())
+{
+    //print an error message and dump both the operand types
+    llvm::errs() << "*******ASSERT HERE ******* "<<"\n";
+    getOperand(0)->getType()->dump();
+    getOperand(1)->getType()->dump();
+    this->dump();
+}
+//    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
+//          "Both operands to ICmp instruction are not of the same type!");
     // Check that the operands are the right type
     assert((getOperand(0)->getType()->isIntOrIntVectorTy() ||
             getOperand(0)->getType()->isPtrOrPtrVectorTy()) &&

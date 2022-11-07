@@ -4754,12 +4754,14 @@ private:
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 
-    llvm::Value * EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr, const QualType BaseTy);
+    llvm::Value * EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr);
 
     llvm::Type*  ChangeStructName(llvm::StructType *StructType);
     llvm::Type *FetchTemplatedTStructType(llvm::StructType *StructType);
     llvm::Value *EmitConditionalTaintedPtrDerefAdaptor(llvm::Value* BaseAddr);
     llvm::Value *EmitConditionalTaintedO2PAdaptor(llvm::Value *Base);
+    llvm::Value *EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
+                                            const llvm::Type *BaseTy);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

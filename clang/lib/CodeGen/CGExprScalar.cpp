@@ -3484,11 +3484,27 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     return CGF.Builder.CreateBitCast(result, pointer->getType());
   }
 
+  Value* RetVal = NULL;
   if (CGF.getLangOpts().isSignedOverflowDefined())
-    return CGF.Builder.CreateGEP(pointer, index, "add.ptr");
+    RetVal = CGF.Builder.CreateGEP(pointer, index, "add.ptr");
 
-  return CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
+  RetVal = CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
                                     op.E->getExprLoc(), "add.ptr");
+
+  if (pointerOperand->getType()->isTaintedPointerType())
+  {
+    //    //Print out the tainted pointer
+    //    llvm::errs() << "Tainted pointer: " << pointer->getName().str() << "\n";
+    auto OriginalTyp = RetVal->getType();
+    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnits::Four(), "tmp");
+    CGF.Builder.CreateStore(RetVal, Temp);
+    RetVal =  CGF.Builder.CreateLoad(Temp);
+    //    //cast the loadVal back to original Value
+    RetVal = CGF.Builder.CreatePointerCast(RetVal, OriginalTyp);
+    int i = 10;
+  }
+  return RetVal;
+
 }
 
 // Construct an fmuladd intrinsic to represent a fused mul-add of MulOp and

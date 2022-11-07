@@ -85,6 +85,23 @@ static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
     return true;
 
 }
+
+static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                             const llvm::Type* BaseTy) {
+  if(!CGM.getLangOpts().CheckedC)
+    return false;
+
+  if (BaseTy->isPointerTy() && BaseTy->getCoreElementType()->isVoidTy())
+    return false;
+
+  if((!(BaseTy->isTaintedPtrTy() || BaseTy->isTStructTy())
+       || BaseTy->isFunctionTy()))
+    return false;
+
+  return true;
+
+}
+
 void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
                                               const QualType BaseTy) {
   if (!shouldEmitNonNullCheck(CGM, BaseTy))
@@ -98,15 +115,27 @@ void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
 }
 
 Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
-                                                const QualType BaseTy){
+                                                const llvm::Type* BaseTy){
     if(!shouldEmitTaintedPtrDerefAdaptor
             (CGM, BaseTy))
         return NULL;
 
     ++NumDynamicChecksTainted;
 
-    return EmitDynamicTaintedPtrAdaptorBlock(BaseAddr, BaseTy);
+    return EmitDynamicTaintedPtrAdaptorBlock(BaseAddr);
 }
+
+Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
+                                                   const QualType BaseTy){
+  if(!shouldEmitTaintedPtrDerefAdaptor
+      (CGM, BaseTy))
+    return NULL;
+
+  ++NumDynamicChecksTainted;
+
+  return EmitDynamicTaintedPtrAdaptorBlock(BaseAddr);
+}
+
 
 /*
  * This Function is introduced to insert Tainted Pointer Dereference
@@ -149,12 +178,16 @@ Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
   Value *OffsetVal = Builder.CreatePointerCast(
       Base,
       llvm::Type::getInt8PtrTy(Base->getContext()));
-  llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal,
-                                                            "_Dynamic_check.tainted_pointer");
+  llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal);
   /*
    * Returned Ptr is of type unsigned int , hence cast it back to original type.
    */
-  return Builder.CreateIntToPtr(ConvPtr, OriginalType);
+  llvm::Value* RetVal = Builder.CreateIntToPtr(ConvPtr, OriginalType);
+  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnits::Four());
+  Builder.CreateStore(RetVal, TempAlloca);
+  //Load from Alloca and return
+  auto LoadVal =  Builder.CreateLoad(TempAlloca);
+  return Builder.CreatePointerCast(LoadVal, RetVal->getType());
 }
 
 void CodeGenFunction::EmitDynamicNonNullCheck(Value *Val,
@@ -520,8 +553,7 @@ void CodeGenFunction::EmitDynamicCheckBlocks(Value *Condition) {
 }
 
 Value*
-CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr,
-                                                   const QualType BaseTy) {
+CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
 
     ++NumDynamicChecksTainted;
 

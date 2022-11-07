@@ -70,6 +70,10 @@ public:
     assert(isValid());
     return Alignment;
   }
+
+  void SetAlignment(CharUnits alignment) {
+    Alignment = alignment;
+  }
 };
 
 /// A specialization of Address that requires the address to be an
