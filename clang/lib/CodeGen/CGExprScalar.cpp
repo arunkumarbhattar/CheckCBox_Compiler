@@ -4050,9 +4050,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
      * Always convert the tainted pointer to an offset.
      */
     if (LHSTy->isTaintedPointerType())
-        LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+    {
+      LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+      //zero extent to i64
+      LHS = CGF.Builder.CreateZExt(LHS, CGF.Int64Ty);
+    }
     if (RHSTy->isTaintedPointerType())
-        RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+    {
+      RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+        //zero extent to i64
+        RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+    }
 
     auto LHSType = LHS->getType();
     auto RHSType = RHS->getType();
@@ -4115,9 +4123,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     }
 
     if (LHSTy->isTaintedPointerType())
+    {
       LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+      //zero extent to i64
+      LHS = CGF.Builder.CreateZExt(LHS, CGF.Int64Ty);
+    }
     if (RHSTy->isTaintedPointerType())
+    {
       RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+        //zero extent to i64
+        RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+    }
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result
