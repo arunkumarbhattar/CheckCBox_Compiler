@@ -151,7 +151,7 @@ Step 4: Now create a build directory generate the Cmake files
 
 ```
 cd <WORK_DIR>/build
-cmake -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_LINKER=/usr/bin/gold DCMAKE_BUILD_TYPE=Debug -DLLVM_LIT_ARGS=-v -DLLVM_PARALLEL_LINK_JOBS=1 ../llvm/
+cmake --G Ninja -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCMAKE_LINKER=/usr/bin/gold DCMAKE_BUILD_TYPE=Debug -DLLVM_LIT_ARGS=-v -DLLVM_PARALLEL_LINK_JOBS=1 ../llvm/
 ```
 
 Step 6: Now you are all set to build the target 
