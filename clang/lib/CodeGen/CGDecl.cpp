@@ -398,6 +398,9 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   llvm::Constant *addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
   CharUnits alignment = getContext().getDeclAlign(&D);
 
+  if (D.getType()->isTaintedPointerType())
+    alignment = alignment.Four();
+
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
   setAddrOfLocalVar(&D, Address(addr, alignment));
