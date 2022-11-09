@@ -1179,8 +1179,8 @@ class ICmpInst: public CmpInst {
   void AssertOK() {
     assert(isIntPredicate() &&
            "Invalid ICmp predicate value");
-    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-          "Both operands to ICmp instruction are not of the same type!");
+//    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
+//          "Both operands to ICmp instruction are not of the same type!");
     // Check that the operands are the right type
     assert((getOperand(0)->getType()->isIntOrIntVectorTy() ||
             getOperand(0)->getType()->isPtrOrPtrVectorTy()) &&
