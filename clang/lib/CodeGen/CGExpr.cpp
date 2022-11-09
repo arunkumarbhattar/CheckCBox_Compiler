@@ -2628,6 +2628,9 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
   V = EmitBitCastOfLValueToProperType(CGF, V, RealVarTy);
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
+  if (VD->getType()->isTaintedPointerType())
+      Alignment = CharUnits::Four();
+
   Address Addr(V, Alignment);
   // Emit reference to the private copy of the variable if it is an OpenMP
   // threadprivate variable.

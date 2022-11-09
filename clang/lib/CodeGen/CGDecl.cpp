@@ -266,7 +266,10 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
-  GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
+  if (D.getType()->isTaintedPointerType())
+      GV->setAlignment(CharUnits::Four().getAsAlign());
+  else
+    GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
 
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -427,7 +430,11 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   if (D.getInit() && !isCudaSharedVar)
     var = AddInitializerToStaticVarDecl(D, var);
 
-  var->setAlignment(alignment.getAsAlign());
+    if (D.getType()->isTaintedPointerType())
+        var->setAlignment(CharUnits::Four().getAsAlign());
+    else
+        var->setAlignment(alignment.getAsAlign());
+
 
   if (D.hasAttr<AnnotateAttr>())
     CGM.AddGlobalAnnotations(&D, var);
@@ -1133,11 +1140,17 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     llvm::GlobalVariable *GV = new llvm::GlobalVariable(
         getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
         Constant, Name, InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
-    GV->setAlignment(Align.getAsAlign());
+    if (D.getType()->isTaintedPointerType())
+        GV->setAlignment(CharUnits::Four().getAsAlign());
+    else
+        GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
   } else if (CacheEntry->getAlignment() < Align.getQuantity()) {
-    CacheEntry->setAlignment(Align.getAsAlign());
+      if (D.getType()->isTaintedPointerType())
+          CacheEntry->setAlignment(CharUnits::Four().getAsAlign());
+      else
+            CacheEntry->setAlignment(Align.getAsAlign());
   }
 
   return Address(CacheEntry, Align);
@@ -2503,9 +2516,12 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
              CGM.getDataLayout().getAllocaAddrSpace());
       auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
       auto *T = V->getType()->getPointerElementType()->getPointerTo(DestAS);
+      auto DeclAlignment = DeclPtr.getAlignment();
+      if (D.getType()->isTaintedPointerType())
+          DeclAlignment = CharUnits::Four();
       DeclPtr = Address(getTargetHooks().performAddrSpaceCast(
                             *this, V, SrcLangAS, DestLangAS, T, true),
-                        DeclPtr.getAlignment());
+                        DeclAlignment);
     }
 
     // Push a destructor cleanup for this parameter if the ABI requires it.

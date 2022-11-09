@@ -3785,7 +3785,10 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     // handling.
     GV->setConstant(isTypeConstant(D->getType(), false));
 
-    GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
+    if (D->getType()->isTaintedPointerType())
+        GV->setAlignment(CharUnits::Four().getAsAlign());
+    else
+        GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 
     setLinkageForGV(GV, D);
 
