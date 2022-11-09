@@ -1917,9 +1917,15 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   Value = EmitToMemory(Value, Ty);
 
   /*
-   * if the Ty (Type of the Source Operand) is a pointer with depth greater than 1
-   * --> then we convert Value to i32 type and
-   * convert Addr to i32* type and then store the value
+   * Multi-depth pointer traversal of Decoyed structure members is to be handled
+   * specially here.
+   *
+   * Jumps between pointers in a 64-bit system is 8-bytes wide. However,
+   * since WASM is a 32-bit system, Decoyed Tstructs communicated between
+   * the two realms need to have members appropriated in the 32-bit realm.
+   *
+   * Which means --> assume char** name --> name[0] should be 4 bytes away from
+   * name[1], if name is a Decoyed member.
    */
   uint8_t pointer_depth = 0;
   auto TempTy = Ty;
@@ -1929,9 +1935,12 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     TempTy = TempTy->getPointeeType();
   }
 
+  //SHADY
   if (pointer_depth >= 1) {
     Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
-    Addr = Builder.CreateElementBitCast(Addr, Builder.getInt32Ty());
+    //Zero extend the pointer to 64-bit
+    Value = Builder.CreateZExt(Value, Builder.getInt64Ty());
+    Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
   }
 
   if (Ty->isTaintedPointerType())
@@ -3789,7 +3798,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
     llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
         addr.getPointer()->getContext());
     CastedPointer = CGF.Builder.CreatePointerCast(addr.getPointer(), DestTy);
-    addr = Address(CastedPointer, addr.getAlignment());
+    addr = Address(CastedPointer, CharUnits::Four());
   }
 
   // All the indices except that last must be zero.
@@ -3823,6 +3832,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
     eltPtr = emitArraySubscriptGEP(
         CGF, addr.getPointer(), indices, inbounds, signedIndices,
         loc, name);
+
   } else {
     // Remember the original array subscript for bpf target
     unsigned idx = LastIndex->getZExtValue();
@@ -3842,7 +3852,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   {
     llvm::Type* DestTy = OriginalType;
     CastedPointer = CGF.Builder.CreatePointerCast(RetAddr.getPointer(), DestTy);
-    RetAddr = Address(CastedPointer, RetAddr.getAlignment());
+    RetAddr = Address(CastedPointer, CharUnits::Four());
   }
   return RetAddr;
 }
@@ -3954,8 +3964,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         EmitTaintedPtrDerefAdaptor(LHS.getAddress(*this), BaseTy);
     Address Addr = LHS.getAddress(*this);
     if (TaintedPtrFromOffset != NULL) {
-      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+      Addr = Address(TaintedPtrFromOffset, CharUnits::Four());
     }
+
     EmitDynamicNonNullCheck(Addr, BaseTy);
     LValue LV = LValue::MakeVectorElt(Addr, Idx, E->getBase()->getType(),
                                       LHS.getBaseInfo(), TBAAAccessInfo());
@@ -4002,7 +4013,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
     if (TaintedPtrFromOffset != NULL)
-      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+      Addr = Address(TaintedPtrFromOffset, CharUnits::Four());
     EmitDynamicNonNullCheck(Addr, BaseTy);
     // The element count here is the total number of non-VLA elements.
     llvm::Value *numElements = getVLASize(vla).NumElts;
@@ -4036,7 +4047,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     llvm::Value *ScaledIdx = Builder.CreateMul(Idx, InterfaceSizeVal);
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
     if (TaintedPtrFromOffset != NULL)
-      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+      Addr = Address(TaintedPtrFromOffset, CharUnits::Four());
     EmitDynamicNonNullCheck(Addr, BaseTy);
     // We don't necessarily build correct LLVM struct types for ObjC
     // interfaces, so we can't rely on GEP to do this scaling
@@ -4090,12 +4101,22 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     QualType ptrType = E->getBase()->getType();
     auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
     if (TaintedPtrFromOffset != NULL)
-      Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
+      Addr = Address(TaintedPtrFromOffset, CharUnits::Four());
     EmitDynamicNonNullCheck(Addr, BaseTy);
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
+    // if the field  type is a tainted pointer type, then perform a temp alloca creation
+        // and store the value of the pointer dereference into the temp alloca
+          // and return the temp alloca address
+    if (ptrType->isTaintedPointerType())
+    {
+      //    //Print out the tainted pointer
+        llvm::errs() << "Emit Array Subscript " << "\n";
+        Addr.SetAlignment(CharUnits::Four());
+    }
+
   }
     LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
 
@@ -4534,7 +4555,7 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
     llvm::Type* DestTy = llvm::Type::getInt32PtrTy(
         base.getPointer()->getContext());
     CastedPointer = CGF.Builder.CreatePointerCast(base.getPointer(), DestTy);
-    base = Address(CastedPointer, base.getAlignment());
+    base = Address(CastedPointer, CharUnits::Four());
   }
 
   Address RetVal = base;
@@ -4548,6 +4569,29 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
 
   RetVal = CGF.Builder.CreateStructGEP(base, idx, field->getName());
 
+  if (field->getType()->isTaintedPointerType())
+  {
+    // Then you gotta manually set the alignment to be 4
+        // because the alignment of the pointer is 4.
+    RetVal = Address(RetVal.getPointer(), CharUnits::Four());
+  }
+
+  if (field->getType()->isTypedefNameType())
+  {
+    //print the name and type of the field
+    std::string FieldName = field->getNameAsString();
+    std::string FieldTypeName = field->getType().getAsString();
+    auto TypedefTyp = field->getType()->getAs<TypedefType>();
+    auto TypedefDecl = TypedefTyp->getDecl();
+    auto UnderlyingType = TypedefDecl->getUnderlyingType();
+    if (UnderlyingType->isTaintedPointerType())
+    {
+      // Then you gotta manually set the alignment to be 4
+      // because the alignment of the pointer is 4.
+      llvm::errs() << "Field Name: " << FieldName << " Field Type: " << FieldTypeName << "\n";
+      RetVal = Address(RetVal.getPointer(), CharUnits::Four());
+    }
+  }
   /*
      * Now, once you get the address, cast it back to original type
    */
@@ -4555,7 +4599,7 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   {
     llvm::Type* DestTy = OriginalType;
     CastedPointer = CGF.Builder.CreatePointerCast(RetVal.getPointer(), DestTy);
-    RetVal = Address(CastedPointer, RetVal.getAlignment());
+    RetVal = Address(CastedPointer, CharUnits::Four());
   }
   return RetVal;
 
@@ -4757,6 +4801,12 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   * involved, then I dont want to add all the instrumentation in between pointer assignments. Makes no sense.
   *
   */
+  /*
+   * Revisiting the above comment after a couple months -->
+   * I think I was wrong. I think I should add instrumentation in between pointer assignments.
+   * But the instrumentation will be a little different
+   */
+
 //  if (addr.getPointer()->getType()->getCoreElementType()->isTStructTy())
 //  {
 //    auto *InstrumentedVal = EmitTaintedPtrDerefAdaptor(addr, field->getType());
@@ -4776,6 +4826,20 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     RecordCVR = 0;
     FieldType = FieldType->getPointeeType();
   }
+
+//  if (field->getType()->isTaintedPointerType())
+//  {
+//   //Once the reference is loaded, we can instrument the pointer
+//   // Convert it to a int32 and zero extend it to int64
+//   llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+//   llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+//   auto OriginalType = addr.getPointer()->getType();
+//   auto V = Builder.CreatePtrToInt(addr.getPointer(), Int32Ty);
+//   // Zero extend this integer to 64 bits.
+//   V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
+//   V = Builder.CreateIntToPtr(V, OriginalType);
+//    addr = Address(V, CharUnits::Four());
+//  }
 
   // Make sure that the address is pointing to the right type.  This is critical
   // for both unions and structs.  A union needs a bitcast, a struct element

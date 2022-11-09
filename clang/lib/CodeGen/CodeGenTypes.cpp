@@ -817,6 +817,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   if (T->isTaintedPointerType())
     ResultType->setTaintedPtrTy(true);
+  else
+    ResultType->setTaintedPtrTy(false);
 
   if (getFunctionExtInfo(T).isDecoyedType())
     ResultType->setDecoyed(true);

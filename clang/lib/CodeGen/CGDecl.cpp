@@ -398,6 +398,9 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   llvm::Constant *addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
   CharUnits alignment = getContext().getDeclAlign(&D);
 
+  if (D.getType()->isTaintedPointerType())
+    alignment = alignment.Four();
+
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
   setAddrOfLocalVar(&D, Address(addr, alignment));
@@ -1518,16 +1521,16 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
 
       /*
-       * There is going to be some extra instrumentation needed here -->
-       * If variable is a pointer, and its core type is a Tstruct,
-       * then check if the Tstruct has a Decoy sibling or not.
+       * Tstruct pointers can be of two types:
+       * 1.) Tstruct *tstruct_ptr; --> Structure members follow generic 64-bit layout.
+       * 2.) _Decoy Tstruct *Spl_tstruct_ptr; --> Structure members follow WASM-compatible 32-bit layout.
        *
-       * If there is a Decoy Sibling, then we need to allocate the address
-       * have the type of the Decoy Sibling and NOT the Original Tstruct.
+       * The below code evaluates if there is a user-defined case for the above,
+       * and hijacks the appropriate type (Decoy Sibling Type) into the flow.
        *
        */
       llvm::Type* DecoyTy = NULL;
-      if (Ty->isPointerType()) {
+      if (Ty->isTaintedPointerType()) {
         const auto coreType = Ty->getCoreTypeInternal();
         if (coreType->isTaintedStructureType()) {
           const RecordDecl *coreDecl = coreType->getAsStructureType()->getDecl();

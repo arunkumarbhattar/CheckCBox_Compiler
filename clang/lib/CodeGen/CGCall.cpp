@@ -4526,8 +4526,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   llvm::Type* DecoyType = IRFuncTy->getReturnType();
   const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
-  const FunctionDecl *F;
-  F = dyn_cast_or_null<FunctionDecl>(TD);
 
   /*
    * The below instrumentation is our attempt at converting Function return Type
@@ -4931,28 +4929,87 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
               I->hasLValue() ? I->getKnownLValue().getAddress(*this)
                              : I->getKnownRValue().getAggregateAddress());
 
+        // If loaded value is of align 4, then perform a ptr to integer cast and
+        // then a truncation to i32.
+        bool isTaintedForSure = false;
+        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy()
+            &&
+            getLoadStoreAlignment(V).value() == 4) {
+          auto OriginalType = V->getType();
+          llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+          llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+          V = Builder.CreatePtrToInt(V, Int32Ty);
+          // Zero extend this integer to 64 bits.
+          V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
+          V = Builder.CreateIntToPtr(V, OriginalType);
+          isTaintedForSure = true;
+        }
+//        else if (V->getType()->isPointerTy() &&
+//                 V->getPointerAlignment(CGM.getDataLayout()).value() == 4) {
+//          llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+//          llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+//          V = Builder.CreatePtrToInt(V, Int32Ty);
+//          V = Builder.CreateIntToPtr(V, PtrTy);
+//          isTaintedForSure = true;
+//        }
+        else if (isa<llvm::CastInst>(V))
+        {
+            //fetch the operand of the cast instruction
+            auto *castIns = dyn_cast<llvm::CastInst>(V);
+            auto DestType = castIns->getDestTy();
+            llvm::Value *Op = castIns->getOperand(0);
+            if (Op!= NULL && Op->getType()->isPointerTy() &&
+                (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op))
+                &&  (getLoadStoreAlignment(Op).value() == 4) && (DestType->isPointerTy()))
+            {
+              //printf("Found a cast instruction with a load/store operand
+              llvm::errs() << "Found a bitcast nested Load/Store Inst\n";
+              llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+              llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+              V = Builder.CreatePtrToInt(V, Int32Ty);
+              V = Builder.CreateIntToPtr(V, DestType);
+              isTaintedForSure = true;
+            }
+        }
+        //if argument being passed is a Bitcast type instruction, walk up the operand
+        // list until you find a load or store with align.
+        // THen you can fetch the alignment and if 4, you can instrument it accordingly
+
          QualType pointeeTy = I->Ty->getPointeeType();
          const Decl *TD = Callee.getAbstractInfo().getCalleeDecl().getDecl();
          const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TD);
 
-         auto AddrRefOfVal = Address(V, getPointerAlign());
-         auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
-         if(TaintedPtrFromOffset != NULL)
-              V = TaintedPtrFromOffset;
-         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isPointerTy())
-                  && (I->Ty->isPointerType()) && (!isa<llvm::Constant>(V)))
-         {/*
-            * To Improve Performance, Only TLIB functions that might have
-            * Itypes will receive this additional Tainting
-            * And one more criteria is that argument being passed must be a
-            * Tainted Pointer
-            * */
-           auto *TaintedPtr = EmitConditionalTaintedPtrDerefAdaptor(V);
-           if(TaintedPtr != NULL)
-           {
-             V = TaintedPtr;
-           }
+         //simple experiment
+         llvm::Value *TaintedPtrFromOffset = NULL;
+         if ((FD != NULL) && (FD->isTLIB())){
+            auto AddrRefOfVal = Address(V, CharUnits::Four());
+            TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
+            if ((TaintedPtrFromOffset == NULL)
+             && (isTaintedForSure))
+            {
+              TaintedPtrFromOffset = EmitDynamicTaintedPtrAdaptorBlock(AddrRefOfVal);
+            }
          }
+         if (TaintedPtrFromOffset != NULL)
+         {
+           V = TaintedPtrFromOffset;
+         }
+
+//         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isTaintedPtrTy())
+//                  && (I->Ty->isPointerType()) && (!isa<llvm::Constant>(V)))
+//         {
+//            /*
+//            * To Improve Performance, Only TLIB functions that might have
+//            * Itypes will receive this additional Tainting
+//            * And one more criteria is that argument being passed must be a
+//            * Tainted Pointer
+//            * */
+//           auto *TaintedPtr = EmitConditionalTaintedPtrDerefAdaptor(V);
+//           if(TaintedPtr != NULL)
+//           {
+//             V = TaintedPtr;
+//           }
+//         }
         // Implement swifterror by copying into a new swifterror argument.
         // We'll write back in the normal path out of the call.
         if (CallInfo.getExtParameterInfo(ArgNo).getABI()
@@ -5563,10 +5620,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
                 RetTy);
 
-  /*
-         * If return type is a Tainted Pointer, We need to make sure it is a
-         * valid 32 Bit offset, hence we pass it through a P2O converter
-   */
+/*
+ * We attempt to enforce an 32-bit tainted pointer invariant throughout the function
+ * Hence, we insert a convert a 64-bit tainted pointer to 32-bit tainted pointer below
+ */
   if (RetTy->isTaintedPointerType())
   {
     auto *TaintedPtrOffset = EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());

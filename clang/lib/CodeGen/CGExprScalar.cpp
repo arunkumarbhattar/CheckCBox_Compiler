@@ -3484,11 +3484,27 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     return CGF.Builder.CreateBitCast(result, pointer->getType());
   }
 
+  Value* RetVal = NULL;
   if (CGF.getLangOpts().isSignedOverflowDefined())
-    return CGF.Builder.CreateGEP(pointer, index, "add.ptr");
+    RetVal = CGF.Builder.CreateGEP(pointer, index, "add.ptr");
 
-  return CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
+  RetVal = CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
                                     op.E->getExprLoc(), "add.ptr");
+
+  if (pointerOperand->getType()->isTaintedPointerType())
+  {
+    //    //Print out the tainted pointer
+    //    llvm::errs() << "Tainted pointer: " << pointer->getName().str() << "\n";
+    auto OriginalTyp = RetVal->getType();
+    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnits::Four(), "tmp");
+    CGF.Builder.CreateStore(RetVal, Temp);
+    RetVal =  CGF.Builder.CreateLoad(Temp);
+    //    //cast the loadVal back to original Value
+    RetVal = CGF.Builder.CreatePointerCast(RetVal, OriginalTyp);
+    int i = 10;
+  }
+  return RetVal;
+
 }
 
 // Construct an fmuladd intrinsic to represent a fused mul-add of MulOp and
@@ -4034,9 +4050,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
      * Always convert the tainted pointer to an offset.
      */
     if (LHSTy->isTaintedPointerType())
-        LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+    {
+      LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+      //zero extent to i64
+      LHS = CGF.Builder.CreateZExt(LHS, CGF.Int64Ty);
+    }
     if (RHSTy->isTaintedPointerType())
-        RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+    {
+      RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+        //zero extent to i64
+        RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+    }
 
     auto LHSType = LHS->getType();
     auto RHSType = RHS->getType();
@@ -4099,9 +4123,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     }
 
     if (LHSTy->isTaintedPointerType())
+    {
       LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
+      //zero extent to i64
+      LHS = CGF.Builder.CreateZExt(LHS, CGF.Int64Ty);
+    }
     if (RHSTy->isTaintedPointerType())
+    {
       RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
+        //zero extent to i64
+        RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+    }
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result
