@@ -1051,6 +1051,7 @@ public:
         return ReturnType;
     }
   Type *getResultElementType() const {
+<<<<<<< HEAD
 
       //This Extra check is added to avoid crash in case of invalid GEP instruction
       //getType returns a pointer of core type this --> :
@@ -1091,6 +1092,19 @@ public:
     }
     assert(ResultElementType ==
            cast<PointerType>(getType()->getScalarType())->getElementType());
+    if (ResultElementType != cast<PointerType>(getType())->getElementType())
+    {
+      //print the resultelementtype
+      llvm::errs() << " ASSERT HERE ******* "<<"\n";
+        ResultElementType->print(errs());
+        errs() << "\n";
+        // and then print the type of the pointer
+        cast<PointerType>(getType())->getElementType()->print(errs());
+        errs() << "\n";
+    }
+
+//    assert(ResultElementType ==
+//           cast<PointerType>(getType()->getScalarType())->getElementType());
     return ResultElementType;
   }
 
@@ -1263,6 +1277,17 @@ class ICmpInst: public CmpInst {
   void AssertOK() {
     assert(isIntPredicate() &&
            "Invalid ICmp predicate value");
+<<<<<<< HEAD
+=======
+if (getOperand(0)->getType() != getOperand(1)->getType())
+{
+    //print an error message and dump both the operand types
+    llvm::errs() << "*******ASSERT HERE ******* "<<"\n";
+    getOperand(0)->getType()->dump();
+    getOperand(1)->getType()->dump();
+    this->dump();
+}
+>>>>>>> backup_6
 //    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
 //          "Both operands to ICmp instruction are not of the same type!");
     // Check that the operands are the right type

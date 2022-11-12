@@ -1543,9 +1543,6 @@ def err_invalid_tainted_ptr_checked : Error<
 def err_invalid_tainted_ptr_unchecked : Error<
   "Tainted Pointer cannot point to Un-Checked pointers">;
 
-def err_invalid_tainted_ptr_struct : Error<
-  "Tainted Pointer cannot point to Non-Tainted Structs">;
-
 def err_tainted_struct_member_ptr : Error<
   "Tainted Structs can only have member pointers of Tainted Type">;
 

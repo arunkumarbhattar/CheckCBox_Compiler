@@ -11283,8 +11283,14 @@ def err_typecheck_bounds_expr_incompatible_pointers : Error<
 def err_typecheck_ptr_decl_with_bounds : Error<
   "bounds declaration not allowed because %0 has a _Ptr type">;
 
+def err_typecheck_tptr_decl_with_bounds : Error<
+  "bounds declaration not allowed because %0 has a _TPtr type">;
+
 def err_typecheck_ptr_return_with_bounds : Error<
   "bounds declaration not allowed for a _Ptr return type">;
+
+def err_typecheck_tptr_return_with_bounds : Error<
+  "bounds declaration not allowed for a _TPtr return type">;
 
 def err_typecheck_function_pointer_decl_with_bounds : Error<
   "bounds declaration not allowed because %0 has a function pointer type">;
@@ -11564,6 +11570,10 @@ def err_bounds_type_annotation_lost_checking : Error<
   def err_checked_scope_no_cast_to_nt_array_ptr : Error<
     "%0 cannot be cast to %1 in a checked scope because "
     "%0 might not point to a null-terminated array">;
+
+  def err_invalid_tainted_ptr_struct : Error<
+    "Tainted Pointer cannot point to Non-Tainted Structs unless\n"
+     "they are part of a TLIB function parameter/Return Type">;
 
   def err_tainted_no_cast_to_nt_array_ptr : Error<
     "%0 cannot be cast to %1 in because "
