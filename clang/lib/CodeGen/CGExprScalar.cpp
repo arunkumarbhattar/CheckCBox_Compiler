@@ -3487,8 +3487,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   Value* RetVal = NULL;
   if (CGF.getLangOpts().isSignedOverflowDefined())
     RetVal = CGF.Builder.CreateGEP(pointer, index, "add.ptr");
-
-  RetVal = CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
+  else
+    RetVal = CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
                                     op.E->getExprLoc(), "add.ptr");
 
   if (pointerOperand->getType()->isTaintedPointerType())

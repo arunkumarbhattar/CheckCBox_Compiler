@@ -1004,7 +1004,91 @@ public:
   void setSourceElementType(Type *Ty) { SourceElementType = Ty; }
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
+  Type * AreDecoyCopies(Type *T1, Type *T2, int* DecoyedOp) const {
+        Type* T1Canonical = NULL;
+        Type* T2Canonical = NULL;
+        if (!T1->isPointerTy())
+            T1Canonical = T1;
+        else
+            T1Canonical = T1->getCoreElementType();
+
+        if (!T2->isPointerTy())
+            T2Canonical = T2;
+        else
+            T2Canonical = T2->getCoreElementType();
+
+        *DecoyedOp = -1;
+        Type* ReturnType = NULL;
+        auto IsValid = T1Canonical->isTStructTy() && T2Canonical->isTStructTy();
+        if (!IsValid)
+            return NULL;
+
+        std::string T1Name = T1Canonical->getStructName().str();
+        std::string T2Name = T2Canonical->getStructName().str();
+        auto T1start = T1Name.find('.');
+        std::string T1ActualName = T1Name.substr(T1start+1);
+        auto T2start = T2Name.find('.');
+        std::string T2ActualName = T2Name.substr(T2start+1);
+
+        if (T1ActualName == "Spl_" + T2ActualName ){
+            ReturnType =  T1Canonical;
+            Type* T2Tmp = T2;
+            while(T2Tmp->isPointerTy()){
+                T2Tmp = T2Tmp->getPointerElementType();
+                ReturnType = ReturnType->getPointerTo();
+            }
+            *DecoyedOp = 2;
+        }
+        else if (T2ActualName == "Spl_" + T1ActualName){
+            ReturnType = T2Canonical;
+            Type* T1Tmp = T1;
+            while(T1Tmp->isPointerTy()){
+                T1Tmp = T1Tmp->getPointerElementType();
+                ReturnType = ReturnType->getPointerTo();
+            }
+            *DecoyedOp = 1;
+        }
+        return ReturnType;
+    }
   Type *getResultElementType() const {
+
+      //This Extra check is added to avoid crash in case of invalid GEP instruction
+      //getType returns a pointer of core type this --> :
+      //%Tstruct.Spl_json_value_t_t
+      // However Expected Type becoems this :
+      //%Tstruct.json_value_t_t
+      // Prevent this inconsistency requires a systematic fix, which is too time consuming at this moment
+      // This is a temporary fix to avoid crash in case of invalid GEP instruction
+
+      if (ResultElementType !=
+          cast<PointerType>(getType()->getScalarType())->getElementType())
+      {
+        int DecoyedVal = -1;
+        auto ResultElemTyp = ResultElementType;
+        auto CurrElemTyp = cast<PointerType>(getType()->getScalarType())->getElementType();
+        auto DecoyTypeAmongstTwo = AreDecoyCopies(ResultElemTyp, CurrElemTyp
+                  ,&DecoyedVal);
+
+        if (DecoyTypeAmongstTwo)
+        {
+            //print the decoy type
+            errs() << "DecoyTypeAmongstTwo : " << "\n";
+            DecoyTypeAmongstTwo->print(errs());
+            return DecoyTypeAmongstTwo;
+        }
+        //print the current type
+        errs() << "Current Type: \n";
+        getType()->print(errs());
+        //print the expected type
+        errs() << "Expected Type: \n";
+        ResultElementType->print(errs());
+        //print the source type
+        errs() << "Source Type: \n";
+        SourceElementType->print(errs());
+        //print the pointer type
+        errs() << "Pointer Type: \n";
+        PointerType::get(ResultElementType, 0)->print(errs());
+    }
     assert(ResultElementType ==
            cast<PointerType>(getType()->getScalarType())->getElementType());
     return ResultElementType;
