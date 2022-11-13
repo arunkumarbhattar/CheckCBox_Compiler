@@ -1051,7 +1051,6 @@ public:
         return ReturnType;
     }
   Type *getResultElementType() const {
-<<<<<<< HEAD
 
       //This Extra check is added to avoid crash in case of invalid GEP instruction
       //getType returns a pointer of core type this --> :
@@ -1277,8 +1276,6 @@ class ICmpInst: public CmpInst {
   void AssertOK() {
     assert(isIntPredicate() &&
            "Invalid ICmp predicate value");
-<<<<<<< HEAD
-=======
 if (getOperand(0)->getType() != getOperand(1)->getType())
 {
     //print an error message and dump both the operand types
@@ -1287,7 +1284,6 @@ if (getOperand(0)->getType() != getOperand(1)->getType())
     getOperand(1)->getType()->dump();
     this->dump();
 }
->>>>>>> backup_6
 //    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
 //          "Both operands to ICmp instruction are not of the same type!");
     // Check that the operands are the right type

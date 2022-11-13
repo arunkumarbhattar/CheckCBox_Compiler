@@ -1937,10 +1937,23 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
 
   //SHADY
   if (pointer_depth >= 1) {
-    Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
-    //Zero extend the pointer to 64-bit
-    Value = Builder.CreateZExt(Value, Builder.getInt64Ty());
-    Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
+      //When you are dealing with a decoyed pointer (member of a decoyed struct)
+      //Do not extend tainted pointers to 64-bit types
+      //Instead, extend them to 32-bit types
+      // Wasted 12 hours on this bug. I hate myself.
+
+    if (Value->getType()->getCoreElementType()->isDecoyed())
+    {
+        Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
+        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt32Ty());
+    }
+    else
+    {
+        Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
+        //Zero extend the pointer to 64-bit --> as long as the pointer is not to a Decoyed structure
+        Value = Builder.CreateZExt(Value, Builder.getInt64Ty());
+        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
+    }
   }
 
   if (Ty->isTaintedPointerType())
