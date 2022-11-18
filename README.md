@@ -144,14 +144,21 @@ Change to the src/llvm/projects/checkedc-wrapper directory and clone the Checked
 
 ```
 cd CheckCBox_Compiler/llvm/projects/checkedc-wrapper/
-git clone https://github.com/arunkumarbhattar/checkedc.git
+git clone https://github.com/secure-sw-dev/checkedc.git
 ```
+
+Then switch to the below directory and clone the below 
+```
+cd CheckCBox_Compiler/llvm/projects/checkcbox-wrapper/
+git clone https://github.com/arunkumarbhattar/checkcbox
+```
+
 
 Step 4: Now create a build directory generate the Cmake files 
 
 ```
 cd <WORK_DIR>/build
-cmake --G Ninja -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCMAKE_LINKER=/usr/bin/gold DCMAKE_BUILD_TYPE=Debug -DLLVM_LIT_ARGS=-v -DLLVM_PARALLEL_LINK_JOBS=1 ../llvm/
+cmake -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCMAKE_LINKER=/usr/bin/gold DCMAKE_BUILD_TYPE=Debug -DLLVM_LIT_ARGS=-v -DLLVM_PARALLEL_LINK_JOBS=1 ../llvm/
 ```
 
 Step 6: Now you are all set to build the target 
