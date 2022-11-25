@@ -102,6 +102,7 @@ CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
+CODEGENOPT(sbx               , 1, 0) ///< -fw2c_sbx. //Set WASM SANDBOX
 CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
                                           ///< enabled.
 

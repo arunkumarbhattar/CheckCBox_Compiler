@@ -88,6 +88,7 @@ CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
+CGOPT(bool, Enablesbx)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
@@ -423,6 +424,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableStackSizeSection);
 
+  static cl::opt<bool> Enablesbx(
+      "w2c_sbx",
+      cl::desc("Enable Wasm Sbx extension"),
+      cl::init(false));
+  CGBINDOPT(Enablesbx);
+
   static cl::opt<bool> EnableAddrsig(
       "addrsig", cl::desc("Emit an address-significance table"),
       cl::init(false));
@@ -557,6 +564,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ExplicitEmulatedTLS = EmulatedTLSView->getNumOccurrences() > 0;
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
+  Options.Emitsbx = getEnablesbx();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();

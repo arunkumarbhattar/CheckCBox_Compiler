@@ -121,6 +121,8 @@ llvm::DebuggerKind getDebuggerTuningOpt();
 
 bool getEnableStackSizeSection();
 
+bool getEnablesbx();
+
 bool getEnableAddrsig();
 
 bool getEmitCallSiteInfo();

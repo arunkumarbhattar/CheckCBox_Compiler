@@ -2752,6 +2752,22 @@ ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
 
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
+  //Create a global variable
+  //check if sbx is enabled
+  if (getCodeGenOpts().sbx) {
+    getModule().getOrInsertGlobal("sbxHeap", Int64Ty);
+    llvm::GlobalVariable *sbxHeap = getModule().getNamedGlobal("sbxHeap");
+    auto const_int_val =
+        llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(64, 0));
+    sbxHeap->setInitializer(const_int_val);
+    sbxHeap->setLinkage(llvm::GlobalValue::CommonLinkage);
+
+    //Insert a global variable to store the HeapBound
+    getModule().getOrInsertGlobal("sbxHeapBound", Int64Ty);
+    llvm::GlobalVariable *sbxHeapBound = getModule().getNamedGlobal("sbxHeapBound");
+    sbxHeapBound->setInitializer(const_int_val);
+    sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
+  }
 
   // Weak references don't produce any output by themselves.
   if (Global->hasAttr<WeakRefAttr>())

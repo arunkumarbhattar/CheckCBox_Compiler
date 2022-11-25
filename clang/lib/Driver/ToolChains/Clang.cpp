@@ -4652,6 +4652,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fdelete_null_pointer_checks, false))
     CmdArgs.push_back("-fno-delete-null-pointer-checks");
 
+  //Check for -fw2c_sbx
+  if (Args.hasFlag(options::OPT_fw2c_sbx,
+                   options::OPT_fno_w2c_sbx, false))
+    CmdArgs.push_back("-fw2c_sbx");
+
   // LLVM Code Generator Options.
 
   if (Args.hasArg(options::OPT_frewrite_map_file) ||

@@ -2423,12 +2423,13 @@ public:
                     const Twine &Name = "") {
     if (LHS->getType()->isTaintedPtrTy())
     {
-      LHS = CreatePToO(LHS);
+      //create a ptr to int cast
+      LHS = CreatePtrToInt(LHS, Type::getInt32Ty(Context));
     }
 
     if (RHS->getType()->isTaintedPtrTy())
     {
-      RHS = CreatePToO(RHS);
+      RHS = CreatePtrToInt(RHS, Type::getInt32Ty(Context));
     }
     if (auto *LC = dyn_cast<Constant>(LHS))
       if (auto *RC = dyn_cast<Constant>(RHS))
@@ -2723,6 +2724,9 @@ public:
 
     CallInst *CreateTaintedOffset2Ptr(Value *Offset);
   Value *CreatePToO(Value *pValue);
+    CallInst *InitSbx();
+  CallInst *FetchSbxHeapAddress();
+    CallInst *FetchSbxHeapBound();
 };
 
 /// This provides a uniform API for creating instructions and inserting

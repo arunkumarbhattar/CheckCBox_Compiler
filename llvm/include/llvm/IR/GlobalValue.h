@@ -41,6 +41,9 @@ namespace Intrinsic {
 typedef unsigned ID;
 Function *SandboxCondlTaintedO2PtrFunction(Module *M);
 Function *SandboxTaintedPtr2OFunction(Module *M);
+Function *InitSbx(Module *M);
+Function *fetchSbxHeapAddress(Module *M);
+Function *fetchSbxHeapBound(Module *M);
 } // end namespace Intrinsic
 
 class GlobalValue : public Constant {

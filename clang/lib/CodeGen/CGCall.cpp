@@ -4981,7 +4981,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
          //simple experiment
          llvm::Value *TaintedPtrFromOffset = NULL;
-         if ((FD != NULL) && (FD->isTLIB())){
+         if ((FD != NULL) && (FD->isTLIB()) && CGM.getCodeGenOpts().sbx){
             auto AddrRefOfVal = Address(V, CharUnits::Four());
             TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
             if ((TaintedPtrFromOffset == NULL)
@@ -5630,6 +5630,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if(TaintedPtrOffset != NULL)
           Ret = RValue::get(TaintedPtrOffset);
   }
+
+  /*
+   * Special handling to register updated sbx bound value
+   * If there is a t_malloc or a t_free or a t_realloc or a t_calloc, it
+   * means there has been some change in the sbx bound value
+   * You need to fetch the fresh value and update the global variable with it
+   */
   return Ret;
 }
 

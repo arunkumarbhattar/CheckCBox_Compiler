@@ -964,6 +964,30 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   ReturnBlock = getJumpDestInCurrentScope("return");
 
   Builder.SetInsertPoint(EntryBB);
+  // If compiler flag is set, insert a function call here
+  // to a function that will be used to mark the start of
+  // the function.
+
+  if (CGM.getCodeGenOpts().sbx && CurFn->getName() == "main")
+  {
+    Builder.InitSbx();
+    //sets its value to a call to the function that returns the heap address
+    auto SbxHeap =CGM.getModule().getNamedGlobal("sbxHeap");
+    if (SbxHeap) {
+      Address* key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+      llvm::Value* HeapAddrVal = Builder.FetchSbxHeapAddress();
+      llvm::StoreInst* store = Builder.CreateStore(HeapAddrVal, *key_addr);
+    }
+
+    //Insert call to get the first fetch of the sandbox head bound
+    auto sbxHeapBound =CGM.getModule().getNamedGlobal("sbxHeapBound");
+    if (sbxHeapBound) {
+      Address* key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
+      llvm::Value* HeapAddrVal = Builder.FetchSbxHeapBound();
+      llvm::StoreInst* store = Builder.CreateStore(HeapAddrVal, *key_addr);
+    }
+  }
+
 
   // If we're checking the return value, allocate space for a pointer to a
   // precise source location of the checked return statement.

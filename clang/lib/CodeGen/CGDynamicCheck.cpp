@@ -178,12 +178,12 @@ Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
   Value *OffsetVal = Builder.CreatePointerCast(
       Base,
       llvm::Type::getInt8PtrTy(Base->getContext()));
-  llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal);
+  llvm::Value* ConvPtr = Builder.CreatePtrToInt(OffsetVal, llvm::Type::getInt32Ty(Base->getContext()));
   /*
    * Returned Ptr is of type unsigned int , hence cast it back to original type.
    */
   llvm::Value* RetVal = Builder.CreateIntToPtr(ConvPtr, OriginalType);
-  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnits::Four());
+  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnits::Four()); //Returned Pointer must align to N/2 bytes for tainted pointers.
   Builder.CreateStore(RetVal, TempAlloca);
   //Load from Alloca and return
   auto LoadVal =  Builder.CreateLoad(TempAlloca);
@@ -589,7 +589,21 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
       Value *OffsetVal = Builder.CreatePtrToInt(
           BaseAddr.getPointer(),
           llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
-      PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
+      Value *OffsetVal64 = Builder.CreateZExt(OffsetVal, llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()));
+      //PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
+      //as an optimization, this call will be replaced by -->
+      //get global variable sbxHeap
+      GlobalVariable* sbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
+      //Create a load on sbxHeap
+      //create a i64 type
+      llvm::Type* i64Type = llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext());
+      Address* SbxHeapLoaded = new Address(sbxHeap, CGM.getPointerAlign());
+      //Add this with the offset
+      Value* OffsetValWithHeap = Builder.CreateAlignedLoad(i64Type, sbxHeap, 8, false);
+      Value* OffsetValWithHeapAndOffset = Builder.CreateAdd(OffsetValWithHeap, OffsetVal64);
+      //Bitcast this to the type of the pointer
+      PointerVal = Builder.CreateIntToPtr(OffsetValWithHeapAndOffset ,
+                                          llvm::Type::getInt8PtrTy(BaseAddr.getPointer()->getContext()));
     }
 
     Value *ConditionVal = PointerVal;

@@ -864,3 +864,436 @@ Command: /usr/bin/cc;;;;-Wall;-Wno-unused-parameter;;-o;/home/twinturbo/Desktop/
 /tmp/ccc56cM1.s:5: Error: no such instruction: `cas w0,w1,[x2]'
 
 1
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_cdea3/fast && /usr/bin/make -f CMakeFiles/cmTC_cdea3.dir/build.make CMakeFiles/cmTC_cdea3.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_cdea3.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG  -nodefaultlibs   -fno-sanitize=safe-stack -o CMakeFiles/cmTC_cdea3.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized argument to '-fno-sanitize=' option: 'safe-stack'
+make[1]: *** [CMakeFiles/cmTC_cdea3.dir/build.make:66: CMakeFiles/cmTC_cdea3.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_cdea3/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_50a55/fast && /usr/bin/make -f CMakeFiles/cmTC_50a55.dir/build.make CMakeFiles/cmTC_50a55.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_50a55.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG  -nodefaultlibs   -fno-profile-instr-generate -o CMakeFiles/cmTC_50a55.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-fno-profile-instr-generate'; did you mean '-fno-profile-generate'?
+make[1]: *** [CMakeFiles/cmTC_50a55.dir/build.make:66: CMakeFiles/cmTC_50a55.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_50a55/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_67660/fast && /usr/bin/make -f CMakeFiles/cmTC_67660.dir/build.make CMakeFiles/cmTC_67660.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_67660.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG  -nodefaultlibs   -fno-profile-instr-use -o CMakeFiles/cmTC_67660.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-fno-profile-instr-use'; did you mean '-fno-profile-use'?
+make[1]: *** [CMakeFiles/cmTC_67660.dir/build.make:66: CMakeFiles/cmTC_67660.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_67660/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_MCRC_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_71493/fast && /usr/bin/make -f CMakeFiles/cmTC_71493.dir/build.make CMakeFiles/cmTC_71493.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_71493.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_MCRC_FLAG  -nodefaultlibs   -Werror -mcrc -o CMakeFiles/cmTC_71493.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-mcrc'
+make[1]: *** [CMakeFiles/cmTC_71493.dir/build.make:66: CMakeFiles/cmTC_71493.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_71493/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_GR_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_c9213/fast && /usr/bin/make -f CMakeFiles/cmTC_c9213.dir/build.make CMakeFiles/cmTC_c9213.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_c9213.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_GR_FLAG  -nodefaultlibs   /GR -o CMakeFiles/cmTC_c9213.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /GR: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_c9213.dir/build.make:66: CMakeFiles/cmTC_c9213.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_c9213/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_GS_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_742e7/fast && /usr/bin/make -f CMakeFiles/cmTC_742e7.dir/build.make CMakeFiles/cmTC_742e7.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_742e7.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_GS_FLAG  -nodefaultlibs   /GS -o CMakeFiles/cmTC_742e7.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /GS: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_742e7.dir/build.make:66: CMakeFiles/cmTC_742e7.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_742e7/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_MT_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_faa69/fast && /usr/bin/make -f CMakeFiles/cmTC_faa69.dir/build.make CMakeFiles/cmTC_faa69.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_faa69.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_MT_FLAG  -nodefaultlibs   /MT -o CMakeFiles/cmTC_faa69.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /MT: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_faa69.dir/build.make:66: CMakeFiles/cmTC_faa69.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_faa69/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_Oy_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_d7f29/fast && /usr/bin/make -f CMakeFiles/cmTC_d7f29.dir/build.make CMakeFiles/cmTC_d7f29.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_d7f29.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_Oy_FLAG  -nodefaultlibs   /Oy -o CMakeFiles/cmTC_d7f29.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /Oy: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_d7f29.dir/build.make:66: CMakeFiles/cmTC_d7f29.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_d7f29/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_430d8/fast && /usr/bin/make -f CMakeFiles/cmTC_430d8.dir/build.make CMakeFiles/cmTC_430d8.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_430d8.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG  -nodefaultlibs   -gline-tables-only -o CMakeFiles/cmTC_430d8.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized debug output level 'line-tables-only'
+make[1]: *** [CMakeFiles/cmTC_430d8.dir/build.make:66: CMakeFiles/cmTC_430d8.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_430d8/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_Zi_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_96ef8/fast && /usr/bin/make -f CMakeFiles/cmTC_96ef8.dir/build.make CMakeFiles/cmTC_96ef8.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_96ef8.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_Zi_FLAG  -nodefaultlibs   /Zi -o CMakeFiles/cmTC_96ef8.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /Zi: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_96ef8.dir/build.make:66: CMakeFiles/cmTC_96ef8.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_96ef8/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_0bb71/fast && /usr/bin/make -f CMakeFiles/cmTC_0bb71.dir/build.make CMakeFiles/cmTC_0bb71.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_0bb71.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG  -nodefaultlibs   -Werror -Wglobal-constructors -o CMakeFiles/cmTC_0bb71.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-Wglobal-constructors'; did you mean '-felide-constructors'?
+make[1]: *** [CMakeFiles/cmTC_0bb71.dir/build.make:66: CMakeFiles/cmTC_0bb71.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_0bb71/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WC99_EXTENSIONS_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_7939b/fast && /usr/bin/make -f CMakeFiles/cmTC_7939b.dir/build.make CMakeFiles/cmTC_7939b.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_7939b.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WC99_EXTENSIONS_FLAG  -nodefaultlibs   -Werror -Wc99-extensions -o CMakeFiles/cmTC_7939b.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-Wc99-extensions'; did you mean '-fms-extensions'?
+make[1]: *** [CMakeFiles/cmTC_7939b.dir/build.make:66: CMakeFiles/cmTC_7939b.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_7939b/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WGNU_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_fe21a/fast && /usr/bin/make -f CMakeFiles/cmTC_fe21a.dir/build.make CMakeFiles/cmTC_fe21a.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_fe21a.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WGNU_FLAG  -nodefaultlibs   -Werror -Wgnu -o CMakeFiles/cmTC_fe21a.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-Wgnu'
+make[1]: *** [CMakeFiles/cmTC_fe21a.dir/build.make:66: CMakeFiles/cmTC_fe21a.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_fe21a/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_10229/fast && /usr/bin/make -f CMakeFiles/cmTC_10229.dir/build.make CMakeFiles/cmTC_10229.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_10229.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG  -nodefaultlibs   -Werror -Wcovered-switch-default -o CMakeFiles/cmTC_10229.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-Wcovered-switch-default'; did you mean '-Wno-switch-default'?
+make[1]: *** [CMakeFiles/cmTC_10229.dir/build.make:66: CMakeFiles/cmTC_10229.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_10229/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_W4_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_e6153/fast && /usr/bin/make -f CMakeFiles/cmTC_e6153.dir/build.make CMakeFiles/cmTC_e6153.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_e6153.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_W4_FLAG  -nodefaultlibs   /W4 -o CMakeFiles/cmTC_e6153.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /W4: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_e6153.dir/build.make:66: CMakeFiles/cmTC_e6153.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_e6153/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WX_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_08302/fast && /usr/bin/make -f CMakeFiles/cmTC_08302.dir/build.make CMakeFiles/cmTC_08302.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_08302.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WX_FLAG  -nodefaultlibs   /WX -o CMakeFiles/cmTC_08302.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /WX: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_08302.dir/build.make:66: CMakeFiles/cmTC_08302.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_08302/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4146_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_18102/fast && /usr/bin/make -f CMakeFiles/cmTC_18102.dir/build.make CMakeFiles/cmTC_18102.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_18102.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4146_FLAG  -nodefaultlibs   /wd4146 -o CMakeFiles/cmTC_18102.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4146: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_18102.dir/build.make:66: CMakeFiles/cmTC_18102.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_18102/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4291_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_17ee8/fast && /usr/bin/make -f CMakeFiles/cmTC_17ee8.dir/build.make CMakeFiles/cmTC_17ee8.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_17ee8.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4291_FLAG  -nodefaultlibs   /wd4291 -o CMakeFiles/cmTC_17ee8.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4291: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_17ee8.dir/build.make:66: CMakeFiles/cmTC_17ee8.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_17ee8/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4221_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2f9f2/fast && /usr/bin/make -f CMakeFiles/cmTC_2f9f2.dir/build.make CMakeFiles/cmTC_2f9f2.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2f9f2.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4221_FLAG  -nodefaultlibs   /wd4221 -o CMakeFiles/cmTC_2f9f2.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4221: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_2f9f2.dir/build.make:66: CMakeFiles/cmTC_2f9f2.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_2f9f2/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4391_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_89260/fast && /usr/bin/make -f CMakeFiles/cmTC_89260.dir/build.make CMakeFiles/cmTC_89260.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_89260.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4391_FLAG  -nodefaultlibs   /wd4391 -o CMakeFiles/cmTC_89260.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4391: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_89260.dir/build.make:66: CMakeFiles/cmTC_89260.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_89260/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4722_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_f2ed8/fast && /usr/bin/make -f CMakeFiles/cmTC_f2ed8.dir/build.make CMakeFiles/cmTC_f2ed8.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_f2ed8.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4722_FLAG  -nodefaultlibs   /wd4722 -o CMakeFiles/cmTC_f2ed8.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4722: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_f2ed8.dir/build.make:66: CMakeFiles/cmTC_f2ed8.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_f2ed8/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_WD4800_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_70a00/fast && /usr/bin/make -f CMakeFiles/cmTC_70a00.dir/build.make CMakeFiles/cmTC_70a00.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_70a00.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_WD4800_FLAG  -nodefaultlibs   /wd4800 -o CMakeFiles/cmTC_70a00.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: /wd4800: No such file or directory
+make[1]: *** [CMakeFiles/cmTC_70a00.dir/build.make:66: CMakeFiles/cmTC_70a00.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_70a00/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_NOSTDLIBXX_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_79e89/fast && /usr/bin/make -f CMakeFiles/cmTC_79e89.dir/build.make CMakeFiles/cmTC_79e89.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_79e89.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_NOSTDLIBXX_FLAG  -nodefaultlibs   -nostdlib++ -o CMakeFiles/cmTC_79e89.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option '-nostdlib++'; did you mean '-nostdlib'?
+make[1]: *** [CMakeFiles/cmTC_79e89.dir/build.make:66: CMakeFiles/cmTC_79e89.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_79e89/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Determining if the function backtrace exists in the execinfo failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_3bdfc/fast && /usr/bin/make -f CMakeFiles/cmTC_3bdfc.dir/build.make CMakeFiles/cmTC_3bdfc.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_3bdfc.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=backtrace  -nodefaultlibs   -o CMakeFiles/cmTC_3bdfc.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_3bdfc
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3bdfc.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=backtrace  -nodefaultlibs    CMakeFiles/cmTC_3bdfc.dir/CheckFunctionExists.c.o  -o cmTC_3bdfc  -lexecinfo -lc -lgcc_s 
+/usr/bin/ld: cannot find -lexecinfo
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_3bdfc.dir/build.make:87: cmTC_3bdfc] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_3bdfc/fast] Error 2
+
+
+
+Determining if the function __cxa_throw exists in the c++ failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_3c292/fast && /usr/bin/make -f CMakeFiles/cmTC_3c292.dir/build.make CMakeFiles/cmTC_3c292.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_3c292.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=__cxa_throw  -nodefaultlibs   -o CMakeFiles/cmTC_3c292.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_3c292
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3c292.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=__cxa_throw  -nodefaultlibs    CMakeFiles/cmTC_3c292.dir/CheckFunctionExists.c.o  -o cmTC_3c292  -lc++ -lc -lgcc_s 
+/usr/bin/ld: cannot find -lc++
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_3c292.dir/build.make:87: cmTC_3c292] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_3c292/fast] Error 2
+
+
+
+Performing C++ SOURCE FILE Test COMPILER_RT_HAS_FUSE_LD_LLD_FLAG failed with the following output:
+Change Dir: /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_4961f/fast && /usr/bin/make -f CMakeFiles/cmTC_4961f.dir/build.make CMakeFiles/cmTC_4961f.dir/build
+make[1]: Entering directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_4961f.dir/src.cxx.o
+/usr/bin/c++    -DCOMPILER_RT_HAS_FUSE_LD_LLD_FLAG  -nodefaultlibs -fuse-ld=lld   -o CMakeFiles/cmTC_4961f.dir/src.cxx.o -c /home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp/src.cxx
+Linking CXX executable cmTC_4961f
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4961f.dir/link.txt --verbose=1
+/usr/bin/c++   -DCOMPILER_RT_HAS_FUSE_LD_LLD_FLAG  -nodefaultlibs -fuse-ld=lld    CMakeFiles/cmTC_4961f.dir/src.cxx.o  -o cmTC_4961f  -lc -lgcc_s 
+collect2: fatal error: cannot find 'ld'
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_4961f.dir/build.make:87: cmTC_4961f] Error 1
+make[1]: Leaving directory '/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_4961f/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+Testing compiler for supporting FLAGS-fxray-instrument:
+Command: /usr/bin/cc;;;;-Wall;-Wno-unused-parameter;-fxray-instrument;-o;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/test.o;;;-c;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/src.c
+
+cc: error: unrecognized command line option ‘-fxray-instrument’
+
+1
+Testing compiler for supporting SOURCE
+_Float16 foo(_Float16 x) {
+ return x
+}
+:
+Command: /usr/bin/cc;;;;-Wall;-Wno-unused-parameter;;-o;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/test.o;;;-c;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/src.c
+
+/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/src.c:2:1: error: ‘_Float16’ is not supported on this target
+    2 | _Float16 foo(_Float16 x) {
+      | ^~~~~~~~
+/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/src.c:2:14: error: ‘_Float16’ is not supported on this target
+    2 | _Float16 foo(_Float16 x) {
+      |              ^~~~~~~~
+
+1
+Testing compiler for supporting SOURCE
+asm(".arch armv8-a+lse")
+asm("cas w0, w1, [x2]")
+:
+Command: /usr/bin/cc;;;;-Wall;-Wno-unused-parameter;;-o;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/test.o;;;-c;/home/arun/Desktop/CheckCBox_Compiler/compiler-rt/CMakeFiles/src.c
+
+/tmp/ccCGdqhw.s: Assembler messages:
+/tmp/ccCGdqhw.s:4: Error: no such architecture: `armv8'
+/tmp/ccCGdqhw.s:4: Error: junk at end of line, first unrecognized character is `-'
+/tmp/ccCGdqhw.s:5: Error: no such instruction: `cas w0,w1,[x2]'
+
+1

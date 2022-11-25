@@ -390,8 +390,8 @@ public:
     Value *OffsetVal = Builder.CreatePointerCast(
         Base,
         llvm::Type::getInt8PtrTy(Base->getContext()));
-    llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal,
-                                             "_Dynamic_check.tainted_pointer");
+    llvm::Value* ConvPtr = Builder.CreatePtrToInt(OffsetVal,
+                                                  llvm::Type::getInt32Ty(Base->getContext()));
     /*
    * Returned Ptr is of type unsigned int , hence cast it back to original type.
      */
