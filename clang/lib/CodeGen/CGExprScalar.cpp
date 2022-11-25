@@ -3496,7 +3496,17 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     //    //Print out the tainted pointer
     //    llvm::errs() << "Tainted pointer: " << pointer->getName().str() << "\n";
     auto OriginalTyp = RetVal->getType();
-    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnits::Four(), "tmp");
+    auto CharUnitsSz = CharUnits::Four();
+    // check if -m32 flag is set
+    if (CGF.CGM.getDataLayout().getPointerSizeInBits() == 32)
+    {
+      CharUnitsSz = CharUnits::Two();
+    }
+    else
+    {
+      CharUnitsSz = CharUnits::Four();
+    }
+    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnitsSz, "tmp");
     CGF.Builder.CreateStore(RetVal, Temp);
     RetVal =  CGF.Builder.CreateLoad(Temp);
     //    //cast the loadVal back to original Value

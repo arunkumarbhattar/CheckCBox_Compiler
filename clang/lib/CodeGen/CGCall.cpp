@@ -4921,7 +4921,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // then a truncation to i32.
         bool isTaintedForSure = false;
         if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy() &&
-            getLoadStoreAlignment(V).value() == 4) {
+            getLoadStoreAlignment(V).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) {
           auto OriginalType = V->getType();
           llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
           llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
@@ -4931,10 +4931,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           V = Builder.CreateIntToPtr(V, OriginalType);
           isTaintedForSure = true;
         }
-        //        else if (V->getType()->isPointerTy() &&
-        //                 V->getPointerAlignment(CGM.getDataLayout()).value() == 4) {
-        //          llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext()); llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext()); V = Builder.CreatePtrToInt(V, Int32Ty); V = Builder.CreateIntToPtr(V, PtrTy); isTaintedForSure = true;
-        //        }
         else if (isa<llvm::CastInst>(V)) {
           // fetch the operand of the cast instruction
           auto *castIns = dyn_cast<llvm::CastInst>(V);
@@ -4942,13 +4938,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           llvm::Value *Op = castIns->getOperand(0);
           if (Op != NULL && Op->getType()->isPointerTy() &&
               (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op)) &&
-              (getLoadStoreAlignment(Op).value() == 4) &&
+              (getLoadStoreAlignment(Op).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) &&
               (DestType->isPointerTy())) {
-            // printf("Found a cast instruction with a load/store operand
-            llvm::errs() << "Found a bitcast nested Load/Store Inst\n";
             llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
             llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
             V = Builder.CreatePtrToInt(V, Int32Ty);
+            V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
+
+
             V = Builder.CreateIntToPtr(V, DestType);
             isTaintedForSure = true;
           }
@@ -4964,7 +4961,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // simple experiment
         llvm::Value *TaintedPtrFromOffset = NULL;
         if ((FD != NULL) && (FD->isTLIB()) && CGM.getCodeGenOpts().sbx) {
-          auto AddrRefOfVal = Address(V, CharUnits::Four());
+          auto CharUnitsSz = CharUnits::Four();
+          // check if -m32 flag is set
+          if (CGM.getDataLayout().getPointerSizeInBits() == 32)
+          {
+            // set the GV to be 32-bit
+            CharUnitsSz = CharUnits::Two();
+          }
+          else
+          {
+            // set the GV to be 64-bit
+            CharUnitsSz = CharUnits::Four();
+          }
+          auto AddrRefOfVal = Address(V, CharUnitsSz);
           TaintedPtrFromOffset =
               EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
           if ((TaintedPtrFromOffset == NULL) && (isTaintedForSure)) {
@@ -4976,20 +4985,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           V = TaintedPtrFromOffset;
         }
 
-        //         else if ((FD != NULL) && (FD->isTLIB()) && (V->getType()->isTaintedPtrTy())
-        //                  && (I->Ty->isPointerType()) && (!isa<llvm::Constant>(V)))
-        //         {
-        //            /*
-        //            * To Improve Performance, Only TLIB functions that might have
-        //            * Itypes will receive this additional Tainting
-        //            * And one more criteria is that argument being passed must be a
-        //            * Tainted Pointer
-        //            * */
-        //           auto *TaintedPtr = EmitConditionalTaintedPtrDerefAdaptor(V); if(TaintedPtr != NULL)
-        //           {
-        //             V = TaintedPtr;
-        //           }
-        //         }
         // Implement swifterror by copying into a new swifterror argument.
         // We'll write back in the normal path out of the call.
         if (CallInfo.getExtParameterInfo(ArgNo).getABI() ==

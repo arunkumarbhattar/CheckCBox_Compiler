@@ -185,7 +185,19 @@ Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
    * Returned Ptr is of type unsigned int , hence cast it back to original type.
    */
   llvm::Value* RetVal = Builder.CreateIntToPtr(ConvPtr, OriginalType);
-  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnits::Four()); //Returned Pointer must align to N/2 bytes for tainted pointers.
+  auto CharUnitsSz = CharUnits::Four();
+  // check if -m32 flag is set
+  if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+  {
+    // set the GV to be 32-bit
+    CharUnitsSz = CharUnits::Two();
+  }
+  else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+  {
+    // set the GV to be 64-bit
+    CharUnitsSz = CharUnits::Four();
+  }
+  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnitsSz); //Returned Pointer must align to N/2 bytes for tainted pointers.
   Builder.CreateStore(RetVal, TempAlloca);
   //Load from Alloca and return
   auto LoadVal =  Builder.CreateLoad(TempAlloca);

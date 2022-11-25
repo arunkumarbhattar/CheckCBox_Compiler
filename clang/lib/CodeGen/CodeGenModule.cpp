@@ -3802,7 +3802,19 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     GV->setConstant(isTypeConstant(D->getType(), false));
 
     if (D->getType()->isTaintedPointerType())
+    {
+      // check if -m32 flag is set
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+      {
+        // set the GV to be 32-bit
+        GV->setAlignment(CharUnits::Two().getAsAlign());
+      }
+      else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+      {
+        // set the GV to be 64-bit
         GV->setAlignment(CharUnits::Four().getAsAlign());
+      }
+    }
     else
         GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 
