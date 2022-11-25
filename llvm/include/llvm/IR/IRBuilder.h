@@ -2726,7 +2726,7 @@ public:
   Value *CreatePToO(Value *pValue);
     CallInst *InitSbx();
   CallInst *FetchSbxHeapAddress();
-    CallInst *FetchSbxHeapBound();
+    CallInst *FetchSbxHeapBound(llvm::Module *M = NULL);
 };
 
 /// This provides a uniform API for creating instructions and inserting

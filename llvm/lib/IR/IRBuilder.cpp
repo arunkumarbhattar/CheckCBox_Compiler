@@ -375,10 +375,12 @@ static CallInst *fetchSbxHeapAddress(IRBuilderBase *Builder){
   return Builder->CreateCall(Decl);
 }
 
-static CallInst *fetchSbxHeapBound(IRBuilderBase *Builder){
-  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+static CallInst *fetchSbxHeapBound(IRBuilderBase *Builder, Module *M_){
+  if (M_ == nullptr)
+    M_ = Builder->GetInsertBlock()->getParent()->getParent();
+//  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = { 0 };
-  auto *Decl = Intrinsic::fetchSbxHeapBound(M);
+  auto *Decl = Intrinsic::fetchSbxHeapBound(M_);
   //create a call to this function
   return Builder->CreateCall(Decl);
 }
@@ -457,10 +459,9 @@ CallInst *IRBuilderBase::FetchSbxHeapAddress(){
   return fetchSbxHeapAddress(this);
 }
 
-CallInst *IRBuilderBase::FetchSbxHeapBound(){
+CallInst *IRBuilderBase::FetchSbxHeapBound(Module* M){
   //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
-
-  return fetchSbxHeapBound(this);
+    return fetchSbxHeapBound(this, M);
 }
 
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {

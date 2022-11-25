@@ -4654,8 +4654,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   //Check for -fw2c_sbx
   if (Args.hasFlag(options::OPT_fw2c_sbx,
-                   options::OPT_fno_w2c_sbx, false))
+                   options::OPT_fno_w2c_sbx, false)) {
     CmdArgs.push_back("-fw2c_sbx");
+    CmdArgs.push_back("-Werror-implicit-function-declaration");
+  }
 
   // LLVM Code Generator Options.
 

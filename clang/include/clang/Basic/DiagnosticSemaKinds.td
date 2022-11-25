@@ -11546,6 +11546,9 @@ def err_bounds_type_annotation_lost_checking : Error<
     "function without a prototype cannot be used or declared in a "
     "checked scope">;
 
+  def err_tlib_scope_no_prototype_func : Error<
+    "function without a prototype cannot be called with tainted pointers ">;
+
   def err_tainted_scope_no_prototype_func : Error<
     "function without a prototype cannot be used or declared in a "
     "Tainted scope">;

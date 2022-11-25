@@ -3501,7 +3501,6 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     RetVal =  CGF.Builder.CreateLoad(Temp);
     //    //cast the loadVal back to original Value
     RetVal = CGF.Builder.CreatePointerCast(RetVal, OriginalTyp);
-    int i = 10;
   }
   return RetVal;
 

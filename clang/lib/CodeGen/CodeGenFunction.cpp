@@ -705,6 +705,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   const Decl *D = GD.getDecl();
 
+
   DidCallStackSave = false;
   CurCodeDecl = D;
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
@@ -968,24 +969,45 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // to a function that will be used to mark the start of
   // the function.
 
-  if (CGM.getCodeGenOpts().sbx && CurFn->getName() == "main")
-  {
+  if (CGM.getCodeGenOpts().sbx && CurFn->getName() == "main") {
     Builder.InitSbx();
-    //sets its value to a call to the function that returns the heap address
-    auto SbxHeap =CGM.getModule().getNamedGlobal("sbxHeap");
+    // sets its value to a call to the function that returns the heap address
+    auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
     if (SbxHeap) {
-      Address* key_addr = new Address(SbxHeap, CGM.getPointerAlign());
-      llvm::Value* HeapAddrVal = Builder.FetchSbxHeapAddress();
-      llvm::StoreInst* store = Builder.CreateStore(HeapAddrVal, *key_addr);
+      Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+      llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
+      // set parent for HeapAddrVal
+      auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+      HeapAddrInst->setParent(EntryBB);
+      llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
     }
 
-    //Insert call to get the first fetch of the sandbox head bound
-    auto sbxHeapBound =CGM.getModule().getNamedGlobal("sbxHeapBound");
+    // Insert call to get the first fetch of the sandbox head bound
+    auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
     if (sbxHeapBound) {
-      Address* key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-      llvm::Value* HeapAddrVal = Builder.FetchSbxHeapBound();
-      llvm::StoreInst* store = Builder.CreateStore(HeapAddrVal, *key_addr);
+      Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
+      llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+      auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+      HeapAddrInst->setParent(EntryBB);
+      llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
     }
+  }
+  else
+  {
+//       If the function is a _Callback function, then we update the global HeapBound,
+//       as here we are anticipating transfer of control from Tainted region to checked region
+//       and hence, pages might be allocated or released
+        if (D->isCallbackDecl() && D->getAsFunction() && D->getAsFunction()->isThisDeclarationADefinition())
+        {
+          auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
+          if (sbxHeapBound) {
+            Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
+            llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+            auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+            heapAddrInst->setParent(Builder.GetInsertBlock());
+            llvm::StoreInst *store = Builder.CreateStore(heapAddrInst, *key_addr);
+          }
+        }
   }
 
 

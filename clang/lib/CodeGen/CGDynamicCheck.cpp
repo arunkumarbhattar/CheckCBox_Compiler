@@ -127,6 +127,8 @@ Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
 
 Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
                                                    const QualType BaseTy){
+  if (!CGM.getCodeGenOpts().sbx)
+    return NULL;
   if(!shouldEmitTaintedPtrDerefAdaptor
       (CGM, BaseTy))
     return NULL;
@@ -584,12 +586,13 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
         BitCastType = BaseAddr.getType();
     }
     Value *PointerVal = BaseAddr.getPointer();
-
+    Value* ValidTPtrOffset = NULL;
     if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy()) {
       Value *OffsetVal = Builder.CreatePtrToInt(
           BaseAddr.getPointer(),
           llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
       Value *OffsetVal64 = Builder.CreateZExt(OffsetVal, llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()));
+      ValidTPtrOffset = OffsetVal64;
       //PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
       //as an optimization, this call will be replaced by -->
       //get global variable sbxHeap
@@ -610,9 +613,22 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
 
     if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
     {
-      ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
-                                                "_Dynamic_check.tainted_pointer");
-      EmitDynamicCheckBlocks(ConditionVal);
+//      ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
+//                                                "_Dynamic_check.tainted_pointer");
+
+        // Fetch the global value for sbxHeapBound and sbxHeap
+        GlobalVariable* sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
+        GlobalVariable* sbxHeapBase = CGM.getModule().getNamedGlobal("sbxHeap");
+        // Create a load on sbxHeapBound
+        Value* SbxHeapBoundLoadedVal = Builder.CreateAlignedLoad(llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()), sbxHeapBound, 8, false);
+        // Create a load on sbxHeap
+        Value* SbxHeapBaseLoadedVal = Builder.CreateAlignedLoad(llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()), sbxHeapBase, 8, false);
+        // Create a sub on sbxHeapBound and sbxHeap
+        Value* ValidTPtrAddressRange = Builder.CreateSub(SbxHeapBoundLoadedVal, SbxHeapBaseLoadedVal);
+        // Create a icmp ult on the result of the sub and the result of the sub of sbxHeapBound and sbxHeap
+        ConditionVal = Builder.CreateICmpULT(ValidTPtrOffset, ValidTPtrAddressRange);
+
+        EmitDynamicCheckBlocks(ConditionVal);
     }
 
     /*
