@@ -71,22 +71,28 @@ static bool shouldEmitNonNullCheck(const CodeGenModule &CGM,
   return true;
 }
 
-static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+bool CodeGenFunction::shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                             const QualType BaseTy) {
     if(!CGM.getLangOpts().CheckedC)
         return false;
     //if(!CGM.getLangOpts().TaintedC)
     //return false;
 
+    if (BaseTy->isUncheckedPointerType())
+      return false;
+
     if((!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType())
           || BaseTy->isFunctionType() || BaseTy->isFunctionPointerType()))
         return false;
+
+    if (BaseTy->isCheckedPointerType() || BaseTy->isCheckedArrayType())
+      return false;
 
     return true;
 
 }
 
-static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+bool CodeGenFunction::shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                              const llvm::Type* BaseTy) {
   if(!CGM.getLangOpts().CheckedC)
     return false;
@@ -116,7 +122,10 @@ void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
 
 Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
                                                 const llvm::Type* BaseTy){
-    if(!shouldEmitTaintedPtrDerefAdaptor
+  if (!CGM.getCodeGenOpts().sbx)
+    return NULL;
+
+  if(!shouldEmitTaintedPtrDerefAdaptor
             (CGM, BaseTy))
         return NULL;
 
@@ -598,6 +607,11 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
         BitCastType = BaseAddr.getType();
     }
     Value *PointerVal = BaseAddr.getPointer();
+    //check if PointerVal is a constant
+    if (isa<Constant>(PointerVal)) {
+      //Hell naw!..we aint gon be instrumenting constants
+      return NULL;
+    }
     Value* ValidTPtrOffset = NULL;
     if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy()) {
       Value *OffsetVal = Builder.CreatePtrToInt(

@@ -4920,16 +4920,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // If loaded value is of align 4, then perform a ptr to integer cast and
         // then a truncation to i32.
         bool isTaintedForSure = false;
-        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy() &&
-            getLoadStoreAlignment(V).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) {
-          auto OriginalType = V->getType();
-          llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
-          llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
-          V = Builder.CreatePtrToInt(V, Int32Ty);
-          // Zero extend this integer to 64 bits.
-          V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
-          V = Builder.CreateIntToPtr(V, OriginalType);
-          isTaintedForSure = true;
+        bool isNotTaintedForSure = false;
+        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy())
+        {
+          if(getLoadStoreAlignment(V).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) {
+            auto OriginalType = V->getType();
+            llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+            llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+            V = Builder.CreatePtrToInt(V, Int32Ty);
+            // Zero extend this integer to 64 bits.
+            //V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
+            V = Builder.CreateIntToPtr(V, OriginalType);
+            isTaintedForSure = true;
+          }
+          else
+            isNotTaintedForSure = true;
         }
         else if (isa<llvm::CastInst>(V)) {
           // fetch the operand of the cast instruction
@@ -4937,19 +4942,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           auto DestType = castIns->getDestTy();
           llvm::Value *Op = castIns->getOperand(0);
           if (Op != NULL && Op->getType()->isPointerTy() &&
-              (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op)) &&
-              (getLoadStoreAlignment(Op).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) &&
-              (DestType->isPointerTy())) {
-            llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
-            llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
-            V = Builder.CreatePtrToInt(V, Int32Ty);
-            V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
-
-
-            V = Builder.CreateIntToPtr(V, DestType);
-            isTaintedForSure = true;
+              (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op))) {
+            if ((DestType->isPointerTy())) {
+              if (getLoadStoreAlignment(Op).value() * 8 ==
+                  CGM.getDataLayout().getPointerSizeInBits() / 2) {
+                llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
+                llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
+                V = Builder.CreatePtrToInt(V, Int32Ty);
+                // V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
+                V = Builder.CreateIntToPtr(V, DestType);
+                isTaintedForSure = true;
+              } else
+                isNotTaintedForSure = true;
+            }
           }
         }
+
+
         // if argument being passed is a Bitcast type instruction, walk up the operand
         //  list until you find a load or store with align.
         //  THen you can fetch the alignment and if 4, you can instrument it accordingly
@@ -4960,7 +4969,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         // simple experiment
         llvm::Value *TaintedPtrFromOffset = NULL;
-        if ((FD != NULL) && (FD->isTLIB()) && CGM.getCodeGenOpts().sbx) {
+        if ((FD != NULL) && (FD->isTLIB()) && CGM.getCodeGenOpts().sbx
+            && (!isNotTaintedForSure)) {
           auto CharUnitsSz = CharUnits::Four();
           // check if -m32 flag is set
           if (CGM.getDataLayout().getPointerSizeInBits() == 32)
@@ -4972,6 +4982,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           {
             // set the GV to be 64-bit
             CharUnitsSz = CharUnits::Four();
+          }
+          if ((FD->getNameAsString()=="t_strcpy") && ((shouldEmitTaintedPtrDerefAdaptor
+                                                        (CGM, I->Ty) || isTaintedForSure))) {
+            int i = 10;
+            auto b = CGM.getDataLayout().getPointerSizeInBits();
           }
           auto AddrRefOfVal = Address(V, CharUnitsSz);
           TaintedPtrFromOffset =

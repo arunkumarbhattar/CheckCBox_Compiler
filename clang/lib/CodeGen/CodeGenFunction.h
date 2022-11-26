@@ -4764,6 +4764,10 @@ private:
                                             const llvm::Type *BaseTy);
     LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                    const VarDecl *VD);
+    bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                          const llvm::Type *BaseTy);
+    bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                          const QualType BaseTy);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

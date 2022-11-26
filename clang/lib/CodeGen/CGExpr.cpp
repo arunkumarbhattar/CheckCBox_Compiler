@@ -3022,6 +3022,12 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
         Addr = Address(TaintedPtrFromOffset, Addr.getAlignment());
         LV.setAddress(Addr);
     }
+
+    // pointee type is a tainted pointer, then the load address must be aligned 4
+    if(T->isTaintedPointerType()) {
+      Addr = Address(Addr.getPointer() ,CharUnits::Four());
+      LV.setAddress(Addr);
+    }
     EmitDynamicNonNullCheck(Addr, BaseTy);
     EmitDynamicBoundsCheck(Addr, E->getBoundsExpr(), E->getBoundsCheckKind(),
                            nullptr);
