@@ -2763,9 +2763,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     sbxHeap->setLinkage(llvm::GlobalValue::CommonLinkage);
 
     //Insert a global variable to store the HeapBound
-    getModule().getOrInsertGlobal("sbxHeapBound", Int64Ty);
-    llvm::GlobalVariable *sbxHeapBound = getModule().getNamedGlobal("sbxHeapBound");
-    sbxHeapBound->setInitializer(const_int_val);
+    getModule().getOrInsertGlobal("sbxHeapRange", Int32Ty);
+    llvm::GlobalVariable *sbxHeapBound = getModule().getNamedGlobal("sbxHeapRange");
+    auto const_int_val_32 =
+        llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(32, 0));
+    sbxHeapBound->setInitializer(const_int_val_32);
     sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
   }
 

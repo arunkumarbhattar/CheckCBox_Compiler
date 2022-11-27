@@ -3844,6 +3844,10 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   Expr* BaseExp = const_cast<Expr *>(Base);
   bool IsShouldMultiPointerBeInstrumented = CodeGenFunction::IsBaseExprDecoyExists(CGF,
       BaseExp, static_cast<llvm::StructType *>(AddrType));
+  if (BaseExp->getType()->isTaintedPointerType())
+  {
+    IsShouldMultiPointerBeInstrumented = true;
+  }
   if (IsShouldMultiPointerBeInstrumented && pointer_depth >= 2)
   {
     llvm::Type* DestTy = llvm::Type::getInt32PtrTy(

@@ -983,13 +983,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
 
     // Insert call to get the first fetch of the sandbox head bound
-    auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
+    auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapRange");
     if (sbxHeapBound) {
       Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-      llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-      auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-      HeapAddrInst->setParent(EntryBB);
-      llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
+      llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+      llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+      auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+      HeapRangeInst->setParent(EntryBB);
+      llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+      //bitcast to i32
+      llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
+      llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
     }
   }
   else
@@ -999,13 +1003,18 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 //       and hence, pages might be allocated or released
         if (D->isCallbackDecl() && D->getAsFunction() && D->getAsFunction()->isThisDeclarationADefinition())
         {
-          auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
+          // Insert call to get the first fetch of the sandbox head bound
+          auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapRange");
           if (sbxHeapBound) {
             Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-            llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-            auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-            heapAddrInst->setParent(Builder.GetInsertBlock());
-            llvm::StoreInst *store = Builder.CreateStore(heapAddrInst, *key_addr);
+            llvm::Value *HeapRangeVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+            llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+            auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapRangeVal);
+            HeapRangeInst->setParent(EntryBB);
+            llvm::Value *HeapRange = Builder.CreateSub(HeapRangeVal, HeapBaseVal);
+            //bitcast to i32
+            llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
+            llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
           }
         }
   }

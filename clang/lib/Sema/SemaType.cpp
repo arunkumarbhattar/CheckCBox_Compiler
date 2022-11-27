@@ -1954,7 +1954,6 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
                                   unsigned CVRAU, const DeclSpec *DS) {
   if (T.isNull())
     return QualType();
-
   // Ignore any attempt to form a cv-qualified reference.
   if (T->isReferenceType())
     CVRAU &=
@@ -1990,6 +1989,11 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   }
 
   Qualifiers Q = Qualifiers::fromCVRMask(CVR);
+  if (DS && DS->getTypeQualifiers() == DeclSpec::TQ_Decoy)
+  {
+    //set the cvr qualifiers with decoy decl mask
+    Q.setDecoyQualifier();
+  }
   Q.setUnaligned(CVRAU & DeclSpec::TQ_unaligned);
   return BuildQualifiedType(T, Loc, Q, DS);
 }

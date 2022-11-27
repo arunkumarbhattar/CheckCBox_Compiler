@@ -4014,6 +4014,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
     case tok::kw__Decoy:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_Decoy, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
       if (!getLangOpts().C11)
           Diag(Tok, diag::ext_c11_feature) << Tok.getName();
         isInvalid = DS.setFunctionSpecDecoy(Loc, PrevSpec, DiagID);

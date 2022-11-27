@@ -5626,11 +5626,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if (functionName == "t_malloc" || functionName == "t_free" ||
         functionName == "t_realloc" || functionName == "t_calloc") {
       // Insert call to get the first fetch of the sandbox head bound
-      auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
-      if (sbxHeapBound) {
-        Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound();
-        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
+      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+      if (sbxHeapRange) {
+        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound();
+        //create a sub between this and  heap base
+        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+        llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+        //bitcast to i32
+        llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Builder.getInt32Ty());
+        //now we store this valid range into the global variable
+        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
       }
     }
     else if (TargetDecl->isTaintedDecl())
@@ -5638,13 +5644,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (TargetDecl->isTaintedDecl() && TargetDecl->getAsFunction() &&
           TargetDecl->getAsFunction()->isThisDeclarationADefinition())
       {
-        auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapBound");
-        if (sbxHeapBound) {
-          Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-          llvm::Value *HeapAddrVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-          auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+        auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+        if (sbxHeapRange) {
+          Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+          llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+          auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
           heapAddrInst->setParent(Builder.GetInsertBlock());
-          llvm::StoreInst *store = Builder.CreateStore(heapAddrInst, *key_addr);
+          //create a sub between this and  heap base
+          llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+          llvm::Value *HeapRangeVal = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+          //bitcast to i32
+          llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+          llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
         }
       }
     }

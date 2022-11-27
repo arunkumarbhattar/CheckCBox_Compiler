@@ -316,7 +316,8 @@ public:
     TQ_unaligned   = 8,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 16
+    TQ_atomic      = 16,
+    TQ_Decoy = 32
   };
 
   bool isTaintedStruct;
@@ -383,7 +384,7 @@ private:
   unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
-  unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 7;  // Bitwise OR of TQ.
 
   unsigned PointerTypeQualifiers : 3;
 
@@ -454,7 +455,7 @@ private:
   /// TSTNameLoc provides source range info for tag types.
   SourceLocation TSTNameLoc;
   SourceRange TypeofParensRange;
-  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
+  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc, TQ_DecoyLoc,
       TQ_unalignedLoc;
   SourceLocation PT_Generic_C_Loc, PT_Checked_C_Loc , PT_Tainted_C_Loc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
@@ -664,6 +665,7 @@ public:
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
+    TQ_DecoyLoc = SourceLocation();
     TQ_unalignedLoc = SourceLocation();
     TQ_pipeLoc = SourceLocation();
   }
@@ -712,7 +714,7 @@ public:
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
   SourceLocation getTaintedSpecLoc() const { return FS_taintedLoc; }
   SourceLocation getTaintedCallbackSpecLoc() const { return FS_tainted_callbackLoc;}
-  SourceLocation getDecoySpecLoc() const { return FS_Decoy_specifiedLoc;}
+  SourceLocation getDecoySpecLoc() const { return TQ_DecoyLoc;}
   SourceLocation getTaintedMirrorSpecLoc() const { return FS_tainted_MirrorLoc;}
   SourceLocation getTLIBSpecLoc() const { return FS_tainted_LibLoc;}
   SourceLocation getPointerTypeChecked() const {return PT_Checked_C_Loc; }
