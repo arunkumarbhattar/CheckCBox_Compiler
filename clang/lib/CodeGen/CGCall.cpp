@@ -4925,12 +4925,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         {
           if(getLoadStoreAlignment(V).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) {
             auto OriginalType = V->getType();
-            llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
-            llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
-            V = Builder.CreatePtrToInt(V, Int32Ty);
-            // Zero extend this integer to 64 bits.
-            //V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
-            V = Builder.CreateIntToPtr(V, OriginalType);
             isTaintedForSure = true;
           }
           else
@@ -4946,11 +4940,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             if ((DestType->isPointerTy())) {
               if (getLoadStoreAlignment(Op).value() * 8 ==
                   CGM.getDataLayout().getPointerSizeInBits() / 2) {
-                llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getLLVMContext());
-                llvm::Type *PtrTy = llvm::Type::getInt8PtrTy(getLLVMContext());
-                V = Builder.CreatePtrToInt(V, Int32Ty);
-                // V = Builder.CreateZExt(V, llvm::Type::getInt64Ty(getLLVMContext()));
-                V = Builder.CreateIntToPtr(V, DestType);
                 isTaintedForSure = true;
               } else
                 isNotTaintedForSure = true;
@@ -4983,11 +4972,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             // set the GV to be 64-bit
             CharUnitsSz = CharUnits::Four();
           }
-          if ((FD->getNameAsString()=="t_strcpy") && ((shouldEmitTaintedPtrDerefAdaptor
-                                                        (CGM, I->Ty) || isTaintedForSure))) {
-            int i = 10;
-            auto b = CGM.getDataLayout().getPointerSizeInBits();
-          }
+
           auto AddrRefOfVal = Address(V, CharUnitsSz);
           TaintedPtrFromOffset =
               EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
@@ -5379,6 +5364,39 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke)
     *callOrInvoke = CI;
 
+  //check if IRFuncTy is a function pointer
+//check if TD is a function pointer
+
+  if (CalleePtr->getType()->isPointerTy() && CalleePtr->getType()->getPointerElementType()->isFunctionTy())
+  {
+    //calls to function pointers may be allocating to sbx memory
+    //Hence, post calls, we need to update them
+    auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
+    if (SbxHeap) {
+      Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+      llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
+      // set parent for HeapAddrVal
+      auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+      HeapAddrInst->setParent(Builder.GetInsertBlock());
+      llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
+    }
+
+    //update the sbxHeap and sbxBound values
+    auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+    if (sbxHeapRange) {
+      Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+      llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+      auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+      heapAddrInst->setParent(Builder.GetInsertBlock());
+      //create a sub between this and  heap base
+      llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+      llvm::Value *HeapRangeVal = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+      //bitcast to i32
+      llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+      llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+    }
+  }
+
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
   // Control Flow Guard checks should not be added, even if the call is inlined.
@@ -5608,6 +5626,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   /*
  * We attempt to enforce an 32-bit tainted pointer invariant throughout the function Hence, we insert a convert a 64-bit tainted pointer to 32-bit tainted pointer below
    */
+  //site of optimization
   if (RetTy->isTaintedPointerType()) {
     auto *TaintedPtrOffset =
         EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());
