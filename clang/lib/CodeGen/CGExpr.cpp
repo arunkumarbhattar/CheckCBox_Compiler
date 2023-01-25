@@ -1944,15 +1944,29 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
 
     if (Value->getType()->getCoreElementType()->isDecoyed())
     {
+        if (CGM.getCodeGenOpts().wasmsbx) {
         Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
         Addr = Builder.CreateElementBitCast(Addr, Builder.getInt32Ty());
+      }
+      else if (CGM.getCodeGenOpts().noopsbx)
+        {
+        Value = Builder.CreatePtrToInt(Value, Builder.getInt64Ty());
+        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
+      }
+
     }
     else
     {
+      if (CGM.getCodeGenOpts().wasmsbx) {
         Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
-        //Zero extend the pointer to 64-bit --> as long as the pointer is not to a Decoyed structure
+        // Zero extend the pointer to 64-bit --> as long as the pointer is not to a Decoyed structure
         Value = Builder.CreateZExt(Value, Builder.getInt64Ty());
         Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
+      }
+      else if (CGM.getCodeGenOpts().noopsbx){
+        Value = Builder.CreatePtrToInt(Value, Builder.getInt64Ty());
+        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
+      }
     }
   }
 

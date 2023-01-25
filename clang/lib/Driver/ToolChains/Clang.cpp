@@ -4653,10 +4653,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-delete-null-pointer-checks");
 
   //Check for -fw2c_sbx
-  if (Args.hasFlag(options::OPT_fw2c_sbx,
-                   options::OPT_fno_w2c_sbx, false)) {
-    CmdArgs.push_back("-fw2c_sbx");
+  if (Args.hasFlag(options::OPT_fwasmsbx,
+                   options::OPT_fno_wasmsbx, false)) {
+    CmdArgs.push_back("-fwasmsbx");
     //CmdArgs.push_back("-Werror-implicit-function-declaration");
+  }
+
+  if (Args.hasFlag(options::OPT_fnoopsbx,
+                   options::OPT_fno_noopsbx, false)) {
+    CmdArgs.push_back("-fnoopsbx");
   }
 
   // LLVM Code Generator Options.

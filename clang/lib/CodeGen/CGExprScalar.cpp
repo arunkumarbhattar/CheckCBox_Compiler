@@ -382,22 +382,6 @@ public:
     return Builder.CreateICmpNE(V, Zero, "tobool");
   }
 
-  Value* EmitConditionalTaintedP2OAdaptor(Value* Base){
-    llvm::Type* OriginalType = Base->getType();
-    if (!Base->getType()->isPointerTy())
-      return NULL;
-
-    Value *OffsetVal = Builder.CreatePointerCast(
-        Base,
-        llvm::Type::getInt8PtrTy(Base->getContext()));
-    llvm::Value* ConvPtr = Builder.CreatePtrToInt(OffsetVal,
-                                                  llvm::Type::getInt32Ty(Base->getContext()));
-    /*
-   * Returned Ptr is of type unsigned int , hence cast it back to original type.
-     */
-    return Builder.CreateIntToPtr(ConvPtr, OriginalType);
-  }
-
   Value *EmitIntToBoolConversion(Value *V) {
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it

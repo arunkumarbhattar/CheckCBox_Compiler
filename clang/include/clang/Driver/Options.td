@@ -2532,9 +2532,13 @@ defm data_sections : BoolFOption<"data-sections",
   CodeGenOpts<"DataSections">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Place each data in its own section">, NegFlag<SetFalse>>;
 
-defm w2c_sbx : BoolFOption<"w2c_sbx",
-  CodeGenOpts<"sbx">, DefaultFalse,
+defm wasmsbx : BoolFOption<"wasmsbx",
+  CodeGenOpts<"wasmsbx">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enables WASM SBX instrumentation">, NegFlag<SetFalse>>;
+
+defm noopsbx : BoolFOption<"noopsbx",
+  CodeGenOpts<"noopsbx">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Enables NOOP SBX instrumentation">, NegFlag<SetFalse>>;
 
 defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,

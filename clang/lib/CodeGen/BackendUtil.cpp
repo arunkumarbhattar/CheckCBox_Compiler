@@ -554,7 +554,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.ExplicitEmulatedTLS = CodeGenOpts.ExplicitEmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
-  Options.Emitsbx = CodeGenOpts.sbx;
+  Options.Emitwasmsbx = CodeGenOpts.wasmsbx;
+  Options.Emitnoopsbx= CodeGenOpts.noopsbx;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;

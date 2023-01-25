@@ -4921,16 +4921,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // then a truncation to i32.
         bool isTaintedForSure = false;
         bool isNotTaintedForSure = false;
-        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy())
-        {
-          if(getLoadStoreAlignment(V).value()*8 == CGM.getDataLayout().getPointerSizeInBits()/2) {
+        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy()) {
+          if (getLoadStoreAlignment(V).value() * 8 ==
+              CGM.getDataLayout().getPointerSizeInBits() / 2) {
             auto OriginalType = V->getType();
             isTaintedForSure = true;
-          }
-          else
+          } else
             isNotTaintedForSure = true;
-        }
-        else if (isa<llvm::CastInst>(V)) {
+        } else if (isa<llvm::CastInst>(V)) {
           // fetch the operand of the cast instruction
           auto *castIns = dyn_cast<llvm::CastInst>(V);
           auto DestType = castIns->getDestTy();
@@ -4947,7 +4945,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           }
         }
 
-
         // if argument being passed is a Bitcast type instruction, walk up the operand
         //  list until you find a load or store with align.
         //  THen you can fetch the alignment and if 4, you can instrument it accordingly
@@ -4958,27 +4955,25 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         // simple experiment
         llvm::Value *TaintedPtrFromOffset = NULL;
-        if ((FD != NULL) && (FD->isTLIB()) && CGM.getCodeGenOpts().sbx
-            && (!isNotTaintedForSure)) {
-          auto CharUnitsSz = CharUnits::Four();
-          // check if -m32 flag is set
-          if (CGM.getDataLayout().getPointerSizeInBits() == 32)
-          {
-            // set the GV to be 32-bit
-            CharUnitsSz = CharUnits::Two();
-          }
-          else
-          {
-            // set the GV to be 64-bit
-            CharUnitsSz = CharUnits::Four();
-          }
+        if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
+          if ((FD != NULL) && (FD->isTLIB()) && (!isNotTaintedForSure)) {
+            auto CharUnitsSz = CharUnits::Four();
+            // check if -m32 flag is set
+            if (CGM.getDataLayout().getPointerSizeInBits() == 32) {
+              // set the GV to be 32-bit
+              CharUnitsSz = CharUnits::Two();
+            } else {
+              // set the GV to be 64-bit
+              CharUnitsSz = CharUnits::Four();
+            }
 
-          auto AddrRefOfVal = Address(V, CharUnitsSz);
-          TaintedPtrFromOffset =
-              EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
-          if ((TaintedPtrFromOffset == NULL) && (isTaintedForSure)) {
+            auto AddrRefOfVal = Address(V, CharUnitsSz);
             TaintedPtrFromOffset =
-                EmitDynamicTaintedPtrAdaptorBlock(AddrRefOfVal);
+                EmitTaintedPtrDerefAdaptor(AddrRefOfVal, I->Ty);
+            if ((TaintedPtrFromOffset == NULL) && (isTaintedForSure)) {
+              TaintedPtrFromOffset =
+                  EmitDynamicTaintedPtrAdaptorBlock(AddrRefOfVal);
+            }
           }
         }
         if (TaintedPtrFromOffset != NULL) {
@@ -5014,13 +5009,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg))
           V = Builder.CreateBitCast(V, IRFuncTy->getParamType(FirstIRArg));
-        /*
- * The Value V is just the immature tainted pointer (still in offset form) loaded You need to run this tainted pointer through our Deref Gadget to make it mature. The instrumentation for that must be inserted here
-         */
-        //        auto AddressOfV = Address(V, getPointerAlign());
-        //        auto *TaintedPtrFromOffsetVal = EmitTaintedPtrDerefAdaptor(AddressOfV, I->Ty);
-        //        if(TaintedPtrFromOffsetVal != NULL)
-        //            V = TaintedPtrFromOffsetVal;
         IRCallArgs[FirstIRArg] = V;
         break;
       }
@@ -5364,13 +5352,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke)
     *callOrInvoke = CI;
 
-  //check if IRFuncTy is a function pointer
-//check if TD is a function pointer
-
-  if (CalleePtr->getType()->isPointerTy() && CalleePtr->getType()->getPointerElementType()->isFunctionTy())
-  {
-    //calls to function pointers may be allocating to sbx memory
-    //Hence, post calls, we need to update them
+  if (CalleePtr->getType()->isPointerTy() &&
+      CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
+    // calls to function pointers may be allocating to sbx memory
+    // Hence, post calls, we need to update them
     auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
     if (SbxHeap) {
       Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
@@ -5381,18 +5366,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
     }
 
-    //update the sbxHeap and sbxBound values
+    // update the sbxHeap and sbxBound values
     auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
     if (sbxHeapRange) {
       Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
       llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
       auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
       heapAddrInst->setParent(Builder.GetInsertBlock());
-      //create a sub between this and  heap base
+      // create a sub between this and  heap base
       llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
       llvm::Value *HeapRangeVal = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-      //bitcast to i32
-      llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+      // bitcast to i32
+      llvm::Value *HeapRange32 =
+          Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
       llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
     }
   }
@@ -5626,7 +5612,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   /*
  * We attempt to enforce an 32-bit tainted pointer invariant throughout the function Hence, we insert a convert a 64-bit tainted pointer to 32-bit tainted pointer below
    */
-  //site of optimization
+  // site of optimization
   if (RetTy->isTaintedPointerType()) {
     auto *TaintedPtrOffset =
         EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());
@@ -5640,41 +5626,45 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
    * means there has been some change in the sbx bound value
    * You need to fetch the fresh value and update the global variable with it
    */
-  if (TargetDecl && TargetDecl->getAsFunction() && CGM.getCodeGenOpts().sbx ) {
-    auto functionName = TargetDecl->getAsFunction()->getNameAsString();
-    if (functionName == "t_malloc" || functionName == "t_free" ||
-        functionName == "t_realloc" || functionName == "t_calloc") {
-      // Insert call to get the first fetch of the sandbox head bound
-      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
-      if (sbxHeapRange) {
-        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
-        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound();
-        //create a sub between this and  heap base
-        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-        llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-        //bitcast to i32
-        llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Builder.getInt32Ty());
-        //now we store this valid range into the global variable
-        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
-      }
-    }
-    else if (TargetDecl->isTaintedDecl())
-    {
-      if (TargetDecl->isTaintedDecl() && TargetDecl->getAsFunction() &&
-          TargetDecl->getAsFunction()->isThisDeclarationADefinition())
-      {
+  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx)
+  {
+    if (TargetDecl && TargetDecl->getAsFunction()) {
+      auto functionName = TargetDecl->getAsFunction()->getNameAsString();
+      if (functionName == "t_malloc" || functionName == "t_free" ||
+          functionName == "t_realloc" || functionName == "t_calloc") {
+        // Insert call to get the first fetch of the sandbox head bound
         auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
         if (sbxHeapRange) {
           Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
-          llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-          auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
-          heapAddrInst->setParent(Builder.GetInsertBlock());
-          //create a sub between this and  heap base
+          llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound();
+          // create a sub between this and  heap base
           llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-          llvm::Value *HeapRangeVal = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-          //bitcast to i32
-          llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+          llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+          // bitcast to i32
+          llvm::Value *HeapRange32 =
+              Builder.CreateTrunc(HeapRange, Builder.getInt32Ty());
+          // now we store this valid range into the global variable
           llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+        }
+      } else if (TargetDecl->isTaintedDecl()) {
+        if (TargetDecl->isTaintedDecl() && TargetDecl->getAsFunction() &&
+            TargetDecl->getAsFunction()->isThisDeclarationADefinition()) {
+          auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+          if (sbxHeapRange) {
+            Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+            llvm::Value *HeapBoundVal =
+                Builder.FetchSbxHeapBound(&CGM.getModule());
+            auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+            heapAddrInst->setParent(Builder.GetInsertBlock());
+            // create a sub between this and  heap base
+            llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+            llvm::Value *HeapRangeVal =
+                Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+            // bitcast to i32
+            llvm::Value *HeapRange32 =
+                Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+            llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+          }
         }
       }
     }
