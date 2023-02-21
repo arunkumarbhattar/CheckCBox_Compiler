@@ -67,6 +67,10 @@ namespace clang {
         return CharUnits(8);
       }
 
+      static CharUnits Two() {
+        return CharUnits(2);
+      }
+
 
       /// fromQuantity - Construct a CharUnits quantity from a raw integer type.
       static CharUnits fromQuantity(QuantityType Quantity) {

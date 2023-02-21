@@ -359,6 +359,32 @@ static CallInst *createTaintedOffset2Ptr(IRBuilderBase *Builder, Value *Offset){
     return createCallHelper(Decl, Ops, Builder);
 }
 
+static CallInst *sbxInit(IRBuilderBase *Builder){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = { 0 };
+  auto *Decl = Intrinsic::InitSbx(M);
+  //create a call to this function
+  return Builder->CreateCall(Decl);
+}
+
+static CallInst *fetchSbxHeapAddress(IRBuilderBase *Builder){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = { 0 };
+  auto *Decl = Intrinsic::fetchSbxHeapAddress(M);
+  //create a call to this function
+  return Builder->CreateCall(Decl);
+}
+
+static CallInst *fetchSbxHeapBound(IRBuilderBase *Builder, Module *M_){
+  if (M_ == nullptr)
+    M_ = Builder->GetInsertBlock()->getParent()->getParent();
+//  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = { 0 };
+  auto *Decl = Intrinsic::fetchSbxHeapBound(M_);
+  //create a call to this function
+  return Builder->CreateCall(Decl);
+}
+
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
@@ -420,6 +446,22 @@ CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
         Offset = CreatePtrToInt(Offset,Type::getInt32Ty(this->getContext()));
     }
     return createTaintedOffset2Ptr(this, Offset);
+}
+CallInst *IRBuilderBase::InitSbx(){
+  //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
+
+  return sbxInit(this);
+}
+
+CallInst *IRBuilderBase::FetchSbxHeapAddress(){
+  //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
+
+  return fetchSbxHeapAddress(this);
+}
+
+CallInst *IRBuilderBase::FetchSbxHeapBound(Module* M){
+  //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
+    return fetchSbxHeapBound(this, M);
 }
 
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {

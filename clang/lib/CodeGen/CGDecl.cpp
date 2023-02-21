@@ -267,7 +267,19 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
       getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
   if (D.getType()->isTaintedPointerType())
-      GV->setAlignment(CharUnits::Four().getAsAlign());
+  {
+    // check if -m32 flag is set
+    if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+    {
+          // set the GV to be 32-bit
+          GV->setAlignment(CharUnits::Two().getAsAlign());
+    }
+    else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+    {
+          // set the GV to be 64-bit
+          GV->setAlignment(CharUnits::Four().getAsAlign());
+    }
+  }
   else
     GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
 
@@ -431,7 +443,19 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
     var = AddInitializerToStaticVarDecl(D, var);
 
     if (D.getType()->isTaintedPointerType())
+    {
+      // check if -m32 flag is set
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+      {
+        // set the GV to be 32-bit
+        var->setAlignment(CharUnits::Two().getAsAlign());
+      }
+      else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+      {
+        // set the GV to be 64-bit
         var->setAlignment(CharUnits::Four().getAsAlign());
+      }
+    }
     else
         var->setAlignment(alignment.getAsAlign());
 
@@ -1141,14 +1165,38 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
         getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
         Constant, Name, InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
     if (D.getType()->isTaintedPointerType())
+    {
+      // check if -m32 flag is set
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+      {
+        // set the GV to be 32-bit
+        GV->setAlignment(CharUnits::Two().getAsAlign());
+      }
+      else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+      {
+        // set the GV to be 64-bit
         GV->setAlignment(CharUnits::Four().getAsAlign());
+      }
+    }
     else
         GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
   } else if (CacheEntry->getAlignment() < Align.getQuantity()) {
       if (D.getType()->isTaintedPointerType())
+      {
+        // check if -m32 flag is set
+        if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        {
+          // set the GV to be 32-bit
+          CacheEntry->setAlignment(CharUnits::Two().getAsAlign());
+        }
+        else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+        {
+          // set the GV to be 64-bit
           CacheEntry->setAlignment(CharUnits::Four().getAsAlign());
+        }
+      }
       else
             CacheEntry->setAlignment(Align.getAsAlign());
   }
@@ -2518,7 +2566,19 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       auto *T = V->getType()->getPointerElementType()->getPointerTo(DestAS);
       auto DeclAlignment = DeclPtr.getAlignment();
       if (D.getType()->isTaintedPointerType())
+      {
+        // check if -m32 flag is set
+        if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        {
+          // set the GV to be 32-bit
+          DeclAlignment = CharUnits::Two();
+        }
+        else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+        {
+          // set the GV to be 64-bit
           DeclAlignment = CharUnits::Four();
+        }
+      }
       DeclPtr = Address(getTargetHooks().performAddrSpaceCast(
                             *this, V, SrcLangAS, DestLangAS, T, true),
                         DeclAlignment);
@@ -2552,7 +2612,19 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       // Otherwise, create a temporary to hold the value.
       auto align = getContext().getDeclAlign(&D);
       if (Ty->isTaintedPointerType())
-        align = CharUnits::Four();
+      {
+        // check if -m32 flag is set
+        if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        {
+          // set the GV to be 32-bit
+          align = CharUnits::Two();
+        }
+        else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+        {
+          // set the GV to be 64-bit
+          align = CharUnits::Four();
+        }
+      }
       DeclPtr = CreateMemTemp(Ty, align,
                               D.getName() + ".addr");
     }

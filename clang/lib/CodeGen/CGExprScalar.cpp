@@ -382,22 +382,6 @@ public:
     return Builder.CreateICmpNE(V, Zero, "tobool");
   }
 
-  Value* EmitConditionalTaintedP2OAdaptor(Value* Base){
-    llvm::Type* OriginalType = Base->getType();
-    if (!Base->getType()->isPointerTy())
-      return NULL;
-
-    Value *OffsetVal = Builder.CreatePointerCast(
-        Base,
-        llvm::Type::getInt8PtrTy(Base->getContext()));
-    llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal,
-                                             "_Dynamic_check.tainted_pointer");
-    /*
-   * Returned Ptr is of type unsigned int , hence cast it back to original type.
-     */
-    return Builder.CreateIntToPtr(ConvPtr, OriginalType);
-  }
-
   Value *EmitIntToBoolConversion(Value *V) {
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
@@ -3496,12 +3480,21 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     //    //Print out the tainted pointer
     //    llvm::errs() << "Tainted pointer: " << pointer->getName().str() << "\n";
     auto OriginalTyp = RetVal->getType();
-    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnits::Four(), "tmp");
+    auto CharUnitsSz = CharUnits::Four();
+    // check if -m32 flag is set
+    if (CGF.CGM.getDataLayout().getPointerSizeInBits() == 32)
+    {
+      CharUnitsSz = CharUnits::Two();
+    }
+    else
+    {
+      CharUnitsSz = CharUnits::Four();
+    }
+    auto Temp = CGF.CreateMemTemp(pointerOperand->getType(), CharUnitsSz, "tmp");
     CGF.Builder.CreateStore(RetVal, Temp);
     RetVal =  CGF.Builder.CreateLoad(Temp);
     //    //cast the loadVal back to original Value
     RetVal = CGF.Builder.CreatePointerCast(RetVal, OriginalTyp);
-    int i = 10;
   }
   return RetVal;
 
@@ -3794,17 +3787,30 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // Do the raw subtraction part.
   llvm::Value *LHS = NULL;
   llvm::Value *RHS = NULL;
-  if (op.LHS->getType()->isTaintedPtrTy() || op.RHS->getType()->isTaintedPtrTy())
-  {
-    auto LHS_inter = Builder.CreatePtrToInt(op.LHS, CGF.Int32Ty, "sub.ptr.lhs.cast");
-    auto RHS_inter = Builder.CreatePtrToInt(op.RHS, CGF.Int32Ty, "sub.ptr.rhs.cast");
-    LHS = Builder.CreateIntCast(LHS_inter, CGF.PtrDiffTy, false, "sub.ptr.lhs.cast");
-    RHS = Builder.CreateIntCast(RHS_inter, CGF.PtrDiffTy, false, "sub.ptr.rhs.cast");
-    const_cast<BinOpInfo&>(op).setQualType(CGF.getContext().IntTy);
+
+  auto op_LHS = op.LHS;
+  if ((isa<llvm::LoadInst>(op_LHS) && op_LHS->getType()->isPointerTy()) &&
+        (getLoadStoreAlignment(op_LHS).value() * 8 ==
+        CGF.CGM.getDataLayout().getPointerSizeInBits() / 2)) {
+      llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGF.getLLVMContext());
+      op_LHS = Builder.CreatePtrToInt(op_LHS, Int32Ty);
+      // Zero extend this integer to 64 bits.
+      LHS = Builder.CreateZExt(op_LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
   }
-  else
-  {
-    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  else {
+      LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  }
+
+  auto op_RHS = op.RHS;
+  if ((isa<llvm::LoadInst>(op_RHS) && op_RHS->getType()->isPointerTy()) &&
+      (getLoadStoreAlignment(op_RHS).value() * 8 ==
+        CGF.CGM.getDataLayout().getPointerSizeInBits() / 2)) {
+      llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGF.getLLVMContext());
+      op_RHS = Builder.CreatePtrToInt(op_RHS, Int32Ty);
+      // Zero extend this integer to 64 bits.
+      RHS = Builder.CreateZExt(op_RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  }
+  else {
     RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
   }
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
@@ -4124,15 +4130,22 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     if (LHSTy->isTaintedPointerType())
     {
+      //fetch the original type
+      auto OrigType = LHS->getType();
       LHS = CGF.Builder.CreatePtrToInt(LHS, CGF.Int32Ty);
       //zero extent to i64
       LHS = CGF.Builder.CreateZExt(LHS, CGF.Int64Ty);
+      //ptr cast to original type
+      LHS = CGF.Builder.CreateIntToPtr(LHS, OrigType);
     }
     if (RHSTy->isTaintedPointerType())
     {
+      auto OrigType = LHS->getType();
       RHS = CGF.Builder.CreatePtrToInt(RHS, CGF.Int32Ty);
         //zero extent to i64
-        RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+      RHS = CGF.Builder.CreateZExt(RHS, CGF.Int64Ty);
+        //ptr cast to original type
+      RHS = CGF.Builder.CreateIntToPtr(RHS, OrigType);
     }
 
     // If AltiVec, the comparison results in a numeric type, so we use

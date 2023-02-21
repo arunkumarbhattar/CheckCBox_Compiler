@@ -1291,6 +1291,27 @@ Function* Intrinsic::Offset2Pointer(Module *M){
                                                  RetVOIDPtr, I32Ty).getCallee());
 }
 
+Function* Intrinsic::InitSbx(Module *M){
+  //get void type
+  Type* VoidTy = Type::getVoidTy(M->getContext());
+  return cast<Function>(M->getOrInsertFunction("sbx_init",
+                                               VoidTy).getCallee());
+}
+
+Function* Intrinsic::fetchSbxHeapAddress(Module *M){
+  //get void type
+  Type* Int64Ty = Type::getInt64Ty(M->getContext());
+  return cast<Function>(M->getOrInsertFunction("c_fetch_sandbox_heap_address",
+                                               Int64Ty).getCallee());
+}
+
+Function* Intrinsic::fetchSbxHeapBound(Module *M){
+  //get void type
+  Type* Int64Ty = Type::getInt64Ty(M->getContext());
+  return cast<Function>(M->getOrInsertFunction("c_fetch_sandbox_heap_bound",
+                                               Int64Ty).getCallee());
+}
+
 // This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"

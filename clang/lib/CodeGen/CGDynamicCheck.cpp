@@ -71,22 +71,28 @@ static bool shouldEmitNonNullCheck(const CodeGenModule &CGM,
   return true;
 }
 
-static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+bool CodeGenFunction::shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                             const QualType BaseTy) {
     if(!CGM.getLangOpts().CheckedC)
         return false;
     //if(!CGM.getLangOpts().TaintedC)
     //return false;
 
+    if (BaseTy->isUncheckedPointerType())
+      return false;
+
     if((!(BaseTy->isTaintedPointerType() || BaseTy->isTaintedStructureType())
           || BaseTy->isFunctionType() || BaseTy->isFunctionPointerType()))
         return false;
+
+    if (BaseTy->isCheckedPointerType() || BaseTy->isCheckedArrayType())
+      return false;
 
     return true;
 
 }
 
-static bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+bool CodeGenFunction::shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                              const llvm::Type* BaseTy) {
   if(!CGM.getLangOpts().CheckedC)
     return false;
@@ -116,7 +122,7 @@ void CodeGenFunction::EmitDynamicNonNullCheck(const Address BaseAddr,
 
 Value* CodeGenFunction::EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
                                                 const llvm::Type* BaseTy){
-    if(!shouldEmitTaintedPtrDerefAdaptor
+  if(!shouldEmitTaintedPtrDerefAdaptor
             (CGM, BaseTy))
         return NULL;
 
@@ -170,6 +176,10 @@ Value* CodeGenFunction::EmitConditionalTaintedPtrDerefAdaptor(Value* Base){
 }
 
 Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
+
+  if(!(CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx))
+    return NULL;
+
   ++NumDynamicChecksTainted;
   llvm::Type* OriginalType = Base->getType();
   if (!Base->getType()->isPointerTy())
@@ -178,12 +188,33 @@ Value* CodeGenFunction::EmitConditionalTaintedP2OAdaptor(Value* Base){
   Value *OffsetVal = Builder.CreatePointerCast(
       Base,
       llvm::Type::getInt8PtrTy(Base->getContext()));
-  llvm::Value* ConvPtr = Builder.CreateP2O(OffsetVal);
+
+  llvm::Value* ConvPtr = NULL;
+  if(CGM.getCodeGenOpts().wasmsbx)
+  {
+    ConvPtr = Builder.CreatePtrToInt(OffsetVal, llvm::Type::getInt32Ty(Base->getContext()));
+  }
+  else if (CGM.getCodeGenOpts().noopsbx)
+  {
+    ConvPtr = Builder.CreatePtrToInt(OffsetVal, llvm::Type::getInt64Ty(Base->getContext()));
+  }
   /*
    * Returned Ptr is of type unsigned int , hence cast it back to original type.
    */
   llvm::Value* RetVal = Builder.CreateIntToPtr(ConvPtr, OriginalType);
-  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnits::Four());
+  auto CharUnitsSz = CharUnits::Four();
+  // check if -m32 flag is set
+  if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+  {
+    // set the GV to be 32-bit
+    CharUnitsSz = CharUnits::Two();
+  }
+  else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+  {
+    // set the GV to be 64-bit
+    CharUnitsSz = CharUnits::Four();
+  }
+  Address TempAlloca = CreateTempAllocaWithoutCast(OriginalType, CharUnitsSz); //Returned Pointer must align to N/2 bytes for tainted pointers.
   Builder.CreateStore(RetVal, TempAlloca);
   //Load from Alloca and return
   auto LoadVal =  Builder.CreateLoad(TempAlloca);
@@ -270,18 +301,30 @@ void CodeGenFunction::EmitDynamicBoundsCheck(const Address PtrAddr,
   {
     llvm::GEPOperator* GEP = dyn_cast<GEPOperator>(Upper.getPointer());
     auto GEPOp = GEP->getPointerOperandType();
-    if(GEPOp->isPointerTy() && GEPOp->getCoreElementType()->isDecoyed())
+    if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx)
     {
-      llvm::Type* PtrTy = GEP->getPointerOperandType();
-      llvm::Type* IntPtrTy = llvm::Type::getInt32PtrTy(CGM.getLLVMContext());
-      llvm::Type* IntTy = llvm::Type::getInt32Ty(CGM.getLLVMContext());
-      llvm::Value* NewPtr = Builder.CreatePointerCast(GEP->getPointerOperand(), IntPtrTy);
-      ArrayRef<llvm::Value *> indices(
-          reinterpret_cast<Value *const *>(GEP->idx_begin()),
-          reinterpret_cast<Value *const *>(GEP->idx_end()));
-      llvm::Value* NewGEP = Builder.CreateInBoundsGEP(IntTy, NewPtr, indices[0]);
-      llvm::Value* OriginalTypeVal = Builder.CreatePointerCast(NewGEP, PtrTy);
-      Upper = Address(OriginalTypeVal, Upper.getAlignment());
+      if(GEPOp->isPointerTy() && GEPOp->getCoreElementType()->isDecoyed())
+      {
+        llvm::Type* PtrTy = GEP->getPointerOperandType();
+        llvm::Type* IntPtrTy = llvm::Type::getInt32PtrTy(CGM.getLLVMContext());
+        llvm::Type* IntTy = NULL;
+        if(CGM.getCodeGenOpts().wasmsbx)
+        {
+          IntTy = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+        }
+        else if (CGM.getCodeGenOpts().noopsbx)
+        {
+          IntTy = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+        }
+
+        llvm::Value* NewPtr = Builder.CreatePointerCast(GEP->getPointerOperand(), IntPtrTy);
+        ArrayRef<llvm::Value *> indices(
+            reinterpret_cast<Value *const *>(GEP->idx_begin()),
+            reinterpret_cast<Value *const *>(GEP->idx_end()));
+        llvm::Value* NewGEP = Builder.CreateInBoundsGEP(IntTy, NewPtr, indices[0]);
+        llvm::Value* OriginalTypeVal = Builder.CreatePointerCast(NewGEP, PtrTy);
+        Upper = Address(OriginalTypeVal, Upper.getAlignment());
+      }
     }
   }
 
@@ -555,56 +598,88 @@ void CodeGenFunction::EmitDynamicCheckBlocks(Value *Condition) {
 Value*
 CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
 
+   if (!(CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx))
+     return NULL;
     ++NumDynamicChecksTainted;
 
-    // Emits code as follows:
-    //
-    // %entry:
-    //   ... (prior code)
-    // %0 = base_addr
-    // %1 = ptrtoint base_ty* %0 to i32
-    // %conv = sext i32 %1 to i64 THis instruction can be made to be avoided
-    // %call = call i8* @c_fetch_pointer_from_offset(i64 %conv)
-    // %LHS = bitcast i8* %call to base_ty*
-    llvm::Type * BitCastType = BaseAddr.getType();
-    if (BitCastType->isTStructTy() || (BitCastType->isPointerTy() &&
-                                       BitCastType->getCoreElementType()->isTStructTy())) {
-      BitCastType =
-          ChangeStructName(reinterpret_cast<StructType *>(BitCastType->getCoreElementType()));
-      if ((BitCastType != NULL) && (BitCastType->isDecoyed()))
-      {
-        llvm::Type* CurrentTypeReferences =  BaseAddr.getType();
-        while (CurrentTypeReferences->isPointerTy()) {
-          CurrentTypeReferences = CurrentTypeReferences->getPointerElementType();
-          BitCastType = BitCastType->getPointerTo(0);
-        }
-        BaseAddr.setType(BitCastType);
+    GlobalVariable* sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+    GlobalVariable* sbxHeapBase = CGM.getModule().getNamedGlobal("sbxHeap");
+    // Create a load on sbxHeapBound
+    Value* SbxHeapRangeLoadedVal =
+        Builder.CreateAlignedLoad(llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()),
+                                                             sbxHeapRange, 8, false);
+    // Create a load on sbxHeap
+    Value* SbxHeapBaseLoadedVal =
+        Builder.CreateAlignedLoad(llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()),
+                                                            sbxHeapBase, 8, false);
+
+    llvm::Type *BitCastType = BaseAddr.getType();
+    if(CGM.getCodeGenOpts().wasmsbx) {
+      if (BitCastType->isTStructTy() ||
+          (BitCastType->isPointerTy() &&
+           BitCastType->getCoreElementType()->isTStructTy())) {
+        BitCastType = ChangeStructName(
+            reinterpret_cast<StructType *>(BitCastType->getCoreElementType()));
+        if ((BitCastType != NULL) && (BitCastType->isDecoyed())) {
+          llvm::Type *CurrentTypeReferences = BaseAddr.getType();
+          while (CurrentTypeReferences->isPointerTy()) {
+            CurrentTypeReferences =
+                CurrentTypeReferences->getPointerElementType();
+            BitCastType = BitCastType->getPointerTo(0);
+          }
+          BaseAddr.setType(BitCastType);
+        } else
+          BitCastType = BaseAddr.getType();
       }
-      else
-        BitCastType = BaseAddr.getType();
     }
+
     Value *PointerVal = BaseAddr.getPointer();
-
-    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy()) {
-      Value *OffsetVal = Builder.CreatePtrToInt(
-          BaseAddr.getPointer(),
-          llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
-      PointerVal = Builder.CreateTaintedOffset2Ptr(OffsetVal);
+    //check if PointerVal is a constant
+    if (isa<Constant>(PointerVal)) {
+      //Hell naw!..we aint gon be instrumenting constants
+      return NULL;
     }
 
+    Value* ValidTPtrOffset = NULL;
     Value *ConditionVal = PointerVal;
 
-    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
-    {
-      ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
-                                                "_Dynamic_check.tainted_pointer");
-      EmitDynamicCheckBlocks(ConditionVal);
+    if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy()) {
+      //fetch codegen options
+      if(CGM.getCodeGenOpts().wasmsbx) {
+        Value *OffsetVal32 = Builder.CreatePtrToInt(
+            BaseAddr.getPointer(),
+            llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
+        Value *OffsetVal64 = Builder.CreateZExt(
+            OffsetVal32,
+            llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()));
+        ValidTPtrOffset = OffsetVal32;
+        Value *OffsetValWithHeap = SbxHeapBaseLoadedVal;
+        Value *OffsetValWithHeapAndOffset =
+            Builder.CreateAdd(OffsetValWithHeap, OffsetVal64);
+        // Bitcast this to the type of the pointer
+        PointerVal = OffsetValWithHeapAndOffset;
+      }
+      else if (CGM.getCodeGenOpts().noopsbx)
+      {
+        ValidTPtrOffset = Builder.CreatePtrToInt(
+            BaseAddr.getPointer(),
+            llvm::Type::getInt64Ty(BaseAddr.getPointer()->getContext()));
+        Value *OffsetValWithHeap = SbxHeapBaseLoadedVal;
+        Value *OffsetValWithHeapAndOffset =
+        Builder.CreateAdd(OffsetValWithHeap, ValidTPtrOffset);
+        // Bitcast this to the type of the pointer
+        PointerVal = OffsetValWithHeapAndOffset;
+      }
+
+      if (!CGM.getCodeGenOpts().wasmsbx) {
+        ValidTPtrOffset = Builder.CreatePtrToInt(
+            BaseAddr.getPointer(),
+            llvm::Type::getInt32Ty(BaseAddr.getPointer()->getContext()));
+      }
+        ConditionVal = Builder.CreateICmpULT(ValidTPtrOffset, SbxHeapRangeLoadedVal);
+        EmitDynamicCheckBlocks(ConditionVal);
     }
 
-    /*
-     * If the destination type is NOT a TStruct Type, then we finna gonna follow
-     * Template Tstruct Type itself
-     */
     llvm::Type* DestTy = BitCastType;
     llvm::Type* DecoyedDestTy = BitCastType;
     if (DestTy->isTStructTy() || (DestTy->isPointerTy() &&
@@ -628,7 +703,7 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
 
     Value* CastedPointer = ConditionVal;
     if (!BaseAddr.getType()->getCoreElementType()->isFunctionTy())
-      CastedPointer = Builder.CreatePointerCast(PointerVal, DecoyedDestTy);
+      CastedPointer = Builder.CreateIntToPtr(PointerVal, DecoyedDestTy);
 
     return CastedPointer;
 }

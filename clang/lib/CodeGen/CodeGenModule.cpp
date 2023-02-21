@@ -2752,6 +2752,25 @@ ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
 
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
+  //Create a global variable
+  //check if sbx is enabled
+  if (getCodeGenOpts().wasmsbx || getCodeGenOpts().noopsbx) {
+    getModule().getOrInsertGlobal("sbxHeap", Int64Ty);
+    llvm::GlobalVariable *sbxHeap = getModule().getNamedGlobal("sbxHeap");
+    auto const_int_val =
+        llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(64, 0));
+    sbxHeap->setInitializer(const_int_val);
+    sbxHeap->setLinkage(llvm::GlobalValue::CommonLinkage);
+
+    // Insert a global variable to store the HeapBound
+    getModule().getOrInsertGlobal("sbxHeapRange", Int32Ty);
+    llvm::GlobalVariable *sbxHeapBound =
+        getModule().getNamedGlobal("sbxHeapRange");
+    auto const_int_val_32 =
+        llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(32, 0));
+    sbxHeapBound->setInitializer(const_int_val_32);
+    sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
+  }
 
   // Weak references don't produce any output by themselves.
   if (Global->hasAttr<WeakRefAttr>())
@@ -3786,7 +3805,19 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     GV->setConstant(isTypeConstant(D->getType(), false));
 
     if (D->getType()->isTaintedPointerType())
+    {
+      // check if -m32 flag is set
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+      {
+        // set the GV to be 32-bit
+        GV->setAlignment(CharUnits::Two().getAsAlign());
+      }
+      else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
+      {
+        // set the GV to be 64-bit
         GV->setAlignment(CharUnits::Four().getAsAlign());
+      }
+    }
     else
         GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 

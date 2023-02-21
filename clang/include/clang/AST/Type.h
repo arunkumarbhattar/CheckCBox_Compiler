@@ -154,6 +154,10 @@ public:
     CVRMask = Const | Volatile | Restrict
   };
 
+  enum Decoy{
+    Decoy = 0x20
+  };
+
   enum GC {
     GCNone = 0,
     Weak,
@@ -293,11 +297,16 @@ public:
     removeCVRQualifiers(CVRMask);
   }
   void addCVRQualifiers(unsigned mask) {
-    assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
+    if(mask != Decoy) //decoy is an exception
+      assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask |= mask;
   }
+  void setDecoyQualifier() {
+    Mask |= Decoy;
+  }
   void addCVRUQualifiers(unsigned mask) {
-    assert(!(mask & ~CVRMask & ~UMask) && "bitmask contains non-CVRU bits");
+    if(mask != Decoy) //decoy is an exception
+      assert(!(mask & ~CVRMask & ~UMask) && "bitmask contains non-CVRU bits");
     Mask |= mask;
   }
 
@@ -397,18 +406,21 @@ public:
   bool hasFastQualifiers() const { return getFastQualifiers(); }
   unsigned getFastQualifiers() const { return Mask & FastMask; }
   void setFastQualifiers(unsigned mask) {
-    assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
+    if(mask != Decoy) //decoy is an exception
+      assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask = (Mask & ~FastMask) | mask;
   }
   void removeFastQualifiers(unsigned mask) {
-    assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
+    if(mask != Decoy) //decoy is an exception
+      assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask &= ~mask;
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
   }
   void addFastQualifiers(unsigned mask) {
-    assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
+    if(mask != Decoy) //decoy is an exception
+      assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask |= mask;
   }
 
@@ -735,6 +747,11 @@ public:
   /// added "const" at a different level.
   bool isLocalConstQualified() const {
     return (getLocalFastQualifiers() & Qualifiers::Const);
+  }
+
+  bool isLocalDecoyQualified() const {
+    //check if qualifiers is decoy
+    return (getCVRQualifiers() == Qualifiers::Decoy);
   }
 
   /// Determine whether this type is const-qualified.
@@ -1299,6 +1316,7 @@ private:
   static bool hasNonTrivialToPrimitiveDefaultInitializeCUnion(const RecordDecl *RD);
   static bool hasNonTrivialToPrimitiveDestructCUnion(const RecordDecl *RD);
   static bool hasNonTrivialToPrimitiveCopyCUnion(const RecordDecl *RD);
+  bool isDecoyQualified() const;
 };
 
 } // namespace clang
@@ -6907,7 +6925,10 @@ inline bool QualType::isConstQualified() const {
   return isLocalConstQualified() ||
          getCommonPtr()->CanonicalType.isLocalConstQualified();
 }
-
+inline bool QualType::isDecoyQualified() const {
+  return isLocalDecoyQualified() ||
+         getCommonPtr()->CanonicalType.isLocalDecoyQualified();
+}
 inline bool QualType::isRestrictQualified() const {
   return isLocalRestrictQualified() ||
          getCommonPtr()->CanonicalType.isLocalRestrictQualified();

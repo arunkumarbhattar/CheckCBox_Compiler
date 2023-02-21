@@ -4762,6 +4762,12 @@ private:
     llvm::Value *EmitConditionalTaintedO2PAdaptor(llvm::Value *Base);
     llvm::Value *EmitTaintedPtrDerefAdaptor(const Address BaseAddr,
                                             const llvm::Type *BaseTy);
+    LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF, const Expr *E,
+                                   const VarDecl *VD);
+    bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                          const llvm::Type *BaseTy);
+    bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
+                                          const QualType BaseTy);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function
