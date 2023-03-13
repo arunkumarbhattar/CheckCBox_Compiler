@@ -4664,6 +4664,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fnoopsbx");
   }
 
+  if (Args.hasFlag(options::OPT_fheapsbx,
+                   options::OPT_fno_heapsbx, false)) {
+    CmdArgs.push_back("-fheapsbx");
+  }
+
   // LLVM Code Generator Options.
 
   if (Args.hasArg(options::OPT_frewrite_map_file) ||

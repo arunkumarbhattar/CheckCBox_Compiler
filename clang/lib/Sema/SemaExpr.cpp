@@ -16782,6 +16782,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   bool NoReturn = BD->hasAttr<NoReturnAttr>();
   bool Tainted = BD->hasAttr<TaintedAttr>();
+  bool Callback = BD->hasAttr<CallbackAttr>();
 
   QualType BlockTy;
 
@@ -16795,6 +16796,11 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     if (Tainted && !Ext.getTainted()) {
       Ext = Ext.setTainted(true);
     }
+
+    if (Callback && !Ext.getCallback()) {
+      Ext = Ext.setCallback(true);
+    }
+
     // Turn protoless block types into nullary block types.
     if (isa<FunctionNoProtoType>(FTy)) {
       FunctionProtoType::ExtProtoInfo EPI;
@@ -16821,6 +16827,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
     EPI.ExtInfo = FunctionType::ExtInfo().setTainted(Tainted);
+    EPI.ExtInfo = FunctionType::ExtInfo().setCallback(Callback);
     BlockTy = Context.getFunctionType(RetTy, None, EPI);
   }
 

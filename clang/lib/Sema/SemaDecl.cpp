@@ -3439,6 +3439,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     RequiresAdjustment = true;
   }
 
+  if (OldTypeInfo.getCallback() && !NewTypeInfo.getCallback()) {
+    NewTypeInfo = NewTypeInfo.setCallback(true);
+    RequiresAdjustment = true;
+  }
+
 
   // Merge regparm attribute.
   if (OldTypeInfo.getHasRegParm() != NewTypeInfo.getHasRegParm() ||
@@ -3695,6 +3700,15 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       OldQTypeForComparison = QualType(OldTypeForComparison, 0);
       assert(OldQTypeForComparison.isCanonical());
     }
+
+    if (!OldTypeInfo.getCallback() && NewTypeInfo.getCallback()) {
+      auto *OldType = OldQType->castAs<FunctionProtoType>();
+      const FunctionType *OldTypeForComparison
+          = Context.adjustFunctionType(OldType, OldTypeInfo.setCallback(true));
+      OldQTypeForComparison = QualType(OldTypeForComparison, 0);
+      assert(OldQTypeForComparison.isCanonical());
+    }
+
 
     if (haveIncompatibleLanguageLinkages(Old, New)) {
       // As a special case, retain the language linkage from previous

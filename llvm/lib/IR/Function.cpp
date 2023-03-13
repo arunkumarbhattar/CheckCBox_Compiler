@@ -1261,11 +1261,17 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 Function* Intrinsic::SandboxTaintedMemCheckFunction(Module *M){
   Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
   Type* RetTyp = (Type::getInt1Ty(M->getContext()));
-  return cast<Function>(M->getOrInsertFunction("c_isTaintedPointerToTaintedMem",
+  return cast<Function>(M->getOrInsertFunction("isPointerinHeap",
                                                RetTyp, VOIDPtr)
       .getCallee());
 }
 
+Function* Intrinsic::CreateIsLegalCallEdgeCheckInternal(Module *M) {
+  Type *RetTyp = (Type::getInt1Ty(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("checkCallStackIntegrityForCheckedFunction",
+                                               RetTyp)
+                            .getCallee());
+}
 Function* Intrinsic::SandboxCondlTaintedO2PtrFunction(Module *M) {
   Type *RetVOIDPtr =
       const_cast<PointerType *>(Type::getInt8PtrTy(M->getContext()));

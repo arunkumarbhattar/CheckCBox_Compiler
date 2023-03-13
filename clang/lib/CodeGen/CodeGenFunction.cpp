@@ -969,56 +969,108 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // to a function that will be used to mark the start of
   // the function.
 
-  if (CurFn->getName() == "main") {
-    if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
-      Builder.InitSbx();
-      // sets its value to a call to the function that returns the heap address
-      auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
-      if (SbxHeap) {
-        Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
-        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
-        // set parent for HeapAddrVal
-        auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-        HeapAddrInst->setParent(EntryBB);
-        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
-      }
-
-      // Insert call to get the first fetch of the sandbox head bound
-      auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapRange");
-      if (sbxHeapBound) {
-        Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-        auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
-        HeapRangeInst->setParent(EntryBB);
-        llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-        // bitcast to i32
-        llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
-        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
-      }
+  if (D->isTaintedDecl() && D->getAsFunction() &&
+      D->getAsFunction()->isThisDeclarationADefinition())
+  {
+    llvm::Value* TaintedvoidPtrFunc = llvm::CastInst::CreatePointerCast(CurFn, Int8PtrTy, "voidPtrFunc", &CurFn->getEntryBlock());
+    auto TaintedFuncIndex = CGM.getModule().getNamedGlobal("TaintedFuncIndex");
+    //fetch the global array of void pointers
+    auto VoidPtrArray = CGM.getModule().getNamedGlobal("ListOfTaintedFunctions");
+    if (TaintedFuncIndex) {
+      //fetch the value of TaintedFuncIndex
+      Address *key_addr = new Address(TaintedFuncIndex, CGM.getPointerAlign());
+      llvm::Value *TaintedFuncIndexVal = Builder.CreateLoad(*key_addr);
+      // Insert a GEP instruction to index into the array
+      llvm::Value* GepIndices[] = {llvm::ConstantInt::get(Int32Ty, 0), TaintedFuncIndexVal};
+      llvm::ArrayType* VoidPtrArrayType = llvm::ArrayType::get(Int8PtrTy, 32);
+      llvm::GetElementPtrInst* GepInst = llvm::GetElementPtrInst::Create(VoidPtrArrayType, VoidPtrArray, GepIndices, "voidPtrArrayIdx", &CurFn->getEntryBlock());
+      Address *GEP_addr = new Address(GepInst, CGM.getPointerAlign());
+      Builder.CreateStore(TaintedvoidPtrFunc, *GEP_addr);
+    }
+  }
+  else if (D->isCallbackDecl() && D->getAsFunction() &&
+           D->getAsFunction()->isThisDeclarationADefinition()) {
+    llvm::Value *CallbackvoidPtrFunc = llvm::CastInst::CreatePointerCast(
+        CurFn, Int8PtrTy, "voidPtrFunc", &CurFn->getEntryBlock());
+    auto CallbackFuncIndex =
+        CGM.getModule().getNamedGlobal("CallbackFuncIndex");
+    // fetch the global array of void pointers
+    auto VoidPtrArray =
+        CGM.getModule().getNamedGlobal("ListOfCallbackFunctions");
+    if (CallbackFuncIndex) {
+      // fetch the value of TaintedFuncIndex
+      Address *key_addr = new Address(CallbackFuncIndex, CGM.getPointerAlign());
+      llvm::Value *CallbackFuncIndexVal = Builder.CreateLoad(*key_addr);
+      // Insert a GEP instruction to index into the array
+      llvm::Value *GepIndices[] = {llvm::ConstantInt::get(Int32Ty, 0),
+                                   CallbackFuncIndexVal};
+      llvm::ArrayType *VoidPtrArrayType = llvm::ArrayType::get(Int8PtrTy, 32);
+      llvm::GetElementPtrInst *GepInst = llvm::GetElementPtrInst::Create(
+          VoidPtrArrayType, VoidPtrArray, GepIndices, "voidPtrArrayIdx",
+          &CurFn->getEntryBlock());
+      Address *GEP_addr = new Address(GepInst, CGM.getPointerAlign());
+      Builder.CreateStore(CallbackvoidPtrFunc, *GEP_addr);
     }
   }
   else
   {
-//       If the function is a _Callback function, then we update the global HeapBound,
-//       as here we are anticipating transfer of control from Tainted region to checked region
-//       and hence, pages might be allocated or released
-        if (D->isCallbackDecl() && D->getAsFunction() && D->getAsFunction()->isThisDeclarationADefinition())
-        {
+    //Its a checked function
+    //insert a call
+    // Create the call to checkCallStackIntegrityiForCheckedFunction()
+    auto ConditionVal = Builder.CreateIsLegalCallEdge("_Dynamic_check.checked_function");
+    EmitDynamicCheckBlocks(ConditionVal);
+  }
+  if (CGM.getCodeGenOpts().wasmsbx) {
+    if (CurFn->getName() == "main") {
+        Builder.InitSbx();
+        // sets its value to a call to the function that returns the heap address
+        auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
+        if (SbxHeap) {
+          Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+          llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
+          // set parent for HeapAddrVal
+          auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+          HeapAddrInst->setParent(EntryBB);
+          Builder.CreateStore(HeapAddrVal, *key_addr);
+        }
+
+        // Insert call to get the first fetch of the sandbox head bound
+        auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapRange");
+        if (sbxHeapBound) {
+          Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
+          llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+          llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+          auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+          HeapRangeInst->setParent(EntryBB);
+          llvm::Value *HeapRange = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+          // bitcast to i32
+          llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
+          Builder.CreateStore(HeapRange32, *key_addr);
+        }
+    }
+    else {
+        /* If the function is a _Callback function, then we update the global HeapBound,
+         * as here we are anticipating transfer of control from Tainted region
+         * to checked region and hence, pages might be allocated or released
+         */
+        if (D->isCallbackDecl() && D->getAsFunction() &&
+            D->getAsFunction()->isThisDeclarationADefinition()) {
           // Insert call to get the first fetch of the sandbox head bound
           auto sbxHeapBound = CGM.getModule().getNamedGlobal("sbxHeapRange");
           if (sbxHeapBound) {
-            Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
-            llvm::Value *HeapRangeVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-            llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-            auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapRangeVal);
-            HeapRangeInst->setParent(EntryBB);
-            llvm::Value *HeapRange = Builder.CreateSub(HeapRangeVal, HeapBaseVal);
-            //bitcast to i32
-            llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
-            llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+          Address *key_addr = new Address(sbxHeapBound, CGM.getPointerAlign());
+          llvm::Value *HeapRangeVal =
+              Builder.FetchSbxHeapBound(&CGM.getModule());
+          llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+          auto HeapRangeInst = dyn_cast<llvm::Instruction>(HeapRangeVal);
+          HeapRangeInst->setParent(EntryBB);
+          llvm::Value *HeapRange = Builder.CreateSub(HeapRangeVal, HeapBaseVal);
+          // bitcast to i32
+          llvm::Value *HeapRange32 = Builder.CreateTrunc(HeapRange, Int32Ty);
+          llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
           }
         }
+      }
   }
 
 

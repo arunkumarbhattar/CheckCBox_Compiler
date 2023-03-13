@@ -9527,6 +9527,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
   einfo = lbaseInfo.setTainted(Tainted);
+  einfo = lbaseInfo.setCallback(lbaseInfo.getCallback() || rbaseInfo.getCallback());
 
   if(Tainted)
   {

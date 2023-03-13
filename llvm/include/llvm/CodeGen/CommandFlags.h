@@ -125,6 +125,8 @@ bool getEnablewasmsbx();
 
 bool getEnablenoopsbx();
 
+bool getEnableheapsbx();
+
 bool getEnableAddrsig();
 
 bool getEmitCallSiteInfo();

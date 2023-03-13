@@ -135,7 +135,7 @@ namespace llvm {
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
           EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), Emitwasmsbx(false), Emitnoopsbx(false),
-          EnableMachineOutliner(false),
+          Emitheapsbx(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
@@ -286,6 +286,8 @@ namespace llvm {
     unsigned Emitwasmsbx : 1;
 
     unsigned Emitnoopsbx : 1;
+
+    unsigned Emitheapsbx : 1;
 
     /// Enables the MachineOutliner pass.
     unsigned EnableMachineOutliner : 1;

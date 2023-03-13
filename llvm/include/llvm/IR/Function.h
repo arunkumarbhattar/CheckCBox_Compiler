@@ -580,12 +580,20 @@ public:
     return hasFnAttribute(Attribute::Tainted);
   }
 
+  bool isCallback() const {
+    return hasFnAttribute(Attribute::Callback);
+  }
+
   void setDoesNotReturn() {
     addFnAttr(Attribute::NoReturn);
   }
 
   void setTainted() {
     addFnAttr(Attribute::Tainted);
+  }
+
+  void setCallback(){
+    addFnAttr(Attribute::Callback);
   }
 
   /// Determine if the function should not perform indirect branch tracking.

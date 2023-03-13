@@ -1812,6 +1812,10 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::Tainted);
   }
 
+  void setCallback() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::Callback);
+  }
+
   /// Determine if the call should not perform indirect branch tracking.
   bool doesNoCfCheck() const { return hasFnAttr(Attribute::NoCfCheck); }
 

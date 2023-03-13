@@ -2540,6 +2540,10 @@ defm noopsbx : BoolFOption<"noopsbx",
   CodeGenOpts<"noopsbx">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enables NOOP SBX instrumentation">, NegFlag<SetFalse>>;
 
+defm heapsbx : BoolFOption<"heapsbx",
+  CodeGenOpts<"heapsbx">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Enables HEAP SBX instrumentation">, NegFlag<SetFalse>>;
+
 defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Emit section containing metadata on function stack sizes">,

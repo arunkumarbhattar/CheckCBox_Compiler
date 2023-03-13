@@ -338,6 +338,12 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
  return createCallHelper(Decl, Ops, Builder);
 }
 
+static CallInst *CreateIsLegalCallEdgeCheckInternal(IRBuilderBase *Builder){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {0};
+  auto *Decl = Intrinsic::CreateIsLegalCallEdgeCheckInternal(M);
+  return Builder->CreateCall(Decl);
+}
 static CallInst *CreateCondlTaintedO2PtrInternal(IRBuilderBase *Builder, Value *Src){
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Src};
@@ -437,6 +443,9 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
     return CreateTaintedPtrMemCheckInternal(this, Src);
 }
 
+CallInst *IRBuilderBase::CreateIsLegalCallEdgeCheck(){
+    return CreateIsLegalCallEdgeCheckInternal(this);
+}
 CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
     //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->
 

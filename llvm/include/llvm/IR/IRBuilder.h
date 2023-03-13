@@ -2636,6 +2636,11 @@ public:
     return CreateTaintedPtrMemCheck(Arg);
   }
 
+  Value *CreateIsLegalCallEdge(const Twine &Name = "") {
+    //Create a Call to "checkCallStackIntegrityForCheckedFunction" by Passing the pointer reference
+    return CreateIsLegalCallEdgeCheck();
+  }
+
   Value *CreateCondlTaintedO2Ptr(Value *pValue);
   Value *CreateDerefCondlTaintedPtr(Value *Arg, const Twine &Name = "") {
     //Create a Call to "c_conditionalO2P" by Passing the pointer reference
@@ -2727,6 +2732,7 @@ public:
     CallInst *InitSbx();
   CallInst *FetchSbxHeapAddress();
     CallInst *FetchSbxHeapBound(llvm::Module *M = NULL);
+  CallInst *CreateIsLegalCallEdgeCheck();
 };
 
 /// This provides a uniform API for creating instructions and inserting

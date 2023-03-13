@@ -90,6 +90,7 @@ CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, Enablewasmsbx)
 CGOPT(bool, Enablenoopsbx)
+CGOPT(bool, Enableheapsbx)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
@@ -437,6 +438,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(Enablenoopsbx);
 
+  static cl::opt<bool> Enableheapsbx(
+      "w2c_heapsbx",
+      cl::desc("Enable Heap Sbx extension"),
+      cl::init(false));
+  CGBINDOPT(Enableheapsbx);
+
   static cl::opt<bool> EnableAddrsig(
       "addrsig", cl::desc("Emit an address-significance table"),
       cl::init(false));
@@ -573,6 +580,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.Emitwasmsbx = getEnablewasmsbx();
   Options.Emitnoopsbx = getEnablenoopsbx();
+  Options.Emitheapsbx = getEnableheapsbx();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();

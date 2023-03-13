@@ -1935,56 +1935,34 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     TempTy = TempTy->getPointeeType();
   }
 
-  //SHADY
-  if (pointer_depth >= 1) {
-      //When you are dealing with a decoyed pointer (member of a decoyed struct)
-      //Do not extend tainted pointers to 64-bit types
-      //Instead, extend them to 32-bit types
-      // Wasted 12 hours on this bug. I hate myself.
+  if (CGM.getCodeGenOpts().wasmsbx) {
+    if (pointer_depth >= 1) {
+      // When you are dealing with a decoyed pointer (member of a decoyed struct) Do not extend tainted pointers to 64-bit types Instead, extend them to 32-bit types
+      //  Wasted 12 hours on this bug. I hate myself.
 
-    if (Value->getType()->getCoreElementType()->isDecoyed())
-    {
-        if (CGM.getCodeGenOpts().wasmsbx) {
+      if (Value->getType()->getCoreElementType()->isDecoyed()) {
         Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
         Addr = Builder.CreateElementBitCast(Addr, Builder.getInt32Ty());
-      }
-      else if (CGM.getCodeGenOpts().noopsbx)
-        {
-        Value = Builder.CreatePtrToInt(Value, Builder.getInt64Ty());
-        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
-      }
-
-    }
-    else
-    {
-      if (CGM.getCodeGenOpts().wasmsbx) {
+      } else {
         Value = Builder.CreatePtrToInt(Value, Builder.getInt32Ty());
         // Zero extend the pointer to 64-bit --> as long as the pointer is not to a Decoyed structure
         Value = Builder.CreateZExt(Value, Builder.getInt64Ty());
         Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
       }
-      else if (CGM.getCodeGenOpts().noopsbx){
-        Value = Builder.CreatePtrToInt(Value, Builder.getInt64Ty());
-        Addr = Builder.CreateElementBitCast(Addr, Builder.getInt64Ty());
-      }
     }
-  }
 
-  if (Ty->isTaintedPointerType())
-  {
-    auto CharUnitsSz = CharUnits::Four();
-    // check if -m32 flag is set
-    if (getTarget().getTriple().getArch() == llvm::Triple::x86)
-    {
-      // set the GV to be 32-bit
-      CharUnitsSz = CharUnits::Two();
+    if (Ty->isTaintedPointerType()) {
+      auto CharUnitsSz = CharUnits::Four();
+      // check if -m32 flag is set
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86) {
+        // set the GV to be 32-bit
+        CharUnitsSz = CharUnits::Two();
+      } else if (getTarget().getTriple().getArch() == llvm::Triple::x86_64) {
+        // set the GV to be 64-bit
+        CharUnitsSz = CharUnits::Four();
+      }
+      Addr = Address(Addr.getPointer(), CharUnitsSz);
     }
-    else if(getTarget().getTriple().getArch() == llvm::Triple::x86_64)
-    {
-      // set the GV to be 64-bit
-      CharUnitsSz = CharUnits::Four();
-    }
-    Addr = Address(Addr.getPointer(), CharUnitsSz);
   }
 
   LValue AtomicLValue =

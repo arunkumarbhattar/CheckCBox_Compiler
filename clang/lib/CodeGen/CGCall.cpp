@@ -189,6 +189,10 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
     func_info.setTainted(true);
   }
 
+  if (CGT.getIsCallback()) {
+    func_info.setCallback(true);
+  }
+
   return CGT.arrangeLLVMFunctionInfo(resultType, instanceMethod,
                                      /*chainCall=*/false, prefix,
                                      func_info, paramInfos,
@@ -452,6 +456,11 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
     this->setIsTainted(true);
   else
     this->setIsTainted(false);
+
+  if (FD->isCallback() == 1)
+    this->setIsCallback(true);
+  else
+    this->setIsCallback(false);
 
   setCUDAKernelCallingConvention(FTy, CGM, FD);
 
@@ -4921,30 +4930,31 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // then a truncation to i32.
         bool isTaintedForSure = false;
         bool isNotTaintedForSure = false;
-        if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy()) {
-          if (getLoadStoreAlignment(V).value() * 8 ==
-              CGM.getDataLayout().getPointerSizeInBits() / 2) {
-            auto OriginalType = V->getType();
-            isTaintedForSure = true;
-          } else
-            isNotTaintedForSure = true;
-        } else if (isa<llvm::CastInst>(V)) {
-          // fetch the operand of the cast instruction
-          auto *castIns = dyn_cast<llvm::CastInst>(V);
-          auto DestType = castIns->getDestTy();
-          llvm::Value *Op = castIns->getOperand(0);
-          if (Op != NULL && Op->getType()->isPointerTy() &&
-              (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op))) {
-            if ((DestType->isPointerTy())) {
-              if (getLoadStoreAlignment(Op).value() * 8 ==
-                  CGM.getDataLayout().getPointerSizeInBits() / 2) {
-                isTaintedForSure = true;
-              } else
-                isNotTaintedForSure = true;
+        if (CGM.getCodeGenOpts().wasmsbx) {
+          //Pointer Swizzling to be done only for Interface WebAssembly Sandbox
+          if (isa<llvm::LoadInst>(V) && V->getType()->isPointerTy()) {
+            if (getLoadStoreAlignment(V).value() * 8 ==
+                CGM.getDataLayout().getPointerSizeInBits() / 2) {
+              isTaintedForSure = true;
+            } else
+              isNotTaintedForSure = true;
+          } else if (isa<llvm::CastInst>(V)) {
+            // fetch the operand of the cast instruction
+            auto *castIns = dyn_cast<llvm::CastInst>(V);
+            auto DestType = castIns->getDestTy();
+            llvm::Value *Op = castIns->getOperand(0);
+            if (Op != NULL && Op->getType()->isPointerTy() &&
+                (isa<llvm::LoadInst>(Op) || isa<llvm::StoreInst>(Op))) {
+              if ((DestType->isPointerTy())) {
+                if (getLoadStoreAlignment(Op).value() * 8 ==
+                    CGM.getDataLayout().getPointerSizeInBits() / 2) {
+                  isTaintedForSure = true;
+                } else
+                  isNotTaintedForSure = true;
+              }
             }
           }
         }
-
         // if argument being passed is a Bitcast type instruction, walk up the operand
         //  list until you find a load or store with align.
         //  THen you can fetch the alignment and if 4, you can instrument it accordingly
@@ -4955,7 +4965,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         // simple experiment
         llvm::Value *TaintedPtrFromOffset = NULL;
-        if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
+        if (CGM.getCodeGenOpts().wasmsbx) {
           if ((FD != NULL) && (FD->isTLIB()) && (!isNotTaintedForSure)) {
             auto CharUnitsSz = CharUnits::Four();
             // check if -m32 flag is set
@@ -4975,9 +4985,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   EmitDynamicTaintedPtrAdaptorBlock(AddrRefOfVal);
             }
           }
-        }
-        if (TaintedPtrFromOffset != NULL) {
-          V = TaintedPtrFromOffset;
+          if (TaintedPtrFromOffset != NULL) {
+            V = TaintedPtrFromOffset;
+          }
         }
 
         // Implement swifterror by copying into a new swifterror argument.
@@ -5352,34 +5362,37 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke)
     *callOrInvoke = CI;
 
-  if (CalleePtr->getType()->isPointerTy() &&
-      CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
-    // calls to function pointers may be allocating to sbx memory
-    // Hence, post calls, we need to update them
-    auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
-    if (SbxHeap) {
-      Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
-      llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
-      // set parent for HeapAddrVal
-      auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-      HeapAddrInst->setParent(Builder.GetInsertBlock());
-      llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
-    }
+  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
+    if (CalleePtr->getType()->isPointerTy() &&
+        CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
+      // calls to function pointers may be allocating to sbx memory
+      // Hence, post calls, we need to update them
+      auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
+      if (SbxHeap) {
+        Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
+        // set parent for HeapAddrVal
+        auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+        HeapAddrInst->setParent(Builder.GetInsertBlock());
+        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
+      }
 
-    // update the sbxHeap and sbxBound values
-    auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
-    if (sbxHeapRange) {
-      Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
-      llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-      auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
-      heapAddrInst->setParent(Builder.GetInsertBlock());
-      // create a sub between this and  heap base
-      llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-      llvm::Value *HeapRangeVal = Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-      // bitcast to i32
-      llvm::Value *HeapRange32 =
-          Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
-      llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+      // update the sbxHeap and sbxBound values
+      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+      if (sbxHeapRange) {
+        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+        auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+        heapAddrInst->setParent(Builder.GetInsertBlock());
+        // create a sub between this and  heap base
+        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+        llvm::Value *HeapRangeVal =
+            Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+        // bitcast to i32
+        llvm::Value *HeapRange32 =
+            Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+      }
     }
   }
 
@@ -5609,15 +5622,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
                 RetTy);
 
-  /*
- * We attempt to enforce an 32-bit tainted pointer invariant throughout the function Hence, we insert a convert a 64-bit tainted pointer to 32-bit tainted pointer below
-   */
-  // site of optimization
-  if (RetTy->isTaintedPointerType()) {
-    auto *TaintedPtrOffset =
-        EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());
-    if (TaintedPtrOffset != NULL)
-      Ret = RValue::get(TaintedPtrOffset);
+  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
+    if (RetTy->isTaintedPointerType()) {
+      auto *TaintedPtrOffset =
+          EmitConditionalTaintedP2OAdaptor(Ret.getScalarVal());
+      if (TaintedPtrOffset != NULL)
+        Ret = RValue::get(TaintedPtrOffset);
+    }
   }
 
   /*

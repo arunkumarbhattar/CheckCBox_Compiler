@@ -145,6 +145,9 @@ def NoReturn : EnumAttr<"noreturn">;
 /// Mark the function as tainted.
 def Tainted : EnumAttr<"tainted">;
 
+/// Mark the function as Callback.
+def Callback : EnumAttr<"callback">;
+
 /// Function does not synchronize.
 def NoSync : EnumAttr<"nosync">;
 

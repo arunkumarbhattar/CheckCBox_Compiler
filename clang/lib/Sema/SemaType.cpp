@@ -7677,7 +7677,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }
-  else if(attr.getKind() == ParsedAttr::AT_Tainted){
+  else if(attr.getKind() == ParsedAttr::AT_Callback){
     if (S.CheckAttrNoArgs(attr))
       return true;
 
@@ -7686,7 +7686,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       return false;
 
     // Otherwise we can process right away.
-    FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().setTainted(true);
+    FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().setCallback(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }
