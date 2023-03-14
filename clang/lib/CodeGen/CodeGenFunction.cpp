@@ -969,57 +969,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // to a function that will be used to mark the start of
   // the function.
 
-  if (D->isTaintedDecl() && D->getAsFunction() &&
-      D->getAsFunction()->isThisDeclarationADefinition())
-  {
-    llvm::Value* TaintedvoidPtrFunc = llvm::CastInst::CreatePointerCast(CurFn, Int8PtrTy, "voidPtrFunc", &CurFn->getEntryBlock());
-    auto TaintedFuncIndex = CGM.getModule().getNamedGlobal("TaintedFuncIndex");
-    //fetch the global array of void pointers
-    auto VoidPtrArray = CGM.getModule().getNamedGlobal("ListOfTaintedFunctions");
-    if (TaintedFuncIndex) {
-      //fetch the value of TaintedFuncIndex
-      Address *key_addr = new Address(TaintedFuncIndex, CGM.getPointerAlign());
-      llvm::Value *TaintedFuncIndexVal = Builder.CreateLoad(*key_addr);
-      // Insert a GEP instruction to index into the array
-      llvm::Value* GepIndices[] = {llvm::ConstantInt::get(Int32Ty, 0), TaintedFuncIndexVal};
-      llvm::ArrayType* VoidPtrArrayType = llvm::ArrayType::get(Int8PtrTy, 32);
-      llvm::GetElementPtrInst* GepInst = llvm::GetElementPtrInst::Create(VoidPtrArrayType, VoidPtrArray, GepIndices, "voidPtrArrayIdx", &CurFn->getEntryBlock());
-      Address *GEP_addr = new Address(GepInst, CGM.getPointerAlign());
-      Builder.CreateStore(TaintedvoidPtrFunc, *GEP_addr);
-    }
-  }
-  else if (D->isCallbackDecl() && D->getAsFunction() &&
-           D->getAsFunction()->isThisDeclarationADefinition()) {
-    llvm::Value *CallbackvoidPtrFunc = llvm::CastInst::CreatePointerCast(
-        CurFn, Int8PtrTy, "voidPtrFunc", &CurFn->getEntryBlock());
-    auto CallbackFuncIndex =
-        CGM.getModule().getNamedGlobal("CallbackFuncIndex");
-    // fetch the global array of void pointers
-    auto VoidPtrArray =
-        CGM.getModule().getNamedGlobal("ListOfCallbackFunctions");
-    if (CallbackFuncIndex) {
-      // fetch the value of TaintedFuncIndex
-      Address *key_addr = new Address(CallbackFuncIndex, CGM.getPointerAlign());
-      llvm::Value *CallbackFuncIndexVal = Builder.CreateLoad(*key_addr);
-      // Insert a GEP instruction to index into the array
-      llvm::Value *GepIndices[] = {llvm::ConstantInt::get(Int32Ty, 0),
-                                   CallbackFuncIndexVal};
-      llvm::ArrayType *VoidPtrArrayType = llvm::ArrayType::get(Int8PtrTy, 32);
-      llvm::GetElementPtrInst *GepInst = llvm::GetElementPtrInst::Create(
-          VoidPtrArrayType, VoidPtrArray, GepIndices, "voidPtrArrayIdx",
-          &CurFn->getEntryBlock());
-      Address *GEP_addr = new Address(GepInst, CGM.getPointerAlign());
-      Builder.CreateStore(CallbackvoidPtrFunc, *GEP_addr);
-    }
-  }
-  else
-  {
-    //Its a checked function
-    //insert a call
-    // Create the call to checkCallStackIntegrityiForCheckedFunction()
-    auto ConditionVal = Builder.CreateIsLegalCallEdge("_Dynamic_check.checked_function");
-    EmitDynamicCheckBlocks(ConditionVal);
-  }
   if (CGM.getCodeGenOpts().wasmsbx) {
     if (CurFn->getName() == "main") {
         Builder.InitSbx();

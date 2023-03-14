@@ -2771,37 +2771,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     sbxHeapBound->setInitializer(const_int_val_32);
     sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
   }
-  else if (getCodeGenOpts().heapsbx)
-  {
-    // Define the type for the global arrays
-    auto voidPtrArrayType = llvm::ArrayType::get(Int8PtrTy, 32);
-
-    getModule().getOrInsertGlobal("ListOfTaintedFunctions", voidPtrArrayType);
-    llvm::GlobalVariable *ListOfTaintedFunctions =
-        getModule().getNamedGlobal("ListOfTaintedFunctions");
-    ListOfTaintedFunctions->setInitializer( llvm::ConstantAggregateZero::get(voidPtrArrayType));
-    ListOfTaintedFunctions->setLinkage(llvm::GlobalValue::CommonLinkage);
-
-    getModule().getOrInsertGlobal("ListOfCallbackFunctions", voidPtrArrayType);
-    llvm::GlobalVariable *ListOfCallbackFunctions =
-        getModule().getNamedGlobal("ListOfCallbackFunctions");
-    ListOfCallbackFunctions->setInitializer( llvm::ConstantAggregateZero::get(voidPtrArrayType));
-    ListOfCallbackFunctions->setLinkage(llvm::GlobalValue::CommonLinkage);
-
-    //We create two indexes to keep track of the number of tainted and callback functions
-    // Insert a global variable to store the HeapBound
-    getModule().getOrInsertGlobal("TaintedFuncIndex", Int32Ty);
-    llvm::GlobalVariable *TaintedFuncIndex =
-        getModule().getNamedGlobal("TaintedFuncIndex");
-    TaintedFuncIndex->setInitializer(const_int_val_32);
-    TaintedFuncIndex->setLinkage(llvm::GlobalValue::CommonLinkage);
-
-    getModule().getOrInsertGlobal("CallbackFuncIndex", Int32Ty);
-    llvm::GlobalVariable *CallbackFuncIndex =
-        getModule().getNamedGlobal("CallbackFuncIndex");
-    CallbackFuncIndex->setInitializer(const_int_val_32);
-    CallbackFuncIndex->setLinkage(llvm::GlobalValue::CommonLinkage);
-  }
 
 
   // Weak references don't produce any output by themselves.

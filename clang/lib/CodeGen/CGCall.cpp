@@ -4928,6 +4928,22 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         // If loaded value is of align 4, then perform a ptr to integer cast and
         // then a truncation to i32.
+        //check if the argument is a function pointer type
+        if (I->Ty->isFunctionPointerType())
+        {
+            //fetch the name of the argument
+            auto FunctionName = V->getName();
+            llvm::Function *FunctionPtrArg = CGM.getModule().getFunction(FunctionName);
+            if (FunctionPtrArg == nullptr)
+            {
+              assert(false && "Function pointer not found");
+            }
+            if (FunctionPtrArg->isTainted())
+            {
+              //insert a call to register this function as a tainted function
+              Builder.RegisterTaintedFunction(FunctionPtrArg);
+            }
+        }
         bool isTaintedForSure = false;
         bool isNotTaintedForSure = false;
         if (CGM.getCodeGenOpts().wasmsbx) {
@@ -5351,6 +5367,26 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
+
+  if (CGM.getCodeGenOpts().heapsbx)
+  {
+    //check if the function emitting the call is tainted or not
+    if (CurFuncDecl->isTaintedDecl())
+    {
+      //check if target decl is an indirect call or direct call
+      if (TargetDecl && !TargetDecl->getAsFunction())
+      {
+        //this is an indirect call
+        //check if the target is one of either tainted or authorized callback
+        //get the indirect call target as a Value*
+        llvm::Value* CalleeVal = CalleePtr;
+        //cast CalleeVal to a void* type
+        llvm::Value* CalleeVoidPtr = Builder.CreateBitCast(CalleeVal, Builder.getInt8PtrTy());
+        auto ConditionVal = Builder.CreateIsLegalCallEdge(CalleeVoidPtr);
+        EmitDynamicCheckBlocks(ConditionVal);
+      }
+    }
+  }
   if (!InvokeDest) {
     CI = Builder.CreateCall(IRFuncTy, CalleePtr, IRCallArgs, BundleList);
   } else {
@@ -5680,7 +5716,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       }
     }
   }
-
   return Ret;
 }
 

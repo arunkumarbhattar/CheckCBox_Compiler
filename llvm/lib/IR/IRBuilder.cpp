@@ -338,11 +338,33 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
  return createCallHelper(Decl, Ops, Builder);
 }
 
-static CallInst *CreateIsLegalCallEdgeCheckInternal(IRBuilderBase *Builder){
+static CallInst *CreateregisterTaintedFunctionInternal(IRBuilderBase *Builder, Value *Src){
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
-  Value *Ops[] = {0};
+  Value *Ops[] = {Src};
+  auto *Decl = Intrinsic::SandboxRegisterTaintedFunction(M);
+  return createCallHelper(Decl, Ops, Builder);
+}
+
+static CallInst *CreateregisterCallbackFunctionInternal(IRBuilderBase *Builder, Value *Src){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Src};
+  auto *Decl = Intrinsic::SandboxRegisterTaintedFunction(M);
+  return createCallHelper(Decl, Ops, Builder);
+}
+
+static CallInst *CreateunregisterCallbackFunctionInternal(IRBuilderBase *Builder, Value *Src){
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Src};
+  auto *Decl = Intrinsic::SandboxUNRegisterCallbackFunction(M);
+  return createCallHelper(Decl, Ops, Builder);
+}
+
+static CallInst *CreateIsLegalCallEdgeCheckInternal(IRBuilderBase *Builder,
+                                                    Value *pValue) {
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {pValue};
   auto *Decl = Intrinsic::CreateIsLegalCallEdgeCheckInternal(M);
-  return Builder->CreateCall(Decl);
+  return Builder->CreateCall(Decl, Ops);
 }
 static CallInst *CreateCondlTaintedO2PtrInternal(IRBuilderBase *Builder, Value *Src){
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
@@ -443,8 +465,41 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
     return CreateTaintedPtrMemCheckInternal(this, Src);
 }
 
-CallInst *IRBuilderBase::CreateIsLegalCallEdgeCheck(){
-    return CreateIsLegalCallEdgeCheckInternal(this);
+CallInst *IRBuilderBase::registerTaintedFunction(Value *Src)
+{
+    //if the parsed Source Value is not a void pointer type, it must be casted to a void pointer -->
+    if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
+    {
+      //cast it to void pointer
+      Src = CreateBitCast(Src,Type::getInt8PtrTy(this->getContext()));
+    }
+    return CreateregisterTaintedFunctionInternal(this, Src);
+}
+
+CallInst *IRBuilderBase::registerCallbackFunction(Value *Src)
+{
+    //if the parsed Source Value is not a void pointer type, it must be casted to a void pointer -->
+    if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
+    {
+      //cast it to void pointer
+      Src = CreateBitCast(Src,Type::getInt8PtrTy(this->getContext()));
+    }
+    return CreateregisterCallbackFunctionInternal(this, Src);
+}
+
+CallInst *IRBuilderBase::unregisterCallbackFunction(Value *Src)
+{
+    //if the parsed Source Value is not a void pointer type, it must be casted to a void pointer -->
+    if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
+    {
+      //cast it to void pointer
+      Src = CreateBitCast(Src,Type::getInt8PtrTy(this->getContext()));
+    }
+    return CreateunregisterCallbackFunctionInternal(this, Src);
+}
+
+CallInst *IRBuilderBase::CreateIsLegalCallEdgeCheck(Value *pValue) {
+    return CreateIsLegalCallEdgeCheckInternal(this, pValue);
 }
 CallInst *IRBuilderBase::CreateTaintedOffset2Ptr(Value *Offset){
     //if the parsed Source Value is not a Unsigned int, it must be casted to a Unsigned int -->

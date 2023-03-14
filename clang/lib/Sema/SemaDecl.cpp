@@ -9597,44 +9597,11 @@ bool Sema::CheckTaintedFunctionIntegrity(ParmVarDecl *Param)
           "Create a Tstruct instead and reflect this data into it ");
     return false;
   }
-
-
-//  if(Param->getType()->isUncheckedPointerType() &&
-//     Param->getType()->getPointeeType()->isFunctionType())
-//  {
-//    const clang::PointerType *pt = Param->getType()->getAs<clang::PointerType>();
-//    const clang::FunctionProtoType *FPT = pt->getPointeeType()->getAs<clang::FunctionProtoType>();
-//    auto fd = FPT->getAs<clang::FunctionType>();
-//    if(FPT == NULL)
-//    {
-//      Diag(Param->getLocation(), diag::err_callback_func_must_be_declarated)
-//          << FixItHint::CreateInsertion(Param->getLocation(),
-//                                        "Create the Function prototype with _Callback");
-//    }
-//    else if(!fd->isCallback()){
-//    Diag(Param->getLocation(), diag::err_tainted_function_can_only_have_callback_func_ptrs)
-//        << FixItHint::CreateInsertion(Param->getLocation(),
-//                                      "Mark the Passed Function pointer as a Callback");
-//    return false;
-//    }
-//  }
   return true;
 }
 
 bool Sema::CheckCallbackFunctionIntegrity(ParmVarDecl *Param)
 {
-  /*
-   * A _Callback attributed function can NOT accept the following types
-   * as parameter values
-   * 1.) struct --> Alternative Tstruct
-   * 2.) _Ptr (checked Ptr) --> Alternative _TPtr
-   * 3.) _Array_ptr (checked array pointer) --> Alternative _TArray_ptr
-   * 4.) _Nt_array_ptr (checked null-terminated array pointer) --> Alternative _TNt_array_ptr
-   * 5.) Generic C pointer that is not a function pointer (example int* , char* , Tstruct*)
-   * NOTE: func_ptr* are allowed as arguments, but not Return values
-   */
-
-
   if(Param->getType()->isCheckedPointerType())
   {
     Diag(Param->getLocation(), diag::err_callback_specified_functions_should_have_tainted_pointers)
@@ -9643,7 +9610,8 @@ bool Sema::CheckCallbackFunctionIntegrity(ParmVarDecl *Param)
                "Create a Tainted Pointer(allocated with t_malloc) instead and Marshall the data into it");
     return false;
   }
-  else if(Param->getType()->isUncheckedPointerType() &&
+
+  if(Param->getType()->isUncheckedPointerType() &&
            !Param->getType()->getPointeeType()->isFunctionType())
   {
     /*

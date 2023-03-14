@@ -1266,10 +1266,36 @@ Function* Intrinsic::SandboxTaintedMemCheckFunction(Module *M){
       .getCallee());
 }
 
+Function* Intrinsic::SandboxRegisterTaintedFunction(Module *M){
+  Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
+  Type* RetTyp = (Type::getInt1Ty(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("registerTaintedFunction",
+                                               RetTyp, VOIDPtr)
+      .getCallee());
+}
+
+Function* Intrinsic::SandboxRegisterCallbackFunction(Module *M){
+  Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
+  Type* RetTyp = (Type::getInt1Ty(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("registerCallbackFunction",
+                                               RetTyp, VOIDPtr)
+                            .getCallee());
+}
+
+Function* Intrinsic::SandboxUNRegisterCallbackFunction(Module *M){
+  Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
+  Type* RetTyp = (Type::getInt1Ty(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("unregisterCallback",
+                                               RetTyp, VOIDPtr)
+                            .getCallee());
+}
+
 Function* Intrinsic::CreateIsLegalCallEdgeCheckInternal(Module *M) {
   Type *RetTyp = (Type::getInt1Ty(M->getContext()));
-  return cast<Function>(M->getOrInsertFunction("checkCallStackIntegrityForCheckedFunction",
-                                               RetTyp)
+  Type *VOIDPtr =
+      const_cast<PointerType *>(Type::getInt8PtrTy(M->getContext()));
+  return cast<Function>(M->getOrInsertFunction("checkCallStackIntegrityForTaintedFunction",
+                                               RetTyp, VOIDPtr)
                             .getCallee());
 }
 Function* Intrinsic::SandboxCondlTaintedO2PtrFunction(Module *M) {
