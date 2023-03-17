@@ -4085,7 +4085,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // the VLA bounds.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
-    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
+    auto *TaintedPtrFromOffset =EmitTaintedPtrDerefAdaptor(Addr, BaseTy);
     if (TaintedPtrFromOffset != NULL)
     {
       // check if -m32 flag is set

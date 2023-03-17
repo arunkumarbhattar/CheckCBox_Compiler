@@ -4767,6 +4767,8 @@ private:
                                           const llvm::Type *BaseTy);
     bool shouldEmitTaintedPtrDerefAdaptor(const CodeGenModule &CGM,
                                           const QualType BaseTy);
+    void EmitDynamicTaintedCacheCheckBlocks(llvm::Value *Condition, llvm::Value  *ValPtr);
+    llvm::BasicBlock *EmitTaintedCacheMissBlock(llvm::BasicBlock *, llvm::Value *ValPtr);
 };
 
 /// TargetFeatures - This class is used to check whether the builtin function

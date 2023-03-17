@@ -2756,6 +2756,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   //check if sbx is enabled
   auto const_int_val_32 =
       llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(32, 0));
+  auto const_int_val_64 =
+      llvm::ConstantInt::get(getModule().getContext(), llvm::APInt(64, 0));
   if (getCodeGenOpts().wasmsbx) {
     getModule().getOrInsertGlobal("sbxHeap", Int64Ty);
     llvm::GlobalVariable *sbxHeap = getModule().getNamedGlobal("sbxHeap");
@@ -2770,8 +2772,20 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
         getModule().getNamedGlobal("sbxHeapRange");
     sbxHeapBound->setInitializer(const_int_val_32);
     sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
-  }
+  }else if (getCodeGenOpts().heapsbx)
+  {
+    getModule().getOrInsertGlobal("lowerbound", Int64Ty);
+    llvm::GlobalVariable *lowerbound = getModule().getNamedGlobal("lowerbound");
+    lowerbound->setInitializer(const_int_val_64);
+    lowerbound->setLinkage(llvm::GlobalValue::CommonLinkage);
 
+    // Insert a global variable to store the HeapBound
+    getModule().getOrInsertGlobal("upperbound", Int64Ty);
+    llvm::GlobalVariable *upperbound =
+            getModule().getNamedGlobal("upperbound");
+    upperbound->setInitializer(const_int_val_64);
+    upperbound->setLinkage(llvm::GlobalValue::CommonLinkage);
+  }
 
   // Weak references don't produce any output by themselves.
   if (Global->hasAttr<WeakRefAttr>())

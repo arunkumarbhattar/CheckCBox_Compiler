@@ -389,7 +389,6 @@ static CallInst *createTaintedOffset2Ptr(IRBuilderBase *Builder, Value *Offset){
 
 static CallInst *sbxInit(IRBuilderBase *Builder){
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
-  Value *Ops[] = { 0 };
   auto *Decl = Intrinsic::InitSbx(M);
   //create a call to this function
   return Builder->CreateCall(Decl);
@@ -455,7 +454,7 @@ CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
   return getReductionIntrinsic(this, ID, Src);
 }
 
-CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value *Src){
+CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value* Src){
     //if the parsed Source Value is not a void pointer type, it must be casted to a void pointer -->
     if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
     {

@@ -2631,7 +2631,7 @@ public:
                         Name);
   }
 
-  Value *CreateIsTaintedPtr(Value *Arg, const Twine &Name = "") {
+  Value *CreateIsTaintedPtr(Value* Arg, const Twine &Name = "") {
     //Create a Call to "c_isTaintedPointerToTaintedMem" by Passing the pointer reference
     return CreateTaintedPtrMemCheck(Arg);
   }
@@ -2736,8 +2736,7 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
-  CallInst *CreateTaintedPtrMemCheck(IRBuilderBase *Builder, Value *Src);
-  CallInst *CreateTaintedPtrMemCheck(Value *Src);
+  CallInst *CreateTaintedPtrMemCheck(Value* Src);
 
     CallInst *CreateTaintedOffset2Ptr(Value *Offset);
   Value *CreatePToO(Value *pValue);

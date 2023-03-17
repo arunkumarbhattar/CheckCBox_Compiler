@@ -1022,7 +1022,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       }
   }
 
-
   // If we're checking the return value, allocate space for a pointer to a
   // precise source location of the checked return statement.
   if (requiresReturnValueCheck()) {

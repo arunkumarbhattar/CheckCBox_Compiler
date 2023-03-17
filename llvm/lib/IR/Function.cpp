@@ -1261,7 +1261,7 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 Function* Intrinsic::SandboxTaintedMemCheckFunction(Module *M){
   Type* VOIDPtr= const_cast<PointerType*>(Type::getInt8PtrTy(M->getContext()));
   Type* RetTyp = (Type::getInt1Ty(M->getContext()));
-  return cast<Function>(M->getOrInsertFunction("isPointerinHeap",
+  return cast<Function>(M->getOrInsertFunction("CacheUpdateandCheck",
                                                RetTyp, VOIDPtr)
       .getCallee());
 }

@@ -567,6 +567,20 @@ void CodeGenFunction::EmitDynamicCheckBlocks(Value *Condition) {
   Builder.SetInsertPoint(DyCkSuccess);
 }
 
+void CodeGenFunction::EmitDynamicTaintedCacheCheckBlocks(Value *Condition, Value *TaintedPtrVal) {
+  assert(Condition->getType()->isIntegerTy(1) &&
+         "May only dynamic check boolean conditions");
+  ++NumDynamicChecksInserted;
+
+  BasicBlock *DyCkSuccess = createBasicBlock("_Tainted_Cache.HIT");
+  BasicBlock *DyCkFail = EmitTaintedCacheMissBlock(DyCkSuccess, TaintedPtrVal);
+
+  Builder.CreateCondBr(Condition, DyCkSuccess, DyCkFail);
+  // This ensures the success block comes directly after the branch
+  EmitBlock(DyCkSuccess);
+  Builder.SetInsertPoint(DyCkSuccess);
+}
+
 Value*
 CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
 
@@ -662,10 +676,27 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
     }
     else if (CGM.getCodeGenOpts().heapsbx)
     {
-     //insert calls to check for tainted pointer sanity to Hoard library
-     auto ConditionVal = Builder.CreateIsTaintedPtr(PointerVal,
-                                     "_Dynamic_check.Tainted_pointer_sanity");
-     EmitDynamicCheckBlocks(ConditionVal);
+     //First Fetch the global heap variables
+     GlobalVariable *lowerbound = CGM.getModule().getNamedGlobal("lowerbound");
+     GlobalVariable *upperbound =  CGM.getModule().getNamedGlobal("upperbound");
+     Value *lowerboundVal = Builder.CreateAlignedLoad(
+         llvm::Type::getInt64Ty(PointerVal->getContext()),
+         lowerbound, 8, false);
+     Value *upperboundVal = Builder.CreateAlignedLoad(
+         llvm::Type::getInt64Ty(PointerVal->getContext()),
+         upperbound, 8, false);
+
+     Value *PointerAsInt64 = Builder.CreatePtrToInt(
+         BaseAddr.getPointer(),
+         llvm::Type::getInt64Ty(PointerVal->getContext()));
+     auto UpperChk = Builder.CreateICmpULE(PointerAsInt64, upperboundVal,
+                                      "_Dynamic_check.Cache_upper");
+     auto LowerChk = Builder.CreateICmpUGE(PointerAsInt64, lowerboundVal,
+                                          "_Tainted_check.Cache_lower");
+     llvm::Value *Condition =
+         Builder.CreateAnd(LowerChk, UpperChk, "_Dynamic_check.range");
+     EmitDynamicTaintedCacheCheckBlocks(Condition, BaseAddr.getPointer());
+     return BaseAddr.getPointer();
     }
 }
 BasicBlock *CodeGenFunction::EmitDynamicCheckFailedBlock() {
@@ -690,6 +721,23 @@ BasicBlock *CodeGenFunction::EmitDynamicCheckFailedBlock() {
   TrapCall->setDoesNotReturn();
   TrapCall->setDoesNotThrow();
   Builder.CreateUnreachable();
+
+  // Return the insert point back to the saved insert point
+  Builder.SetInsertPoint(Begin);
+
+  return FailBlock;
+}
+
+BasicBlock *CodeGenFunction::EmitTaintedCacheMissBlock(BasicBlock * CacheHit, Value* PtrVal) {
+  // Save current insert point
+  BasicBlock *Begin = Builder.GetInsertBlock();
+
+  // Add a "failed block", which will be inserted at the end of CurFn
+  BasicBlock *FailBlock = createBasicBlock("_Tainted_Cache.MISS", CurFn);
+  Builder.SetInsertPoint(FailBlock);
+  Builder.CreateIsTaintedPtr(PtrVal, "_Tainted_Cache.Cache_update_and_check");
+  //jump back to the cache hit block
+  Builder.CreateBr(CacheHit);
 
   // Return the insert point back to the saved insert point
   Builder.SetInsertPoint(Begin);
