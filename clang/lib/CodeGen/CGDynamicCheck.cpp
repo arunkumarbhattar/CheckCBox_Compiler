@@ -567,13 +567,13 @@ void CodeGenFunction::EmitDynamicCheckBlocks(Value *Condition) {
   Builder.SetInsertPoint(DyCkSuccess);
 }
 
-void CodeGenFunction::EmitDynamicTaintedCacheCheckBlocks(Value *Condition, Value *TaintedPtrVal) {
+void CodeGenFunction::EmitDynamicTaintedCacheCheckBlocks(Value *Condition, Value *PointerAsInt64) {
   assert(Condition->getType()->isIntegerTy(1) &&
          "May only dynamic check boolean conditions");
   ++NumDynamicChecksInserted;
 
   BasicBlock *DyCkSuccess = createBasicBlock("_Tainted_Cache.HIT");
-  BasicBlock *DyCkFail = EmitTaintedCacheMissBlock(DyCkSuccess, TaintedPtrVal);
+  BasicBlock *DyCkFail = EmitTaintedL1_CacheMissBlock(DyCkSuccess, PointerAsInt64);
 
   Builder.CreateCondBr(Condition, DyCkSuccess, DyCkFail);
   // This ensures the success block comes directly after the branch
@@ -677,25 +677,25 @@ CodeGenFunction::EmitDynamicTaintedPtrAdaptorBlock(const Address BaseAddr) {
     else if (CGM.getCodeGenOpts().heapsbx)
     {
      //First Fetch the global heap variables
-     GlobalVariable *lowerbound = CGM.getModule().getNamedGlobal("lowerbound");
-     GlobalVariable *upperbound =  CGM.getModule().getNamedGlobal("upperbound");
-     Value *lowerboundVal = Builder.CreateAlignedLoad(
+     GlobalVariable *lowerbound_1 = CGM.getModule().getNamedGlobal("lowerbound_1");
+     GlobalVariable *upperbound_1 =  CGM.getModule().getNamedGlobal("upperbound_1");
+     Value *lowerboundVal_1 = Builder.CreateAlignedLoad(
          llvm::Type::getInt64Ty(PointerVal->getContext()),
-         lowerbound, 8, false);
-     Value *upperboundVal = Builder.CreateAlignedLoad(
+         lowerbound_1, 8, false);
+     Value *upperboundVal_1 = Builder.CreateAlignedLoad(
          llvm::Type::getInt64Ty(PointerVal->getContext()),
-         upperbound, 8, false);
+         upperbound_1, 8, false);
 
      Value *PointerAsInt64 = Builder.CreatePtrToInt(
          BaseAddr.getPointer(),
          llvm::Type::getInt64Ty(PointerVal->getContext()));
-     auto UpperChk = Builder.CreateICmpULE(PointerAsInt64, upperboundVal,
+     auto UpperChk_1 = Builder.CreateICmpULE(PointerAsInt64, upperboundVal_1,
                                       "_Dynamic_check.Cache_upper");
-     auto LowerChk = Builder.CreateICmpUGE(PointerAsInt64, lowerboundVal,
+     auto LowerChk_1= Builder.CreateICmpUGE(PointerAsInt64, lowerboundVal_1,
                                           "_Tainted_check.Cache_lower");
-     llvm::Value *Condition =
-         Builder.CreateAnd(LowerChk, UpperChk, "_Dynamic_check.range");
-     EmitDynamicTaintedCacheCheckBlocks(Condition, BaseAddr.getPointer());
+     llvm::Value *Condition_1 =
+         Builder.CreateAnd(LowerChk_1, UpperChk_1, "_Dynamic_check.cache_range_1");
+     EmitDynamicTaintedCacheCheckBlocks(Condition_1, PointerAsInt64);
      return BaseAddr.getPointer();
     }
 }
@@ -728,14 +728,54 @@ BasicBlock *CodeGenFunction::EmitDynamicCheckFailedBlock() {
   return FailBlock;
 }
 
-BasicBlock *CodeGenFunction::EmitTaintedCacheMissBlock(BasicBlock * CacheHit, Value* PtrVal) {
+BasicBlock *CodeGenFunction::EmitTaintedL1_CacheMissBlock(BasicBlock * CacheHit, Value* PointerAsInt64) {
+    ++NumDynamicChecksInserted;
+    // Save current insert point
+  BasicBlock *Begin = Builder.GetInsertBlock();
+
+  // Add a "failed block", which will be inserted at the end of CurFn
+  BasicBlock *FailBlock = createBasicBlock("_Tainted_Cache_L1.MISS", CurFn);
+  Builder.SetInsertPoint(FailBlock);
+  BasicBlock *DyCkSuccess = createBasicBlock("_Tainted_Cache_L2.HIT");
+  BasicBlock *DyCkFail = EmitTaintedL2_CacheMissBlock(DyCkSuccess, PointerAsInt64);
+
+  GlobalVariable *lowerbound_2 = CGM.getModule().getNamedGlobal("lowerbound_2");
+  GlobalVariable *upperbound_2 =  CGM.getModule().getNamedGlobal("upperbound_2");
+  Value *lowerboundVal_2 = Builder.CreateAlignedLoad(
+      llvm::Type::getInt64Ty(PointerAsInt64->getContext()),
+      lowerbound_2, 8, false);
+  Value *upperboundVal_2 = Builder.CreateAlignedLoad(
+      llvm::Type::getInt64Ty(PointerAsInt64->getContext()),
+      upperbound_2, 8, false);
+  auto UpperChk_2 = Builder.CreateICmpULE(PointerAsInt64, upperboundVal_2,
+                                          "_Dynamic_check.Cache_upper");
+  auto LowerChk_2= Builder.CreateICmpUGE(PointerAsInt64, lowerboundVal_2,
+                                          "_Tainted_check.Cache_lower");
+  llvm::Value *Condition_2 =
+      Builder.CreateAnd(LowerChk_2, UpperChk_2, "_Dynamic_check.cache_range_2");
+  Builder.CreateCondBr(Condition_2, DyCkSuccess, DyCkFail);
+  // This ensures the success block comes directly after the branch
+  EmitBlock(DyCkSuccess);
+  Builder.SetInsertPoint(DyCkSuccess);
+
+
+  //jump back to the cache hit block
+  Builder.CreateBr(CacheHit);
+
+  // Return the insert point back to the saved insert point
+  Builder.SetInsertPoint(Begin);
+
+  return FailBlock;
+}
+
+BasicBlock *CodeGenFunction::EmitTaintedL2_CacheMissBlock(BasicBlock * CacheHit, Value* PointerAsInt64) {
   // Save current insert point
   BasicBlock *Begin = Builder.GetInsertBlock();
 
   // Add a "failed block", which will be inserted at the end of CurFn
-  BasicBlock *FailBlock = createBasicBlock("_Tainted_Cache.MISS", CurFn);
+  BasicBlock *FailBlock = createBasicBlock("_Tainted_Cache_L2.MISS", CurFn);
   Builder.SetInsertPoint(FailBlock);
-  Builder.CreateIsTaintedPtr(PtrVal, "_Tainted_Cache.Cache_update_and_check");
+  Builder.CreateIsTaintedPtr(PointerAsInt64, "_Tainted_Cache_L1L2.Cache_update_and_check");
   //jump back to the cache hit block
   Builder.CreateBr(CacheHit);
 

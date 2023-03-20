@@ -2774,17 +2774,29 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     sbxHeapBound->setLinkage(llvm::GlobalValue::CommonLinkage);
   }else if (getCodeGenOpts().heapsbx)
   {
-    getModule().getOrInsertGlobal("lowerbound", Int64Ty);
-    llvm::GlobalVariable *lowerbound = getModule().getNamedGlobal("lowerbound");
-    lowerbound->setInitializer(const_int_val_64);
-    lowerbound->setLinkage(llvm::GlobalValue::CommonLinkage);
+    getModule().getOrInsertGlobal("lowerbound_1", Int64Ty);
+    llvm::GlobalVariable *lowerbound_1 = getModule().getNamedGlobal("lowerbound_1");
+    lowerbound_1->setInitializer(const_int_val_64);
+    lowerbound_1->setLinkage(llvm::GlobalValue::CommonLinkage);
 
     // Insert a global variable to store the HeapBound
-    getModule().getOrInsertGlobal("upperbound", Int64Ty);
-    llvm::GlobalVariable *upperbound =
-            getModule().getNamedGlobal("upperbound");
-    upperbound->setInitializer(const_int_val_64);
-    upperbound->setLinkage(llvm::GlobalValue::CommonLinkage);
+    getModule().getOrInsertGlobal("upperbound_1", Int64Ty);
+    llvm::GlobalVariable *upperbound_1 =
+            getModule().getNamedGlobal("upperbound_1");
+    upperbound_1->setInitializer(const_int_val_64);
+    upperbound_1->setLinkage(llvm::GlobalValue::CommonLinkage);
+
+    getModule().getOrInsertGlobal("lowerbound_2", Int64Ty);
+    llvm::GlobalVariable *lowerbound_2 = getModule().getNamedGlobal("lowerbound_2");
+    lowerbound_2->setInitializer(const_int_val_64);
+    lowerbound_2->setLinkage(llvm::GlobalValue::CommonLinkage);
+
+    // Insert a global variable to store the HeapBound
+    getModule().getOrInsertGlobal("upperbound_2", Int64Ty);
+    llvm::GlobalVariable *upperbound_2 =
+        getModule().getNamedGlobal("upperbound_2");
+    upperbound_2->setInitializer(const_int_val_64);
+    upperbound_2->setLinkage(llvm::GlobalValue::CommonLinkage);
   }
 
   // Weak references don't produce any output by themselves.

@@ -459,7 +459,7 @@ CallInst *IRBuilderBase::CreateTaintedPtrMemCheck(Value* Src){
     if(Src->getType() != Type::getInt8PtrTy(this->getContext()))
     {
       //cast it to void pointer
-      Src = CreateBitCast(Src,Type::getInt8PtrTy(this->getContext()));
+      Src = CreateIntToPtr(Src,Type::getInt8PtrTy(this->getContext()));
     }
     return CreateTaintedPtrMemCheckInternal(this, Src);
 }

@@ -4934,11 +4934,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             //fetch the name of the argument
             auto FunctionName = V->getName();
             llvm::Function *FunctionPtrArg = CGM.getModule().getFunction(FunctionName);
-            if (FunctionPtrArg == nullptr)
-            {
-              assert(false && "Function pointer not found");
-            }
-            if (FunctionPtrArg->isTainted())
+            //lot of callback functions are simply passed as function arguments,
+            // they do not have a local declaration to scoop out the function qualifier
+            // in the current translational unit. Thus, we ignore those cases, and
+            // expect user to manually register those tainted or callback functions.
+            if (FunctionPtrArg != nullptr && FunctionPtrArg->isTainted())
             {
               //insert a call to register this function as a tainted function
               Builder.RegisterTaintedFunction(FunctionPtrArg);
