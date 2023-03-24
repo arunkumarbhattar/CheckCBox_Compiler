@@ -16794,11 +16794,11 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     if (NoReturn && !Ext.getNoReturn()) Ext = Ext.withNoReturn(true);
 
     if (Tainted && !Ext.getTainted()) {
-      Ext = Ext.setTainted(true);
+      Ext.setTainted(true);
     }
 
     if (Callback && !Ext.getCallback()) {
-      Ext = Ext.setCallback(true);
+      Ext.setCallback(true);
     }
 
     // Turn protoless block types into nullary block types.

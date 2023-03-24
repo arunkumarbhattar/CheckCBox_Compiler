@@ -3966,17 +3966,18 @@ public:
 
     ExtInfo setTainted(bool tainted) {
       if (tainted)
-        return ExtInfo(Actually_tainted = 1);
+        Actually_tainted = 1;
       else
-        return ExtInfo(Actually_tainted = 0);
-
+        Actually_tainted = 0;
+      return *this;
     }
 
     ExtInfo setCallback(bool callback) {
       if (callback)
-        return ExtInfo(Actually_callback = 1);
+        Actually_callback = 1;
       else
-        return ExtInfo(Actually_callback = 0);
+        Actually_callback = 0;
+      return *this;
     }
 
     void setDecoyed(bool decoyed) {
@@ -3985,16 +3986,18 @@ public:
 
     ExtInfo setMirror(bool mirror) {
       if (mirror)
-        return ExtInfo(Actually_mirror = 1);
+        Actually_mirror = 1;
       else
-        return ExtInfo(Actually_mirror = 0);
+        Actually_mirror = 0;
+      return *this;
     }
 
     ExtInfo setTLIB(bool TLIB) {
       if (TLIB)
-        return ExtInfo(Actually_TLIB = 1);
+        Actually_TLIB = 1;
       else
-        return ExtInfo(Actually_TLIB = 0);
+        Actually_TLIB = 0;
+      return *this;
     }
 
     ExtInfo withProducesResult(bool producesResult) const {

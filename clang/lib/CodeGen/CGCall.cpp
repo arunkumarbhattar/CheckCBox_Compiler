@@ -4495,7 +4495,7 @@ llvm::Type* CodeGenFunction::ChangeStructName(llvm::StructType* StructType)
     actualName = "Tstruct.Spl_"+ actualName;
     ModifiedName = std::string(actualName);
   }
-  else
+  else if(StructType->isTStructTy())
   {
     std::string StructName = StructType->
                              getStructName().str();

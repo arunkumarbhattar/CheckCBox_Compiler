@@ -3435,12 +3435,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
   }
 
   if (OldTypeInfo.getTainted() && !NewTypeInfo.getTainted()) {
-    NewTypeInfo = NewTypeInfo.setTainted(true);
+    NewTypeInfo.setTainted(true);
     RequiresAdjustment = true;
   }
 
   if (OldTypeInfo.getCallback() && !NewTypeInfo.getCallback()) {
-    NewTypeInfo = NewTypeInfo.setCallback(true);
+    NewTypeInfo.setCallback(true);
     RequiresAdjustment = true;
   }
 
