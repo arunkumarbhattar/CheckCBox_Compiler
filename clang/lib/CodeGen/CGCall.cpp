@@ -5397,40 +5397,43 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
   if (callOrInvoke)
     *callOrInvoke = CI;
-
-  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
-    if (CalleePtr->getType()->isPointerTy() &&
-        CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
-      // calls to function pointers may be allocating to sbx memory
-      // Hence, post calls, we need to update them
-      auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
-      if (SbxHeap) {
-        Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
-        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
-        // set parent for HeapAddrVal
-        auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-        HeapAddrInst->setParent(Builder.GetInsertBlock());
-        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
-      }
-
-      // update the sbxHeap and sbxBound values
-      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
-      if (sbxHeapRange) {
-        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
-        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-        auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
-        heapAddrInst->setParent(Builder.GetInsertBlock());
-        // create a sub between this and  heap base
-        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-        llvm::Value *HeapRangeVal =
-            Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-        // bitcast to i32
-        llvm::Value *HeapRange32 =
-            Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
-        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
-      }
-    }
-  }
+/*
+ *
+ * The below is adding immense overhead -->
+ */
+//  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
+//    if (CalleePtr->getType()->isPointerTy() &&
+//        CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
+//      // calls to function pointers may be allocating to sbx memory
+//      // Hence, post calls, we need to update them
+//      auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
+//      if (SbxHeap) {
+//        Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
+//        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
+//        // set parent for HeapAddrVal
+//        auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
+//        HeapAddrInst->setParent(Builder.GetInsertBlock());
+//        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
+//      }
+//
+//      // update the sbxHeap and sbxBound values
+//      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
+//      if (sbxHeapRange) {
+//        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
+//        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
+//        auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
+//        heapAddrInst->setParent(Builder.GetInsertBlock());
+//        // create a sub between this and  heap base
+//        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
+//        llvm::Value *HeapRangeVal =
+//            Builder.CreateSub(HeapBoundVal, HeapBaseVal);
+//        // bitcast to i32
+//        llvm::Value *HeapRange32 =
+//            Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
+//        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
+//      }
+//    }
+//  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that

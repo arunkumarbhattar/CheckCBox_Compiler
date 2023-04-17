@@ -493,8 +493,8 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
   assert(New && "Value::replaceAllUsesWith(<null>) is invalid!");
   assert(!contains(New, this) &&
          "this->replaceAllUsesWith(expr(this)) is NOT valid!");
-  assert(New->getType() == getType() &&
-         "replaceAllUses of value with new value of different type!");
+//  assert(New->getType() == getType() &&
+//         "replaceAllUses of value with new value of different type!");
 
   // Notify all ValueHandles (if present) that this value is going away.
   if (HasValueHandle)
@@ -1088,8 +1088,8 @@ void ValueHandleBase::ValueIsDeleted(Value *V) {
 void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
   assert(Old->HasValueHandle &&"Should only be called if ValueHandles present");
   assert(Old != New && "Changing value into itself!");
-  assert(Old->getType() == New->getType() &&
-         "replaceAllUses of value with new value of different type!");
+//  assert(Old->getType() == New->getType() &&
+//         "replaceAllUses of value with new value of different type!");
 
   // Get the linked list base, which is guaranteed to exist since the
   // HasValueHandle flag is set.

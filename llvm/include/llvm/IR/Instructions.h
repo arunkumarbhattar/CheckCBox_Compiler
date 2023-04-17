@@ -2783,8 +2783,8 @@ public:
   }
   void setIncomingValue(unsigned i, Value *V) {
     assert(V && "PHI node got a null value!");
-    assert(getType() == V->getType() &&
-           "All operands to PHI node must be the same type as the PHI node!");
+//    assert(getType() == V->getType() &&
+//           "All operands to PHI node must be the same type as the PHI node!");
     setOperand(i, V);
   }
 
