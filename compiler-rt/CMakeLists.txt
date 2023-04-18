@@ -253,8 +253,8 @@ if(MSVC)
   # remove other /W[0-4] flags will result in a warning about overriding a
   # previous flag.
   if (COMPILER_RT_HAS_W4_FLAG)
-    string(REGEX REPLACE " /W[0-4]" "" "${CMAKE_C_FLAGS}" "${CMAKE_C_FLAGS}")
-    string(REGEX REPLACE " /W[0-4]" "" "${CMAKE_CXX_FLAGS}" "${CMAKE_CXX_FLAGS}")
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     append_string_if(COMPILER_RT_HAS_W4_FLAG /W4 CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 else()
@@ -425,7 +425,7 @@ append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMO
 append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
-  string(REPLACE "-Wl,-z,defs" "" "${CMAKE_SHARED_LINKER_FLAGS}" "${CMAKE_SHARED_LINKER_FLAGS}")
+  string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 else()
   if (ANDROID)
     append_list_if(COMPILER_RT_HAS_GCC_LIB gcc SANITIZER_COMMON_LINK_LIBS)
@@ -454,7 +454,7 @@ append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SANITIZER_COMMON_LINK
 
 # Remove -stdlib= which is unused when passing -nostdinc++...
 string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" "${CMAKE_CXX_FLAGS}" "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
@@ -500,7 +500,7 @@ string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
 
 # When cross-compiling, COMPILER_RT_TEST_COMPILER_CFLAGS help in compilation
 # and linking of unittests.
-string(REPLACE " " ";" "${COMPILER_RT_UNITTEST_CFLAGS}" "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
 
 # Unittests support.
