@@ -2550,9 +2550,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::InAlloca: {
       assert(NumIRArgs == 0);
       auto FieldIndex = ArgI.getInAllocaFieldIndex();
-//      auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgStruct, Ty);
-//      if(TaintedPtrFromOffset != NULL)
-//          ArgStruct = Address(TaintedPtrFromOffset, ArgStruct.getAlignment());
       Address V =
           Builder.CreateStructGEP(ArgStruct, FieldIndex, Arg->getName());
       if (ArgI.getInAllocaIndirect())
@@ -2783,9 +2780,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           auto AI = Fn->getArg(FirstIRArg + i);
           AI->setName(Arg->getName() + ".coerce" + Twine(i));
-//           auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(AddrToStoreInto, Ty);
-//           if(TaintedPtrFromOffset != NULL)
-//               AddrToStoreInto = Address(TaintedPtrFromOffset, AddrToStoreInto.getAlignment());
           Address EltPtr = Builder.CreateStructGEP(AddrToStoreInto, i);
           Builder.CreateStore(AI, EltPtr);
         }
@@ -2828,10 +2822,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         llvm::Type *eltType = coercionType->getElementType(i);
         if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType))
           continue;
-
-//        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(alloca, Ty);
-//        if(TaintedPtrFromOffset != NULL)
-//            alloca = Address(TaintedPtrFromOffset, alloca.getAlignment());
         auto eltAddr = Builder.CreateStructGEP(alloca, i);
         auto elt = Fn->getArg(argIndex++);
         Builder.CreateStore(elt, eltAddr);
@@ -3384,9 +3374,6 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     } else {
       // If the value is offset in memory, apply the offset now.
       Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
-//      auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(V, RetTy);
-//      if(TaintedPtrFromOffset != NULL)
-//          V = Address(TaintedPtrFromOffset, V.getAlignment());
       RV = CreateCoercedLoad(V, RetAI.getCoerceToType(), *this);
     }
 
@@ -4714,11 +4701,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if (IRFunctionArgs.hasSRetArg()) {
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] = SRetPtr.getPointer();
     } else if (RetAI.isInAlloca()) {
-      /*
- * Instrumentation Not required on return pointers.
-       */
-      //    auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, RetTy); if(TaintedPtrFromOffset != NULL)
-      //     ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
       Address Addr =
           Builder.CreateStructGEP(ArgMemory, RetAI.getInAllocaFieldIndex());
       Builder.CreateStore(SRetPtr.getPointer(), Addr);
@@ -4765,9 +4747,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // Replace the placeholder with the appropriate argument slot GEP.
           CGBuilderTy::InsertPoint IP = Builder.saveIP();
           Builder.SetInsertPoint(Placeholder);
-          //          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, I->Ty);
-          //           if(TaintedPtrFromOffset != NULL)
-          //               ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
           Addr = Builder.CreateStructGEP(ArgMemory,
                                          ArgInfo.getInAllocaFieldIndex());
           Builder.restoreIP(IP);
@@ -4776,9 +4755,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // placeholder with a regular aggregate temporary alloca. Store the
           // address of this alloca into the struct.
           Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
-          //          auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, I->Ty);
-          //          if(TaintedPtrFromOffset != NULL)
-          //                ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
           Address ArgSlot = Builder.CreateStructGEP(
               ArgMemory, ArgInfo.getInAllocaFieldIndex());
           Builder.CreateStore(Addr.getPointer(), ArgSlot);
@@ -4791,17 +4767,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             I->Ty, getContext().getTypeAlignInChars(I->Ty),
             "indirect-arg-temp");
         I->copyInto(*this, Addr);
-        //        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, I->Ty);
-        //        if(TaintedPtrFromOffset != NULL)
-        //              ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
         Address ArgSlot =
             Builder.CreateStructGEP(ArgMemory, ArgInfo.getInAllocaFieldIndex());
         Builder.CreateStore(Addr.getPointer(), ArgSlot);
       } else {
-        // Store the RValue into the argument struct.
-        //        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(ArgMemory, I->Ty);
-        //        if(TaintedPtrFromOffset != NULL)
-        //              ArgMemory = Address(TaintedPtrFromOffset, ArgMemory.getAlignment());
         Address Addr =
             Builder.CreateStructGEP(ArgMemory, ArgInfo.getInAllocaFieldIndex());
         unsigned AS = Addr.getType()->getPointerAddressSpace();
@@ -5077,9 +5046,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         assert(NumIRArgs == STy->getNumElements());
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          //         auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Src, I->Ty);
-          //         if(TaintedPtrFromOffset != NULL)
-          //             Src = Address(TaintedPtrFromOffset, Src.getAlignment());
           Address EltPtr = Builder.CreateStructGEP(Src, i);
           llvm::Value *LI = Builder.CreateLoad(EltPtr);
           IRCallArgs[FirstIRArg + i] = LI;
@@ -5087,8 +5053,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       } else {
         // In the simple case, just pass the coerced loaded value.
         assert(NumIRArgs == 1);
-        //        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(Src, I->Ty); if(TaintedPtrFromOffset != NULL)
-        //              Src = Address(TaintedPtrFromOffset, Src.getAlignment());
         llvm::Value *Load =
             CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
 
@@ -5144,8 +5108,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         llvm::Type *eltType = coercionType->getElementType(i);
         if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType))
           continue;
-        //        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(addr, I->Ty); if(TaintedPtrFromOffset != NULL)
-        //            addr = Address(TaintedPtrFromOffset, addr.getAlignment());
         Address eltAddr = Builder.CreateStructGEP(addr, i);
         llvm::Value *elt = Builder.CreateLoad(eltAddr);
         IRCallArgs[IRArgPos++] = elt;
@@ -5397,43 +5359,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
   if (callOrInvoke)
     *callOrInvoke = CI;
-/*
- *
- * The below is adding immense overhead -->
- */
-//  if (CGM.getCodeGenOpts().wasmsbx || CGM.getCodeGenOpts().noopsbx) {
-//    if (CalleePtr->getType()->isPointerTy() &&
-//        CalleePtr->getType()->getPointerElementType()->isFunctionTy()) {
-//      // calls to function pointers may be allocating to sbx memory
-//      // Hence, post calls, we need to update them
-//      auto SbxHeap = CGM.getModule().getNamedGlobal("sbxHeap");
-//      if (SbxHeap) {
-//        Address *key_addr = new Address(SbxHeap, CGM.getPointerAlign());
-//        llvm::Value *HeapAddrVal = Builder.FetchSbxHeapAddress();
-//        // set parent for HeapAddrVal
-//        auto HeapAddrInst = dyn_cast<llvm::Instruction>(HeapAddrVal);
-//        HeapAddrInst->setParent(Builder.GetInsertBlock());
-//        llvm::StoreInst *store = Builder.CreateStore(HeapAddrVal, *key_addr);
-//      }
-//
-//      // update the sbxHeap and sbxBound values
-//      auto sbxHeapRange = CGM.getModule().getNamedGlobal("sbxHeapRange");
-//      if (sbxHeapRange) {
-//        Address *key_addr = new Address(sbxHeapRange, CGM.getPointerAlign());
-//        llvm::Value *HeapBoundVal = Builder.FetchSbxHeapBound(&CGM.getModule());
-//        auto heapAddrInst = dyn_cast<llvm::Instruction>(HeapBoundVal);
-//        heapAddrInst->setParent(Builder.GetInsertBlock());
-//        // create a sub between this and  heap base
-//        llvm::Value *HeapBaseVal = Builder.FetchSbxHeapAddress();
-//        llvm::Value *HeapRangeVal =
-//            Builder.CreateSub(HeapBoundVal, HeapBaseVal);
-//        // bitcast to i32
-//        llvm::Value *HeapRange32 =
-//            Builder.CreateTrunc(HeapRangeVal, Builder.getInt32Ty());
-//        llvm::StoreInst *store = Builder.CreateStore(HeapRange32, *key_addr);
-//      }
-//    }
-//  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
@@ -5559,11 +5484,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         llvm::Type *eltType = coercionType->getElementType(i);
         if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType))
           continue;
-        /*
-         * This instrumentation WILL NOT be needed
-         */
-        //        auto *TaintedPtrFromOffset = EmitTaintedPtrDerefAdaptor(addr, RetTy); if(TaintedPtrFromOffset != NULL)
-        //              addr = Address(TaintedPtrFromOffset, addr.getAlignment());
         Address eltAddr = Builder.CreateStructGEP(addr, i);
         llvm::Value *elt = CI;
         if (requiresExtract)

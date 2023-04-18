@@ -9529,11 +9529,6 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   einfo = lbaseInfo.setTainted(Tainted);
   einfo = lbaseInfo.setCallback(lbaseInfo.getCallback() || rbaseInfo.getCallback());
 
-  if(Tainted)
-  {
-    printf("UAU");
-  }
-
   unsigned NumTypeVars = 0;
   bool IsITypeGenericFunction = false;
 
